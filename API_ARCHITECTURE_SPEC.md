@@ -1,1516 +1,986 @@
 # API_ARCHITECTURE_SPEC.md
-Canonical API Architecture Specification for FUZE.ac
 
 ## 1. Title
-
-**API_ARCHITECTURE_SPEC.md**  
-Canonical API Architecture Specification for the FUZE Platform
-
----
+FUZE API Architecture Specification
 
 ## 2. Document Metadata
-
-- Document Name: `API_ARCHITECTURE_SPEC.md`
-- Document Type: Platform-wide API architecture specification
-- Status: Canonical Draft for Source-of-Truth Use
-- Governing Registries:
-  - `DOCS_SPEC.md`
-  - `SYSTEM_SPEC_INDEX.md`
-- Primary Implementation Repo: `fuze-backend-api`
-- Consumer Repos:
-  - `fuze-frontend-webapp`
-  - `fuze-frontend-admin`
-- Related Repos:
-  - `fuze-contracts`
-  - `fuze-specs`
-  - `fuze-public-registry`
-  - `fuze-sdk` (future derived consumer only)
-- Specification Layer: Shared API / workflow / event / runtime layer
-- Intended Folder: `fuze.ac > docs > system-spec`
-- Related Specifications:
-  - `PUBLIC_API_SPEC.md`
-  - `INTERNAL_SERVICE_API_SPEC.md`
-  - `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-  - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-  - `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-
----
+- Document Name: API_ARCHITECTURE_SPEC.md
+- Status: Active Draft for Approval
+- API Classification: platform-wide architecture; public, internal, admin, derived-public, event-driven, and chain-adjacent interface governance
+- Owning Domain: Platform Architecture / API Architecture
+- Primary Implementing Repo: `fuze-backend-api`
+- Supporting Repos: `fuze-frontend-webapp`, `fuze-frontend-admin`, `fuze-contracts`, `fuze-public-registry`, future `fuze-sdk`
+- Primary System of Record: platform-owned service contracts and domain-owned canonical data stores inside `fuze-backend-api`, with explicit on-chain contract truth where applicable
+- Canonical Folder Target: `fuze.ac > docs > api-spec`
+- Interpretation Mode: architecture-level API source of truth
 
 ## 3. Purpose
+This document defines the canonical API architecture of the FUZE platform. Its purpose is to establish how FUZE structures APIs across platform domains, product domains, internal service coordination, public trust surfaces, admin and control-plane actions, event-driven interfaces, and chain-adjacent integrations so that interface design reinforces canonical ownership, economic safety, auditability, and long-term platform consistency.
 
-This document defines the canonical API architecture of the FUZE platform. Its purpose is to establish how APIs are structured across FUZE, how platform and product domains expose capabilities safely and coherently, how write and read boundaries align with canonical entity ownership, and how the API layer supports a multi-product, transparency-first platform with shared identity, billing, Platform Credits, workflow, governance, treasury, stablecoin payout execution, and public transparency systems.
-
-In FUZE, API architecture is not only a transport concern. It is a boundary-enforcement layer. It determines which backend domains are allowed to mutate truth, which surfaces are read-only, which actions must be asynchronous, which interfaces are safe for public exposure, and how product-specific APIs extend the platform without redefining it.
-
----
+FUZE is a platform-first ecosystem with shared identity, workspace, billing, Platform Credits, AI orchestration, workflow execution, transparency, governance-sensitive controls, Ethereum token participation, Base credits commitments, and Base payout execution. In such a system, API architecture is not merely transport design. It is one of the main enforcement layers for domain ownership, write authority, read-model discipline, async workflow behavior, and public trust.
 
 ## 4. Scope
-
 This specification covers:
+- platform-wide API philosophy and boundary rules
+- API surface families across public, first-party, internal, admin, derived-public, event, and chain-adjacent interfaces
+- ownership-aligned write/read principles
+- request, response, correlation, and error architecture principles
+- synchronous and asynchronous interaction patterns
+- authentication, authorization, and scope rules at the architecture level
+- versioning, compatibility, and idempotency expectations at the architecture level
+- event and webhook positioning relative to APIs
+- governance, treasury, credits, billing, payout, and transparency-sensitive boundary rules
+- contract-derivation expectations for OpenAPI, AsyncAPI, and future SDK generation
 
-- the canonical API philosophy of the FUZE ecosystem
-- the distinction among first-party application APIs, public APIs, internal service APIs, admin/control APIs, and event-driven interfaces
-- how APIs align with canonical entity ownership and mutation authority
-- request, response, error, versioning, and idempotency principles at the architecture level
-- identity, workspace, wallet-aware, Platform Credits, billing, AI, workflow, governance, treasury, transparency, and payout-sensitive API boundaries
-- synchronous versus asynchronous API interaction patterns
-- how APIs interact with audit, monitoring, transparency, reporting, and chain-integration systems
-- security, privacy, control, and failure-handling principles for FUZE APIs
-
-This specification does **not** define every endpoint, every payload field, or every product-specific route. Those details belong in downstream domain API specifications, product API specifications, OpenAPI contracts, AsyncAPI contracts, and implementation code.
-
----
+This specification does not define every endpoint, payload field, or domain-specific resource contract. Those belong in narrower API SPEC files and derived machine-readable contracts.
 
 ## 5. Source-of-Truth Inputs
-
-### 5.1 Governing FUZE docs
-
-The following docs-level sources govern this specification:
-
+### Governing FUZE indexes
 - `DOCS_SPEC.md`
+- `SYSTEM_SPEC_INDEX.md`
+
+### Highest-priority FUZE system specifications used
+- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
+- `PLATFORM_ARCHITECTURE_SPEC.md`
+- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
+- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+
+### Additional FUZE API and runtime specifications used
+- `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC_refreshed.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `SERVICE_TOPOLOGY_SPEC.md`
+
+### FUZE core docs used for architectural alignment
 - `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
 - `FUZE_CHAIN_ARCHITECTURE.md`
 - `FUZE_PLATFORM_CREDITS.md`
 - `STABLECOIN_PROFIT_PARTICIPATION.md`
 - `TOKEN_CONTRACT_ARCHITECTURE_.md`
 
-### 5.2 Governing FUZE system specs
+### Supporting format and quality guides
+- `The_API_Specification_guide.md`
+- `Database_Schemas_Guide.md`
 
-The following system-spec sources govern this specification:
+### External standards used only as supporting design guidance
+- HTTP semantics and idempotent-method principles from RFC 9110
+- OpenAPI ecosystem conventions for contract-first API design
+- AsyncAPI ecosystem conventions for event and webhook contract modeling
 
-- `SYSTEM_SPEC_INDEX.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
-- `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md`
-- `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`
-- `PLATFORM_CREDITS_SPEC.md`
-- `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md`
-- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
-- `AI_ORCHESTRATION_SPEC.md`
-- `AI_USAGE_METERING_SPEC.md`
-- `MODEL_ROUTING_AND_CONTEXT_SPEC.md`
-- `WORKFLOW_AND_AUTOMATION_SPEC.md`
-- `JOB_QUEUE_AND_WORKER_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC_refreshed.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `PAYOUT_LEDGER_SPEC.md`
-- `BASE_PLATFORM_CREDITS_LAYER_SPEC.md`
-- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `PAYMENT_FRAUD_AND_ABUSE_PREVENTION_SPEC.md`
-
-### 5.3 Highest-priority interpretation inputs
-
-When conflicts arise, the following are treated as highest priority for this document:
-
-1. `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-2. `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-3. `PLATFORM_ARCHITECTURE_SPEC.md`
-4. `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-5. `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-6. `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
-7. Docs-level conflict order from `DOCS_SPEC.md`
-
-### 5.4 Supporting external references
-
-The following external references inform best practices but do not override FUZE source-of-truth rules:
-
-- OpenAPI Specification guidance
-- current IETF draft guidance for the `Idempotency-Key` HTTP header
-- OWASP API Security Top 10 (2023)
-- Mermaid syntax guidance for flowchart, ER, and sequence diagrams
-
----
+### Source priority interpretation
+Where ambiguity exists, platform-wide ownership and architecture documents override narrower API or product documents. Docs-level conflicts are resolved according to `DOCS_SPEC.md`. System-spec conflicts are resolved according to `SYSTEM_SPEC_INDEX.md`.
 
 ## 6. Governing Architecture and Ownership Interpretation
+FUZE APIs exist to expose capabilities according to canonical ownership, trust sensitivity, and execution mode rather than according to frontend convenience or temporary repository structure.
 
-### 6.1 Core interpretation
+The architecture therefore applies these governing rules:
+- `fuze-backend-api` owns business truth, domain APIs, orchestration APIs, admin execution APIs, worker-trigger interfaces, integration ingress, and chain-adjacent adapters.
+- `fuze-frontend-webapp` consumes APIs and owns presentation only.
+- `fuze-frontend-admin` triggers privileged workflows and renders control-plane state, but does not own durable truth.
+- `fuze-contracts` owns explicit on-chain contract behavior and chain-native truth only where contract design commits it.
+- `fuze-public-registry` publishes derived or canonical public artifacts but does not redefine underlying platform or chain truth.
+- future `fuze-sdk` derives from approved contracts rather than acting as source of truth.
 
-FUZE is a shared platform core with product extension domains and a separate on-chain integration layer. APIs must reinforce this architecture rather than weaken it. Shared platform concerns such as identity, workspaces, Platform Credits, billing, wallet-aware participation, workflow orchestration, AI orchestration, audit, transparency, and reporting remain platform-owned. Product APIs extend the platform by exposing product-domain capabilities, but they do not take ownership of shared platform truth.
-
-### 6.2 Why this API architecture belongs to the platform core
-
-API architecture is platform-owned because it governs:
-
-- interface classes and boundary discipline across all products
-- how canonical writes map to owning backend domains
-- how read aggregation is separated from write authority
-- how public, internal, admin, and event interfaces differ
-- how on-chain and off-chain responsibilities remain distinct
-- how async execution becomes first-class without collapsing every action into blocking HTTP calls
-
-### 6.3 Why other domains do not own this specification
-
-- Product domains do not own it because they inherit and extend the shared platform API rules.
-- Frontend repos do not own it because frontend surfaces consume APIs and must not define mutation authority.
-- `fuze-contracts` does not own it because contract interfaces are chain-domain interfaces, not the whole platform interaction model.
-- `fuze-sdk` does not own it because SDKs are derived packaging artifacts, not canonical interface truth.
-
-### 6.4 Platform constraints that shape this design
-
-This API architecture is constrained by the following FUZE rules:
-
-- backend domains own durable truth
-- frontend surfaces must not become shadow owners of business state
-- FUZE token, Platform Credits, stablecoin payout execution, treasury, and governance must remain distinct
-- on-chain state and off-chain business truth must coordinate explicitly
-- trust-sensitive operations require narrower, more explicit contracts than routine product reads
-- reporting and transparency surfaces are derived and must not redefine canonical truth
-
----
+The result is a boundary-enforcement API model. Domain owners expose interfaces. Consumers may read, derive, present, and execute against those interfaces according to contract, but they do not take over ownership of the underlying fact.
 
 ## 7. Domain Responsibilities
+### Platform API architecture domain responsibilities
+- define API surface families and their allowed use
+- define canonical response and error philosophy
+- define routing and contract-boundary discipline
+- define write/read separation rules
+- define sync vs async interaction guidance
+- define public vs internal vs admin exposure criteria
+- define chain-adjacent interface boundaries
+- define contract-derivation requirements for OpenAPI and AsyncAPI
 
-### 7.1 Platform-owned API responsibilities
-
-The platform layer owns APIs for:
-
-- identity and account lifecycle
-- sessions and linked login
-- workspace and organization context
-- role and permission evaluation
-- wallet-aware participation context
-- subscriptions, entitlements, invoicing, receipts, and commercial state
-- Platform Credits issuance, reservation, spending, release, reversal, and adjustment
-- AI orchestration and usage metering
-- shared workflow and automation orchestration
-- audit and activity capture
-- transparency and reporting publication coordination
-- public wallet and contract registry surfaces
-
-### 7.2 Product-owned API responsibilities
-
-Each product owns APIs for product-domain objects and workflows, such as:
-
-- QTB analysis requests and outputs
-- AIMM operational configuration and simulation workflows
-- ZAGA utility-program objects
-- AIE discovery and event-intelligence objects
-- HerHelp generation project lifecycle
-- Botmad workflow assistance artifacts
-- ToolGrid inventory, campaigns, tools, zones, and analytics surfaces
-
-### 7.3 Chain-adjacent API responsibilities
-
-Chain-adjacent APIs coordinate with on-chain systems but do not erase chain boundaries. They include:
-
-- token-state observation
-- Base Platform Credits ledger coordination
-- payout-cycle execution coordination
-- snapshot and eligibility pipeline coordination
-- contract event ingestion and reconciliation
-
-### 7.4 Derived/public-trust API responsibilities
-
-Derived and public-trust APIs may expose:
-
-- public metadata
-- public product catalog views
-- public contract and wallet registry views
-- public transparency and payout-status views
-- investor/community report access surfaces
-
-These surfaces remain read-oriented and derived unless a narrower write contract is explicitly approved.
-
----
+### Domain responsibilities by interface family
+- **Platform application APIs**: expose shared platform capabilities such as identity, workspace, wallet-aware context, billing, credits, AI orchestration, workflow entrypoints, audit visibility, and transparency views.
+- **Product-domain APIs**: expose product-owned canonical objects and product-specific workflows while consuming platform primitives.
+- **Internal service APIs**: provide service-to-service collaboration without bypassing ownership boundaries.
+- **Admin/control-plane APIs**: provide privileged operator and governance-aware control flows under stronger authorization, auditing, and mutation safety.
+- **Public APIs**: expose only intentionally safe and supportable external contracts.
+- **Event and webhook contracts**: communicate accepted outcomes and state changes outward from the owning domain.
+- **Chain-adjacent APIs**: coordinate off-chain orchestration with on-chain truth, without pretending that contracts own off-chain policy or that off-chain systems own on-chain execution truth.
 
 ## 8. Out of Scope
-
-This specification does not define:
-
-- exact wire-level endpoint inventory for every domain
-- exact OpenAPI schemas for every payload
-- exact auth token implementation details
-- exact internal transport technologies for all service-to-service calls
-- exact queue infrastructure or broker implementation
-- exact SDK class layout
-- exact public monetization or quota policy
-- exact chain ABI layouts
-- exact pagination and search parameter conventions for every downstream API family
-
-Those details belong in domain API specs, product API specs, OpenAPI / AsyncAPI files, and implementation documents.
-
----
+This document does not:
+- define every route path or schema field
+- freeze every internal transport choice to HTTP only
+- define product-specific request and result contracts in full
+- define every event payload schema
+- define every admin workflow detail
+- define the full database schema of each domain
+- redefine chain architecture, profit-participation policy, or contract logic that belongs in dedicated docs
+- authorize public exposure of every first-party endpoint
 
 ## 9. Canonical Entities and Data Ownership
+This architecture references the following canonical entity classes:
 
-This section defines the minimum architecture-level entities required to make FUZE API design coherent. These are conceptual ownership entities, not full implementation tables.
+### Platform canonical entities
+- account
+- linked login method
+- session
+- workspace
+- workspace membership
+- role assignment / access grant
+- wallet link
+- credits account / balance context
+- subscription
+- entitlement
+- payment record
+- invoice / receipt
+- audit event
+- payout-cycle orchestration record
+- transparency publication record
+- integration provider record
 
-### 9.1 API surface entities
+### Product-domain canonical entities
+- product request objects
+- product job objects
+- product result artifacts
+- product-specific configuration and workflow entities
 
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `api_surface` | Defines a distinct callable interface family | Platform API architecture |
-| `api_surface_version` | Tracks contract version lineage | Platform API architecture |
-| `api_visibility_class` | Public, internal, first-party, admin, or webhook classification | Platform API architecture |
-| `api_operation_policy` | Declares policy, sensitivity, and allowed caller types | Platform API architecture |
+### On-chain canonical entities
+- FUZE token balance and transfer truth on Ethereum
+- Base Platform Credits commitment state where applicable
+- Base payout funding and claim execution state
+- vault and governance contract state
 
-### 9.2 Request lineage entities
+### Derived entities
+- dashboard aggregates
+- public registry entries
+- payout ledger artifacts
+- investor/community reports
+- transparency reports
+- search indexes and caches
 
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `request_lineage` | Request-level trace and correlation record | Platform request layer |
-| `correlation_reference` | Cross-service and async correlation | Platform orchestration layer |
-| `idempotency_record` | Mutation replay protection | Owning mutation domain |
-| `auth_subject_context` | Caller identity and role scope | Identity / access domains |
-
-### 9.3 Async operation entities
-
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `async_operation` | Durable accepted operation record | Owning domain or shared workflow domain |
-| `job_execution` | Worker execution record | Async execution layer |
-| `operation_result_reference` | Result linkage to canonical entity or artifact | Owning domain |
-| `retry_lineage` | Retry-attempt lineage and terminal classification | Async execution layer |
-
-### 9.4 Trust-sensitive linkage entities
-
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `audit_lineage_reference` | Durable audit linkage for sensitive actions | Audit domain |
-| `policy_reference` | Governing rule or policy source | Control / governance layer |
-| `payout_cycle_reference` | Payout correlation and public reporting linkage | Payout-related domains |
-| `governance_action_reference` | Governance-sensitive action lineage | Governance domain |
-
-### 9.5 Ownership rules
-
-- `api_surface` and interface classification are platform-owned.
-- `idempotency_record` belongs to the domain that owns the mutation semantics.
-- `async_operation` belongs to the accepting domain, even if the actual execution is delegated to workers.
-- derived dashboards, frontend state, or reporting mirrors are **not** canonical owners of API truth.
-
----
+### Ownership interpretation
+- canonical write entities are owned by the relevant platform, product, or on-chain domain
+- derived entities may aggregate or publish, but they may not redefine canonical meaning
+- API architecture must preserve lineage between canonical entities and derived representations
+- contract state, policy-derived datasets, and off-chain business entities must remain distinct
 
 ## 10. State Model and Lifecycle
+At architecture level, FUZE APIs should recognize the following lifecycle classes rather than one global state machine.
 
-### 10.1 API surface lifecycle
+### A. Synchronous request lifecycle
+`requested -> validated -> authorized -> applied | rejected`
 
-`draft -> approved -> implemented -> versioned -> deprecated -> retired`
+### B. Asynchronous request lifecycle
+`requested -> accepted -> queued -> running -> completed | failed | canceled`
 
-### 10.2 Synchronous request lifecycle
+### C. Economic mutation lifecycle
+`requested -> validated -> policy_checked -> applied_once -> recorded -> reported`
 
-`received -> authenticated -> authorized -> validated -> executed -> responded -> audited`
+### D. Public artifact publication lifecycle
+`prepared -> reviewed -> published -> superseded | corrected | deprecated`
 
-### 10.3 Asynchronous request lifecycle
+### E. Governance-sensitive action lifecycle
+`proposed -> gated -> approved -> executed | rejected | expired`
 
-`received -> authenticated -> authorized -> validated -> accepted -> queued -> executing -> completed | failed | cancelled`
-
-### 10.4 Event-driven side effect lifecycle
-
-`domain mutation committed -> domain event emitted -> downstream consumers process -> retries if needed -> terminal handled state`
-
-### 10.5 Public/deprecated interface lifecycle
-
-`active -> deprecation_announced -> migration_window -> sunset_locked -> retired`
-
-### 10.6 Important lifecycle rule
-
-A successful synchronous API response does not necessarily mean every downstream side effect completed. If the business action is async or event-driven, the accepted or completed meaning must be explicit.
-
----
+### Lifecycle rules
+- API acceptance is not always equivalent to final state.
+- Async APIs must expose accepted-state semantics explicitly.
+- Governance-sensitive APIs require stronger state progression controls than routine runtime APIs.
+- Publication-oriented APIs must preserve historical interpretability through correction and supersession rather than silent replacement where trust-sensitive artifacts are involved.
 
 ## 11. API Surface Overview
+FUZE recognizes the following canonical API surface families.
 
-FUZE must explicitly recognize the following API surface families.
-
-### 11.1 First-party application APIs
-
-Used by `fuze-frontend-webapp` and selected first-party product experiences.
-
-Characteristics:
-- identity-aware
-- scope-aware
-- typically authenticated
-- may submit sync or async work
-- may expose aggregated read models
-- must not become hidden admin or public integration surfaces
-
-### 11.2 Platform domain APIs
-
-Used by first-party apps and product services to access platform-owned capabilities.
+### 11.1 Platform Application APIs
+Used by first-party surfaces and product domains to access shared platform capabilities.
 
 Examples:
-- identity
-- workspace
-- wallet-aware context
-- Platform Credits reads and mutation requests
-- subscription and billing checks
-- workflow entrypoints
-- audit-aware actions
+- identity and account context
+- workspace and membership reads/writes
+- wallet-link actions
+- credits balance and spend-intent operations
+- subscription and entitlement operations
+- workflow initiation and status APIs
 
-### 11.3 Product-domain APIs
+### 11.2 Product-Domain APIs
+Used by product-facing surfaces and product services to create, mutate, and read product-owned objects.
 
-Used by product frontends and product services to create, mutate, and read product-owned domain objects.
+Examples:
+- QTB analysis requests
+- AIMM configuration jobs
+- ZAGA utility operations
+- AIE event-intelligence requests
+- HerHelp generation requests
+- Botmad workflow scans
 
-### 11.4 Internal service APIs
+### 11.3 Internal Service APIs
+Used for service-to-service coordination across platform-owned and product-owned domains.
 
-Used for service-to-service coordination inside FUZE. They are typed collaboration boundaries and must not be treated as public APIs by accident.
+Examples:
+- payment verification handoff to billing
+- credits issuance command requests
+- entitlement refresh requests
+- payout-cycle preparation requests
+- registry publication coordination
 
-### 11.5 Admin/control-plane APIs
+### 11.4 Admin / Control-Plane APIs
+Used by privileged operators and governance-aware systems for approvals, overrides, emergency controls, and policy-safe operational actions.
 
-Used by `fuze-frontend-admin` and privileged operational tools for policy-sensitive, support-sensitive, and control-sensitive flows.
+Examples:
+- support-safe correction requests
+- review and approval transitions
+- control-path status reads
+- incident and operational actions subject to policy
 
-### 11.6 Public APIs
+### 11.5 Public APIs
+Used by external consumers, partner systems, public clients, and public-read trust surfaces under explicit exposure policy.
 
-Used by external consumers, public data surfaces, partner-safe integrations, or explicitly allowed read/public interaction layers.
+Examples:
+- public registry reads
+- transparency report retrieval
+- public metadata reads
+- authenticated user profile, workspace, credits, and job-status reads
+- selected externally consumable product request/result APIs
 
-### 11.7 Event-driven interfaces
+### 11.6 Event-Driven Interfaces
+Used for asynchronous coordination and external webhook delivery.
 
-Used for asynchronous system coordination and selected external webhooks.
+Examples:
+- `payment.verified`
+- `credits.issued`
+- `workflow.run.started`
+- `product_job.completed`
+- `payout_cycle.funded`
 
-### 11.8 Surface-family rule
+### 11.7 Chain-Adjacent APIs
+Used by the off-chain platform to interpret, coordinate, reconcile, and present chain-linked actions.
 
-These families may share conventions, but they must **not** be treated as one undifferentiated interface layer. Different API families have different:
-
-- stability expectations
-- auth and authorization rules
-- rate-limit rules
-- exposure rules
-- audit requirements
-- side-effect semantics
-
----
+Examples:
+- token-aware participation lookups
+- payout-cycle preparation based on policy-derived eligibility
+- contract registry and wallet registry publication
+- Base credits and payout execution observation and reconciliation
 
 ## 12. Authentication and Authorization Model
-
-### 12.1 Authentication subjects
-
-API callers may be:
-
+### Authentication subjects
+FUZE APIs may authenticate:
 - end-user accounts
 - workspace members
 - internal services
-- privileged operators/admins
-- governance-controlled executors
+- admin or operator roles
+- governance-gated execution actors
 - partner or external integration clients
-- public unauthenticated consumers for selected read-only surfaces
+- unauthenticated public readers for explicitly public resources
 
-### 12.2 Authorization dimensions
-
-Authorization must consider:
-
-- account identity
-- workspace role and scope
-- product entitlement
-- billing owner scope
-- wallet-aware context where relevant
-- admin/operator authority
-- governance policy restrictions
-- control-plane or environment restrictions
-
-### 12.3 Sensitive-scope rule
-
-Authentication alone is not sufficient for sensitive domains. Credits, billing, treasury, governance, payout, and admin override flows require explicit authorization checks with scope-aware policy evaluation.
-
-### 12.4 Least-privilege rule
-
-Tokens, sessions, service credentials, and admin capabilities must have only the authority required for their function.
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-This architecture-level specification defines the canonical route families and contract classes rather than every final downstream endpoint.
-
-### 13.1 Canonical route family classes
-
-#### A. First-party application route families
-- `/v1/app/...`
-- `/v1/workspaces/...`
-- `/v1/me/...`
-- `/v1/products/...`
-
-#### B. Platform domain route families
-- `/v1/identity/...`
-- `/v1/auth/...`
-- `/v1/workspaces/...`
-- `/v1/roles/...`
-- `/v1/wallets/...`
-- `/v1/credits/...`
-- `/v1/billing/...`
-- `/v1/invoices/...`
-- `/v1/receipts/...`
-- `/v1/ai/...`
-- `/v1/workflows/...`
-- `/v1/audit/...`
-
-#### C. Product-domain route families
-- `/v1/qtb/...`
-- `/v1/aimm/...`
-- `/v1/zaga/...`
-- `/v1/aie/...`
-- `/v1/herhelp/...`
-- `/v1/botmad/...`
-- `/v1/toolgrid/...`
-
-#### D. Admin/control families
-- `/v1/admin/...`
-- `/v1/control/...`
-- `/v1/ops/...`
-
-#### E. Public families
-- `/v1/public/...`
-- `/v1/public/registry/...`
-- `/v1/public/transparency/...`
-- `/v1/public/products/...`
-- `/v1/public/payouts/...`
-
-#### F. Internal families
-- `/internal/v1/...`
-
-#### G. Webhook families
-- outbound webhook event contracts
-- inbound provider callback contracts under dedicated callback routes
-
-### 13.2 Canonical interaction contracts
-
-#### Read-only contract
-- Purpose: fetch canonical or derived state
-- Caller types: first-party, public, internal, or admin depending on domain
-- Side effects: no business mutation
-- Audit: trace request lineage; durable audit only where policy requires it
-
-#### Mutation contract
-- Purpose: create or mutate canonical truth in the owning domain
-- Caller types: scoped authenticated first-party, admin, or internal service
-- Side effects: domain-owned mutation only
-- Requirements: validation, authorization, idempotency, audit where relevant, downstream event emission where relevant
-
-#### Accepted-async contract
-- Purpose: accept long-running or multi-step work
-- Caller types: first-party, internal, or admin depending on domain
-- Response: accepted status, operation reference, correlation reference
-- Side effects: durable operation record, queue or workflow submission
-
-#### Internal command/query contract
-- Purpose: typed service-to-service collaboration
-- Caller types: authenticated internal services only
-- Requirements: strong traceability, explicit contract versioning discipline, narrow scope
-
-#### Public-read contract
-- Purpose: expose intentionally public, safe, supportable data
-- Caller types: external consumers or unauthenticated clients where allowed
-- Requirements: no hidden write semantics, clear caching rules, strong abuse control
-
-#### Webhook contract
-- Purpose: notify external consumers of approved event outcomes
-- Requirements: signed delivery, retry discipline, deduplication behavior, event versioning
-
-### 13.3 Architecture-level route semantics
-
-- Use noun-oriented, resource-oriented paths for HTTP-style APIs.
-- Keep admin and internal surfaces separate from public surface naming.
-- Do not expose generic “do anything” mutation endpoints.
-- Credits, treasury, governance, and payout-sensitive actions must use narrow, explicit operation routes or operation types.
-- Aggregated reads may compose across domains, but writes must terminate in the owning domain contract.
-
----
-
-## 14. Request Rules
-
-### 14.1 Request composition rules
-
-Requests must be explicit about:
-
-- caller identity
-- scope
-- target resource or operation
-- mutation intent if applicable
-- idempotency key where applicable
-- correlation metadata where supported
-- version target where applicable
-
-### 14.2 Scope rules
-
-Important APIs must preserve scope explicitly, including:
-
+### Authorization dimensions
+Authorization must be evaluated by scope and domain, not authentication alone. At minimum, authorization may depend on:
 - account scope
 - workspace scope
 - product scope
-- billing owner scope
-- governance domain scope
-- payout-cycle scope where relevant
+- entitlement state
+- billing or credits state where relevant
+- admin/operator role
+- governance-sensitive control path
+- environment restrictions
+- public visibility class
 
-### 14.3 Validation rules
+### Surface-family authorization posture
+- **Public read**: intentionally visible only, no hidden privileged data.
+- **Authenticated public**: user- or workspace-scoped only.
+- **Internal service**: mutually authenticated and least-privilege domain-to-domain rights.
+- **Admin/control-plane**: explicit role, policy, and audit gating.
+- **Chain-adjacent**: split between read access, orchestration rights, and governance-controlled execution.
 
-All mutation-capable APIs must validate:
+### Non-negotiable rule
+No API may assume that because the caller is first-party or internal it may bypass domain authorization. Trusted caller status does not replace domain-specific mutation authority.
 
-- required fields
-- allowed state transitions
-- ownership and scope constraints
-- product/platform boundaries
-- treasury / governance / payout policy constraints where relevant
+## 13. API Endpoints / Interface Contracts
+This file defines architectural route families and contract shapes rather than every final endpoint. Route-family names are normative at the architecture level.
 
-### 14.4 Replay safety rule
+### 13.1 Platform application route families
+- `POST /v1/accounts`
+- `GET /v1/me`
+- `POST /v1/sessions`
+- `DELETE /v1/sessions/{session_id}`
+- `GET /v1/workspaces`
+- `POST /v1/workspaces`
+- `GET /v1/workspaces/{workspace_id}`
+- `POST /v1/workspaces/{workspace_id}/members`
+- `GET /v1/wallet-links`
+- `POST /v1/wallet-links`
+- `GET /v1/credits/accounts/{credits_account_id}`
+- `GET /v1/credits/accounts/{credits_account_id}/ledger`
+- `GET /v1/subscriptions`
+- `POST /v1/subscriptions/change-requests`
+- `POST /v1/workflows/runs`
+- `GET /v1/workflows/runs/{run_id}`
 
-Retry-capable mutation requests must be designed with domain-level idempotency, not only transport-level retry assumptions.
+### 13.2 Product-domain route families
+- `POST /v1/products/{product_key}/requests`
+- `GET /v1/products/{product_key}/requests/{request_id}`
+- `GET /v1/products/{product_key}/jobs/{job_id}`
+- `GET /v1/products/{product_key}/results/{result_id}`
+- `PATCH /v1/products/{product_key}/objects/{object_id}`
 
----
+### 13.3 Internal service route families
+- `POST /internal/v1/{domain}/commands/{command_name}`
+- `GET /internal/v1/{domain}/queries/{query_name}`
+- `POST /internal/v1/{domain}/transitions/{transition_name}`
+- `POST /internal/v1/{domain}/reconciliations/{operation_name}`
+
+### 13.4 Admin / control-plane route families
+- `GET /admin/v1/{domain}/records/{record_id}`
+- `POST /admin/v1/{domain}/approvals`
+- `POST /admin/v1/{domain}/corrections`
+- `POST /admin/v1/{domain}/overrides`
+- `GET /admin/v1/control-plane/status`
+
+### 13.5 Public trust and registry route families
+- `GET /public/v1/registry/contracts`
+- `GET /public/v1/registry/wallets`
+- `GET /public/v1/transparency/reports`
+- `GET /public/v1/payout-cycles`
+- `GET /public/v1/platform/metadata`
+- `GET /public/v1/products/catalog`
+
+### 13.6 Interface contract rules
+For every route family or interface contract:
+- paths should be resource-oriented and noun-based where practical
+- paths should not expose raw internal mutation primitives to public callers
+- domain-owned mutations should be represented as business actions or explicit domain transitions
+- derived/public artifacts should be clearly distinct from canonical write paths
+- admin routes must not be reused as ordinary app routes
+- internal APIs must not be exposed publicly by accident or by proxy
+
+## 14. Request Rules
+### General request rules
+- every write-capable request must identify acting subject, scope, and target resource or business action
+- all mutation requests must be traceable to a domain-owned intent
+- request validation must occur before authorization-sensitive side effects
+- request fields must distinguish canonical identifiers, client correlation identifiers, and optional metadata
+
+### Scope rules
+Requests must make scope explicit where relevant:
+- account-scoped
+- workspace-scoped
+- product-scoped
+- payout-cycle-scoped
+- governance-action-scoped
+
+### Async request rules
+Long-running actions must use an acceptance model:
+- request accepted
+- returned stable request or job identifier
+- status retrievable through explicit status or result APIs
+
+### Business-action rule
+Public and first-party writes should express business intent, not raw internal mutation power.
+
+Examples:
+- allowed: request checkout, request product run, request wallet link, request workspace creation
+- not allowed as general public primitives: `issue_credits`, `adjust_ledger`, `publish_payout_cycle`, `advance_governance_state`
 
 ## 15. Response Rules
+### Response philosophy
+Responses must help clients and operators understand:
+- whether the operation succeeded, was accepted, conflicted, rejected, or failed
+- whether the returned resource is canonical, derived, or publication-oriented
+- which correlation and trace references apply
+- whether the result is final or still in progress
 
-### 15.1 Response philosophy
-
-Responses must make clear:
-
-- whether the call succeeded, was accepted, or failed
-- whether the returned object is canonical or derived
-- the applicable request, correlation, or operation reference
-- whether additional async processing remains pending
-- the applicable error class when unsuccessful
-
-### 15.2 Minimum response envelope semantics
-
-At minimum, FUZE APIs should be able to carry these concepts:
-
-- success or accepted outcome
-- data payload
-- error object when needed
-- correlation reference
+### Recommended response envelope concepts
+- `status`
+- `data`
+- `error`
+- `correlation_id`
+- `request_id` or `job_id` where relevant
 - pagination metadata where relevant
-- async operation metadata where relevant
+- version metadata where relevant
 
-### 15.3 Async response rule
+### Response-state classes
+- `success`
+- `accepted`
+- `previously_applied`
+- `conflict`
+- `rejected`
+- `error`
 
-Accepted async responses must not pretend to be final success. They should expose an operation reference and clear follow-up status semantics.
-
-### 15.4 Derived-read response rule
-
-Derived reads should declare themselves as derived where confusion with canonical truth is possible.
-
----
+### Important rule
+A response that acknowledges request acceptance must not masquerade as final completion if the underlying work is asynchronous.
 
 ## 16. Error Model
+FUZE uses a structured error model across API families.
 
-### 16.1 Error architecture principles
-
-Errors must communicate:
-
-- machine-readable code
-- human-readable message
-- category
-- retry guidance where appropriate
-- correlation reference
-- domain context where useful but safe
-
-### 16.2 Minimum error classes
-
-FUZE error classes must distinguish among:
-
+### Error classes
 - validation errors
 - authentication errors
 - authorization errors
-- object-level access errors
+- scope errors
 - state conflict errors
-- rate limit / quota errors
+- idempotency conflicts
+- rate limit or quota errors
 - dependency/provider errors
-- async job failure states
+- async execution failure status
 - governance or policy denial errors
 - internal platform errors
 
-### 16.3 Sensitive-domain error rule
+### Error payload expectations
+An error payload should communicate:
+- machine-readable error code
+- human-readable message
+- domain or subsystem context
+- retry suitability where appropriate
+- correlation or trace reference
+- optional field-level validation details
 
-Credits, billing, treasury, governance, and payout-sensitive APIs must return explicit, supportable error classifications and must not use vague generic failures where actionability matters.
-
-### 16.4 Public error rule
-
-Public APIs must avoid leaking internal implementation details while still preserving a predictable and supportable error model.
-
----
+### Architectural error rules
+- public errors must avoid leaking sensitive internals
+n- internal errors may include richer domain context, but still require consistency
+- admin errors must preserve reviewability for support and policy-sensitive workflows
+- economic and governance-sensitive APIs require especially clear conflict and denial semantics
 
 ## 17. Idempotency and Mutation Safety
+Idempotency in FUZE is business-level, not only transport-level.
 
-### 17.1 Canonical rule
+### Architecture rules
+- repeated submission of the same intended business action must apply at most once in business meaning
+- identical retries must resolve to stable outcomes or explicit conflict semantics
+- the stronger the economic or governance sensitivity, the stronger the idempotency requirement
+- idempotency references must be recorded in audit lineage for retriable write operations
 
-If the same business mutation is submitted more than once due to retry, replay, duplicate delivery, or transient failure, FUZE should apply it at most once in business meaning.
+### Operations requiring explicit idempotency treatment
+- account-creation flows where duplicate creation is possible
+- wallet-link confirmation flows
+- checkout or payment-linked business actions
+- async job submission
+- credits mutations
+- subscription transitions
+- payout publication and trust-sensitive publication actions
+- governance- or treasury-sensitive action requests
 
-### 17.2 When idempotency is required
-
-Idempotency is required for:
-
-- external payment-verification follow-through
-- Platform Credits issuance, reservation, spend, release, reversal, and adjustment
-- subscription and entitlement mutation where replay is possible
-- refund, reversal, or adjustment flows
-- payout-cycle publication and payout-sensitive transitions
-- governance or treasury-sensitive execution requests
-- inbound provider callbacks
-- accepted async operation submission where duplicate create semantics are dangerous
-
-### 17.3 Architecture-level mechanism
-
-FUZE should support an `Idempotency-Key` style request mechanism for non-idempotent HTTP mutation methods where retry safety matters, while domain-level storage determines the true business deduplication rules.
-
-### 17.4 Conflict rule
-
-A repeated key with the same business request should return the stable prior outcome where possible. A repeated key with a materially different payload should be treated as a conflict, not as a successful replay.
-
----
+### Mutation safety rules
+- no frontend may act as local owner of mutation truth
+- no read-model service may mutate canonical source truth silently
+- no product may create alternate balance or payout semantics outside approved platform boundaries
 
 ## 18. Versioning and Compatibility Rules
+### Architecture versioning principles
+- every externally consumed or cross-domain consumed contract should evolve deliberately
+- public APIs require stronger stability guarantees than internal interfaces
+- event and webhook payloads must preserve interpretability during evolution
+- published trust artifacts must preserve historical meaning when format changes
 
-### 18.1 Versioning philosophy
+### Versioning model
+At architecture level, FUZE supports:
+- path or surface-family versioning for public APIs, e.g. `/v1/...`
+- explicit contract versioning for events and webhooks
+- internal interface versioning when cross-service compatibility requires it
+- publication-version metadata for derived/public artifacts where format or interpretation evolves
 
-- Public APIs must use explicit and stable versioning.
-- Internal APIs still require change discipline even if their exact versioning mechanism differs.
-- Events and webhooks must follow compatibility discipline.
-- Breaking changes must not be introduced casually into broadly consumed surfaces.
-
-### 18.2 Preferred evolution pattern
-
-- add rather than break when possible
-- deprecate explicitly
-- preserve migration windows where needed
-- document semantic changes clearly
-- keep canonical ownership stable even when interface shape evolves
-
-### 18.3 Compatibility rule
-
-Versioning must protect continuity without freezing all internal evolution. The more external or trust-sensitive a surface is, the stronger its compatibility discipline must be.
-
----
+### Compatibility rules
+- breaking changes require explicit version transition
+- additive changes are preferred over disruptive mutation of existing semantics
+- deprecation must be explicit for public and cross-domain contracts
+- migration-sensitive domains must preserve lineage and interpretation across versions
 
 ## 19. Event Emission and Webhook Behavior
+### Event positioning
+Events are complementary to APIs, not replacements for them.
+- APIs initiate, query, or accept actions
+- events communicate meaningful accepted outcomes or state changes outward
+- audit records preserve review lineage
 
-### 19.1 Event-first coordination rule
+### Event rules
+- events must be produced by the owning domain or by an authorized domain-owned orchestration path
+- consumers may react, project, notify, or trigger follow-up work, but do not take ownership of original truth
+- internal event delivery should be assumed at-least-once
+- public webhooks are narrower and safer subsets of internal event surfaces
 
-FUZE should prefer event-driven coordination for important cross-domain side effects.
+### Architectural event families
+- domain events
+- integration events
+- system/operational events
+- public webhook events
 
-Examples:
-- payment verified -> credits issued
-- subscription renewed -> entitlements refreshed
-- credits spent -> product usage recorded
-- payout cycle funded -> payout ledger updated
-- governance action executed -> transparency update triggered
-
-### 19.2 Event ownership rule
-
-Events communicate meaningful outcomes from the owning domain outward. They do not transfer ownership of the underlying truth to downstream consumers.
-
-### 19.3 Webhook exposure rule
-
-External webhook contracts are permitted only for intentionally supported external outcomes and must not expose internal governance-, treasury-, or payout-sensitive control events by default.
-
-### 19.4 Delivery rule
-
-Webhook and event consumers must support replay safety, deduplication, retry handling, and version-aware consumption.
-
----
+### Webhook rules
+- every webhook must include stable event identity
+- webhook retries must not imply new business actions
+- webhook exposure must not leak internal control-plane state by default
 
 ## 20. Audit and Activity Requirements
+Every meaningful API mutation or privileged read family must have audit posture appropriate to its sensitivity.
 
-### 20.1 Auditability requirements
+### Must be auditable
+- account and workspace mutations
+- wallet-link mutations
+- credits and billing mutations
+- product job submissions where billable or policy-relevant
+- admin approvals, overrides, and corrections
+- payout, registry, transparency, and governance-sensitive publication actions
+- internal service commands affecting economic or trust-sensitive state
 
-Important API interactions must support:
+### Audit expectations
+Audit records should capture:
+- acting subject
+- acting scope
+- interface family
+- request identifier
+- idempotency identifier where applicable
+- target entity or business reference
+- outcome class
+- correlation/trace identifiers
+- resulting event linkage where applicable
 
-- correlation IDs
-- actor and scope traceability
-- request timestamps
-- result classification
-- idempotency references where relevant
-- workflow or operation references for async actions
-- durable audit generation for trust-sensitive actions
-
-### 20.2 Activity versus audit distinction
-
-- audit records are durable compliance/control traces
-- activity feeds are user-facing or operator-facing experience surfaces
-- API responses are not themselves audit or activity systems
-- events are not substitutes for full audit records
-
-### 20.3 Sensitive-domain requirement
-
-Credits, billing, treasury, governance, admin override, and payout-sensitive APIs must have stronger durable audit lineage than ordinary read APIs.
-
----
+Activity feeds may be user-facing or operator-facing, but they are not substitutes for canonical audit records.
 
 ## 21. Data Model and Database Schema View
+This section defines the minimum database-oriented architecture needed to support FUZE API behavior.
 
-This section provides the architecture-level relational blueprint needed to support API discipline in `fuze-backend-api`. Exact schema details belong in downstream domain specs.
+### Core architecture tables / entity families
+#### `api_request_log`
+Purpose:
+- store accepted or attempted API requests for traceability, rate analysis, and support diagnostics
 
-### 21.1 Core architecture tables
-
-#### `api_surfaces`
-- `api_surface_id` (PK, UUID)
-- `surface_name` (unique)
-- `surface_family` (enum: first_party, platform, product, internal, admin, public, webhook)
-- `owning_domain`
-- `visibility_class`
-- `status` (draft, active, deprecated, retired)
-- `version_reference`
-- `created_at`
-- `updated_at`
-
-#### `api_operations`
-- `api_operation_id` (PK, UUID)
-- `api_surface_id` (FK -> `api_surfaces.api_surface_id`)
-- `operation_name`
-- `http_method` (nullable for non-HTTP contracts)
-- `route_pattern` (nullable for non-HTTP contracts)
-- `operation_type` (read, mutate, async_accept, internal_command, internal_query, webhook_inbound, webhook_outbound)
-- `owning_domain`
-- `sensitivity_class`
-- `requires_idempotency`
-- `audit_class`
-- `status`
-- `created_at`
-- `updated_at`
-
-#### `request_lineage`
-- `request_id` (PK, UUID)
-- `correlation_id` (indexed)
-- `api_operation_id` (FK -> `api_operations.api_operation_id`)
+Key columns:
+- `api_request_id` PK
+- `surface_family`
+- `route_family`
+- `http_method`
 - `actor_type`
-- `actor_reference`
-- `workspace_id` (nullable)
-- `scope_type`
-- `scope_reference`
+- `actor_account_id` nullable FK
+- `workspace_id` nullable FK
+- `client_id` nullable FK
+- `request_correlation_id`
+- `idempotency_key` nullable
+- `request_status`
 - `received_at`
-- `completed_at` (nullable)
-- `response_status`
-- `error_code` (nullable)
+- `completed_at` nullable
 
-#### `idempotency_records`
-- `idempotency_record_id` (PK, UUID)
+Indexes:
+- `(surface_family, route_family, received_at)`
+- `(request_correlation_id)` unique where present
+- `(actor_account_id, received_at)`
+- `(idempotency_key, actor_account_id, workspace_id, route_family)` partial where idempotency applies
+
+#### `api_operation_reference`
+Purpose:
+- bind business actions and async requests to stable operation identity
+
+Key columns:
+- `operation_id` PK
+- `operation_type`
+- `surface_family`
 - `owning_domain`
-- `idempotency_key` (indexed)
-- `request_fingerprint`
-- `operation_name`
-- `actor_reference`
-- `scope_reference`
-- `first_request_id` (FK -> `request_lineage.request_id`)
-- `stored_outcome_reference`
-- `status`
-- `expires_at` (nullable)
+- `resource_type`
+- `resource_id` nullable
+- `job_id` nullable
+- `idempotency_scope_hash`
+- `operation_outcome`
 - `created_at`
+- `last_seen_at`
 
-**Constraints**
-- unique constraint on (`owning_domain`, `idempotency_key`)
-- request fingerprint mismatch with same key must raise conflict semantics
+Constraints:
+- unique business operation reference within scoped idempotency dimensions
 
-#### `async_operations`
-- `async_operation_id` (PK, UUID)
-- `request_id` (FK -> `request_lineage.request_id`)
-- `owning_domain`
-- `operation_name`
-- `status` (accepted, queued, executing, completed, failed, cancelled)
-- `accepted_at`
-- `started_at` (nullable)
-- `completed_at` (nullable)
-- `failed_at` (nullable)
-- `result_reference` (nullable)
-- `failure_code` (nullable)
-- `retry_count`
-- `workflow_reference` (nullable)
-- `job_reference` (nullable)
+#### `api_contract_registry`
+Purpose:
+- track approved contract families, route families, version, exposure class, and deprecation state
 
-#### `api_version_registry`
-- `api_version_registry_id` (PK, UUID)
-- `surface_name`
-- `version_reference`
-- `compatibility_class`
-- `effective_from`
-- `deprecation_announced_at` (nullable)
-- `sunset_at` (nullable)
-- `notes`
+Key columns:
+- `contract_registry_id` PK
+- `contract_name`
+- `surface_family`
+- `contract_version`
+- `exposure_class`
+- `status`
+- `introduced_at`
+- `deprecated_at` nullable
+- `superseded_by` nullable self FK
 
-### 21.2 Relationship model
+#### `api_error_catalog_entry`
+Purpose:
+- govern stable machine-readable error taxonomy across surface families
 
-- one `api_surface` has many `api_operations`
-- one `api_operation` has many `request_lineage` rows
-- one request may have zero or one `async_operations` records
-- one request may link to one `idempotency_record`
-- one surface may have many version records over time
+Key columns:
+- `error_code` PK
+- `error_class`
+- `default_http_status`
+- `surface_family`
+- `retry_hint`
+- `is_public_safe`
+- `description`
 
-### 21.3 Database design notes
+#### `api_webhook_endpoint`
+Purpose:
+- manage registered partner/public webhook endpoints where allowed
 
-- Keep `request_lineage` append-heavy and index on `correlation_id`, `actor_reference`, and `received_at`.
-- Keep `idempotency_records` domain-partitionable for high-volume mutation domains.
-- Do not store derived dashboard state as source-of-truth mutation lineage.
-- Product-domain schema extensions should reuse the architecture tables for request lineage, async coordination, and audit linkage rather than inventing isolated tracing models.
-- Strongly typed resource identifiers should be stable once issued and must not be replaced by presentation-layer aliases.
-- Calculated or summary fields should remain derived where possible rather than becoming shadow truth tables.
+Key columns:
+- `webhook_endpoint_id` PK
+- `owner_scope_type`
+- `owner_scope_id`
+- `subscription_status`
+- `delivery_secret_ref`
+- `target_url`
+- `created_at`
+- `disabled_at` nullable
 
----
+#### `api_webhook_delivery`
+Purpose:
+- preserve retry lineage and delivery status for emitted webhook events
+
+Key columns:
+- `delivery_id` PK
+- `webhook_endpoint_id` FK
+- `event_id`
+- `event_version`
+- `attempt_number`
+- `delivery_status`
+- `response_code` nullable
+- `scheduled_at`
+- `attempted_at` nullable
+- `completed_at` nullable
+
+### Schema rules
+- API architecture tables do not own core domain truth; they support contract governance, traceability, and safe execution.
+- Core business entities remain in domain-owned tables.
+- API support tables must preserve lineage to domain-owned entities through stable foreign references.
+- derived/public artifacts should be linked to source domain references and publication records rather than redefining business truth.
 
 ## 22. Architecture Diagram — Mermaid flowchart
-
 ```mermaid
-flowchart TD
-    A[External Clients / Public Consumers]
-    B[fuze-frontend-webapp]
-    C[fuze-frontend-admin]
-
-    subgraph API_SURFACES[API Surface Families]
-        D[Public APIs]
-        E[First-Party App APIs]
-        F[Admin / Control APIs]
-        G[Internal Service APIs]
-        H[Event / Webhook Interfaces]
+flowchart LR
+    subgraph Clients[Experience and External Clients]
+        WEB[fuze-frontend-webapp]
+        ADMIN[fuze-frontend-admin]
+        PARTNER[Partner or Public Client]
     end
 
-    subgraph PLATFORM_CORE[fuze-backend-api Platform Core]
-        I[Identity and Access Domain]
-        J[Workspace and Role Domain]
-        K[Wallet-Aware Domain]
-        L[Billing and Subscription Domain]
-        M[Platform Credits Domain]
-        N[AI Orchestration Domain]
-        O[Workflow and Automation Domain]
-        P[Audit and Activity Domain]
-        Q[Transparency and Reporting Coordination]
-        R[Registry Publication Coordination]
+    subgraph Edge[Edge and Interface Layer]
+        PUB[Public API Surface]
+        APP[Platform and Product App API Surface]
+        ADM[Admin Control API Surface]
+        INT[Internal Service API Surface]
+        EVT[Event and Webhook Interface]
     end
 
-    subgraph PRODUCT_DOMAINS[Product Domains]
-        S[QTB]
-        T[AIMM]
-        U[ZAGA]
-        V[AIE]
-        W[HerHelp]
-        X[Botmad]
-        Y[ToolGrid]
+    subgraph Core[fuze-backend-api Core Domains]
+        ID[Identity and Session]
+        WS[Workspace and Access]
+        BILL[Billing and Entitlements]
+        CRED[Platform Credits]
+        AI[AI and Workflow]
+        PROD[Product Domains]
+        AUDIT[Audit and Trace]
+        CTRL[Control Plane]
+        REPORT[Transparency and Reporting]
     end
 
-    subgraph ASYNC_RUNTIME[Async and Runtime Layers]
-        Z[Job Queue and Workers]
-        AA[Schedulers]
-        AB[Event Bus / Domain Events]
+    subgraph Async[Async and Integration]
+        JOBS[Queue Workers and Scheduler]
+        ADAPT[Integration and Chain Adapters]
     end
 
-    subgraph CHAIN_LAYER[Chain-Adjacent Integration]
-        AC[Ethereum Token Read]
-        AD[Base Credits Layer]
-        AE[Base Payout Execution Layer]
-        AF[Snapshot and Eligibility Pipeline]
-        AG[Contract Event Ingestion]
+    subgraph Chain[On-Chain Domains]
+        ETH[Ethereum Token Contracts]
+        BASEC[Base Credits Layer]
+        BASEP[Base Payout Layer]
     end
 
-    subgraph DERIVED_OUTPUTS[Derived / Public Trust Outputs]
-        AH[fuze-public-registry]
-        AI[Public Transparency Outputs]
-        AJ[Investor / Community Outputs]
+    subgraph PublicTrust[Public Trust Artifacts]
+        REG[fuze-public-registry]
     end
 
-    A --> D
-    B --> E
-    C --> F
-
-    D --> I
-    D --> J
-    D --> K
-    D --> L
-    D --> M
-    D --> Q
-    D --> R
-    D --> S
-    D --> T
-    D --> U
-    D --> V
-    D --> W
-    D --> X
-    D --> Y
-
-    E --> I
-    E --> J
-    E --> K
-    E --> L
-    E --> M
-    E --> N
-    E --> O
-    E --> S
-    E --> T
-    E --> U
-    E --> V
-    E --> W
-    E --> X
-    E --> Y
-
-    F --> I
-    F --> J
-    F --> L
-    F --> M
-    F --> O
-    F --> P
-    F --> Q
-    F --> R
-
-    G --> I
-    G --> J
-    G --> K
-    G --> L
-    G --> M
-    G --> N
-    G --> O
-    G --> P
-    G --> Q
-    G --> R
-    G --> S
-    G --> T
-    G --> U
-    G --> V
-    G --> W
-    G --> X
-    G --> Y
-
-    O --> Z
-    O --> AA
-    I --> AB
-    J --> AB
-    K --> AB
-    L --> AB
-    M --> AB
-    N --> AB
-    O --> AB
-    S --> AB
-    T --> AB
-    U --> AB
-    V --> AB
-    W --> AB
-    X --> AB
-    Y --> AB
-
-    G --> AC
-    G --> AD
-    G --> AE
-    G --> AF
-    G --> AG
-
-    Q --> AI
-    R --> AH
-    Q --> AJ
-
-    H --> AB
-    AG --> AB
+    WEB --> APP
+    ADMIN --> ADM
+    PARTNER --> PUB
+    PUB --> APP
+    APP --> ID
+    APP --> WS
+    APP --> BILL
+    APP --> CRED
+    APP --> AI
+    APP --> PROD
+    ADM --> CTRL
+    ADM --> AUDIT
+    INT --> ID
+    INT --> WS
+    INT --> BILL
+    INT --> CRED
+    INT --> AI
+    INT --> PROD
+    EVT --> JOBS
+    APP --> JOBS
+    PROD --> JOBS
+    BILL --> ADAPT
+    CRED --> ADAPT
+    REPORT --> ADAPT
+    ADAPT --> ETH
+    ADAPT --> BASEC
+    ADAPT --> BASEP
+    AUDIT --> REPORT
+    REPORT --> REG
 ```
-
----
 
 ## 23. Data Design — Mermaid Diagram
-
 ```mermaid
 erDiagram
-    API_SURFACES ||--o{ API_OPERATIONS : contains
-    API_OPERATIONS ||--o{ REQUEST_LINEAGE : records
-    REQUEST_LINEAGE ||--o| ASYNC_OPERATIONS : may_create
-    REQUEST_LINEAGE ||--o| IDEMPOTENCY_RECORDS : may_link
-    API_SURFACES ||--o{ API_VERSION_REGISTRY : versions
+    API_REQUEST_LOG ||--o{ API_OPERATION_REFERENCE : traces
+    API_CONTRACT_REGISTRY ||--o{ API_REQUEST_LOG : governs
+    API_ERROR_CATALOG_ENTRY ||--o{ API_REQUEST_LOG : classifies
+    API_WEBHOOK_ENDPOINT ||--o{ API_WEBHOOK_DELIVERY : receives
+    API_OPERATION_REFERENCE ||--o{ API_WEBHOOK_DELIVERY : emits
 
-    API_SURFACES {
-        uuid api_surface_id PK
-        string surface_name UK
+    API_REQUEST_LOG {
+        uuid api_request_id PK
+        string surface_family
+        string route_family
+        string http_method
+        string actor_type
+        uuid actor_account_id FK
+        uuid workspace_id FK
+        string request_correlation_id
+        string idempotency_key
+        string request_status
+        timestamptz received_at
+        timestamptz completed_at
+    }
+
+    API_OPERATION_REFERENCE {
+        uuid operation_id PK
+        string operation_type
         string surface_family
         string owning_domain
-        string visibility_class
+        string resource_type
+        uuid resource_id
+        uuid job_id
+        string idempotency_scope_hash
+        string operation_outcome
+        timestamptz created_at
+        timestamptz last_seen_at
+    }
+
+    API_CONTRACT_REGISTRY {
+        uuid contract_registry_id PK
+        string contract_name
+        string surface_family
+        string contract_version
+        string exposure_class
         string status
-        string version_reference
-        timestamp created_at
-        timestamp updated_at
+        timestamptz introduced_at
+        timestamptz deprecated_at
+        uuid superseded_by FK
     }
 
-    API_OPERATIONS {
-        uuid api_operation_id PK
-        uuid api_surface_id FK
-        string operation_name
-        string http_method
-        string route_pattern
-        string operation_type
-        string owning_domain
-        string sensitivity_class
-        boolean requires_idempotency
-        string audit_class
-        string status
-        timestamp created_at
-        timestamp updated_at
+    API_ERROR_CATALOG_ENTRY {
+        string error_code PK
+        string error_class
+        int default_http_status
+        string surface_family
+        string retry_hint
+        boolean is_public_safe
+        string description
     }
 
-    REQUEST_LINEAGE {
-        uuid request_id PK
-        string correlation_id IDX
-        uuid api_operation_id FK
-        string actor_type
-        string actor_reference
-        uuid workspace_id
-        string scope_type
-        string scope_reference
-        timestamp received_at
-        timestamp completed_at
-        string response_status
-        string error_code
+    API_WEBHOOK_ENDPOINT {
+        uuid webhook_endpoint_id PK
+        string owner_scope_type
+        uuid owner_scope_id
+        string subscription_status
+        string delivery_secret_ref
+        string target_url
+        timestamptz created_at
+        timestamptz disabled_at
     }
 
-    IDEMPOTENCY_RECORDS {
-        uuid idempotency_record_id PK
-        string owning_domain
-        string idempotency_key UK
-        string request_fingerprint
-        string operation_name
-        string actor_reference
-        string scope_reference
-        uuid first_request_id FK
-        string stored_outcome_reference
-        string status
-        timestamp expires_at
-        timestamp created_at
-    }
-
-    ASYNC_OPERATIONS {
-        uuid async_operation_id PK
-        uuid request_id FK
-        string owning_domain
-        string operation_name
-        string status
-        timestamp accepted_at
-        timestamp started_at
-        timestamp completed_at
-        timestamp failed_at
-        string result_reference
-        string failure_code
-        int retry_count
-        string workflow_reference
-        string job_reference
-    }
-
-    API_VERSION_REGISTRY {
-        uuid api_version_registry_id PK
-        string surface_name
-        string version_reference
-        string compatibility_class
-        timestamp effective_from
-        timestamp deprecation_announced_at
-        timestamp sunset_at
-        string notes
+    API_WEBHOOK_DELIVERY {
+        uuid delivery_id PK
+        uuid webhook_endpoint_id FK
+        string event_id
+        string event_version
+        int attempt_number
+        string delivery_status
+        int response_code
+        timestamptz scheduled_at
+        timestamptz attempted_at
+        timestamptz completed_at
     }
 ```
 
----
-
 ## 24. Flow View
+### Happy path
+1. Client or service calls the appropriate API surface family.
+2. Edge layer validates request shape, correlation metadata, and surface eligibility.
+3. Authn/authz and scope checks are performed.
+4. Owning domain processes the business action or accepts async work.
+5. Canonical mutation occurs only in the owning domain or contract domain.
+6. Response indicates final success or accepted state.
+7. Audit records and downstream events are emitted where relevant.
+8. Derived/public artifacts update through approved reporting or publication flows.
 
-### 24.1 Happy path — synchronous canonical mutation
+### Alternate path
+1. A client uses a public surface to initiate a valid business action.
+2. The request is translated to an owning-domain command rather than directly mutating internal subsystems.
+3. The domain accepts the action asynchronously and returns a stable operation reference.
+4. The client later polls or subscribes for status and retrieves final artifacts from result APIs.
 
-1. Client calls the owning domain API.
-2. The API authenticates the caller.
-3. The API authorizes the caller in explicit scope.
-4. The API validates payload and current state.
-5. If mutation-capable, the API checks idempotency rules.
-6. The owning domain performs the canonical mutation.
-7. The API records request lineage and audit linkage as required.
-8. The owning domain emits a domain event if downstream consequences exist.
-9. The API returns a success response with canonical identifiers and a correlation reference.
+### Failure and recovery path
+1. A request times out or a dependency fails.
+2. The caller retries with the same idempotency identity where required.
+3. The owning domain resolves whether the action is previously applied, still in progress, or safely retryable.
+4. Duplicate business mutation is prevented.
+5. Failures are surfaced through structured error or status semantics.
+6. Operators use admin/control-plane APIs for review, correction, or replay only through governed paths.
 
-### 24.2 Happy path — asynchronous accepted action
+### Retry behavior
+- naturally idempotent reads may be retried freely
+- retry-sensitive writes require business-level idempotency protection
+- async job submissions should resolve to the same logical operation when the same business request is retried
+- event and webhook consumers must assume duplicate delivery is possible
 
-1. Client submits a long-running action.
-2. The API authenticates, authorizes, validates, and applies idempotency rules.
-3. The API creates a durable accepted operation record.
-4. The API enqueues a workflow or job reference.
-5. The API returns an accepted response with an operation reference.
-6. Workers execute downstream work.
-7. A status API or event stream reflects progress.
-8. The final result becomes available through explicit result or status endpoints.
-
-### 24.3 Alternate flow — aggregated read
-
-1. Client requests dashboard or summary view.
-2. The read API composes from canonical or derived sources.
-3. The response is labeled as canonical or derived as appropriate.
-4. No domain truth is mutated.
-5. No local frontend correction is allowed.
-
-### 24.4 Failure flow — dependency failure during accepted async work
-
-1. Request is accepted successfully.
-2. Worker begins execution.
-3. External provider or internal dependency fails.
-4. Worker records failure state and retry lineage.
-5. Operation remains observable as failed or retrying.
-6. Canonical mutation is not silently duplicated.
-7. Client or operator can inspect the terminal failure state and next permitted action.
-
-### 24.5 Retry / replay flow
-
-1. Client retries a mutation with the same idempotency key after timeout.
-2. The API compares the owning-domain idempotency record.
-3. If the request fingerprint matches, the prior stable outcome is returned.
-4. If the fingerprint differs, a conflict response is returned.
-5. Duplicate mutation is prevented.
-
-### 24.6 Admin override / review flow
-
-1. A privileged operator calls the admin/control API.
-2. The API authenticates and validates elevated scope.
-3. The API checks role and policy restrictions.
-4. A narrow explicit action is executed, not a generic freeform mutation.
-5. Durable audit lineage is required.
-6. Downstream domain consequences flow through explicit events or orchestration.
-
-### 24.7 Cross-domain side-effect flow
-
-1. The owning domain commits a canonical change.
-2. The domain emits an event.
-3. A subscriber domain reacts through event-driven coordination or explicit internal API.
-4. The subscriber updates only its own canonical entities.
-5. Cross-domain write shortcuts are not allowed.
-
----
+### Admin override flow
+- admin surfaces may initiate correction or override requests
+- the backend control-plane domain evaluates policy and authorization
+- corrections produce auditable records and, where necessary, compensating domain actions rather than silent truth rewrites
 
 ## 25. Data Flows — Mermaid sequenceDiagram
-
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Client
-    participant API as API Surface
-    participant Domain as Owning Domain
-    participant Idem as Idempotency Store
-    participant Audit as Audit Domain
-    participant Bus as Event Bus
-    participant Worker as Worker
-    participant Status as Status API
+    participant C as Client or Service
+    participant E as API Surface
+    participant A as Auth and Scope
+    participant D as Owning Domain
+    participant Q as Async Worker Layer
+    participant X as Integration or Chain Adapter
+    participant P as Public Registry or Derived Surface
+    participant U as Audit Layer
 
-    Client->>API: Mutation or async request
-    API->>Domain: Authenticate and authorize in scope
-    Domain-->>API: Scope validated
+    C->>E: Submit request
+    E->>A: Authenticate and authorize
+    A-->>E: Scope decision
+    E->>D: Domain-owned command or query
 
-    alt Mutation requires idempotency
-        API->>Idem: Check key and request fingerprint
-        alt Matching previous request
-            Idem-->>API: Stable prior outcome
-            API-->>Client: Return prior outcome
-        else New or safe-to-apply request
-            Idem-->>API: Proceed
-            API->>Domain: Execute canonical mutation
-            Domain->>Audit: Record durable audit linkage
-            Domain->>Bus: Emit domain event
-            Domain-->>API: Success result
-            API-->>Client: Success with correlation reference
-        else Key reused with different fingerprint
-            Idem-->>API: Conflict
-            API-->>Client: Conflict response
-        end
-    else Long-running async request
-        API->>Domain: Accept async business action
-        Domain->>Audit: Record accepted action
-        Domain->>Bus: Emit accepted / queued event
-        Domain-->>API: Operation reference
-        API-->>Client: Accepted with operation reference
-        Bus->>Worker: Dispatch async work
-        Worker->>Domain: Execute workflow step(s)
-        alt Completed
-            Domain->>Bus: Emit completed event
-            Worker->>Status: Publish terminal status
-        else Failed and retryable
-            Worker->>Status: Publish retrying / failed status
-            Worker->>Bus: Emit retry or failure event
-        end
+    alt Synchronous final mutation
+        D->>U: Record audit lineage
+        D-->>E: Final outcome
+        E-->>C: Success or conflict response
+    else Accepted async action
+        D->>Q: Enqueue durable work
+        D->>U: Record acceptance and references
+        D-->>E: Accepted with operation or job id
+        E-->>C: Accepted response
+        Q->>D: Execute work
+        D->>X: Optional chain or provider interaction
+        D->>U: Record completion or failure
+        D->>P: Publish derived artifact when allowed
     end
 ```
 
----
-
 ## 26. Security and Risk Controls
-
-### 26.1 Core security principles
-
-- least privilege
-- explicit scope-aware authorization
-- strong separation between public and internal surfaces
-- sensitive-path hardening for Platform Credits, billing, treasury, governance, and payout
-- abuse resistance through validation, rate limiting, and replay protection
-- inventory and contract management for public APIs
-
-### 26.2 Architecture-level controls
-
-- broken object-level authorization must be addressed at the operation level
-- function-level authorization must distinguish ordinary user actions from privileged control actions
-- property-level exposure must be governed in read responses, not left to ad hoc frontend filtering
-- public APIs must have stronger external inventory discipline than internal APIs
-- unsafe consumption of external callbacks and provider APIs must be mediated through explicit inbound interface contracts
-
-### 26.3 Sensitive-domain hardening
-
-The following surfaces require tighter controls than ordinary product reads:
-
-- Platform Credits mutation
-- billing-state mutation
-- refund and reversal paths
-- governance and foundation operations
-- treasury and vault actions
-- payout-cycle preparation and publication
-- public transparency publication controls
-- admin override functions
-
----
+- public exposure must be deliberate, narrow, and supportable
+- internal APIs require mutual trust establishment plus least-privilege authorization
+- admin/control-plane APIs require stronger authorization and audit posture than ordinary product APIs
+- governance-, treasury-, credits-, billing-, and payout-sensitive interfaces require explicit policy gating and stronger mutation safety
+- API error payloads must not leak sensitive internals to public clients
+- webhook deliveries must use verifiable signing or shared-secret verification
+- chain-adjacent APIs must preserve the distinction between chain truth, off-chain policy, and derived reporting
+- surface separation must prevent accidental promotion of internal or admin routes into public contracts
 
 ## 27. Operational Considerations
-
-### 27.1 Degraded mode philosophy
-
-FUZE APIs should support degraded mode without redefining truth.
-
-Examples:
-- AI orchestration unavailable while identity and billing remain healthy
-- reporting or transparency publication delayed while canonical economic truth remains intact
-- product-specific long-running actions delayed while accepted request lineage remains visible
-- public-read surfaces degraded without changing internal canonical state
-
-### 27.2 Observability requirements
-
-Operational monitoring should support:
-
-- request correlation
-- surface-family classification
-- owning-domain attribution
-- async operation visibility
-- error-class aggregation
-- retry and replay visibility
-- public versus internal traffic segmentation
-
-### 27.3 Runtime placement rule
-
-- synchronous request handling belongs in request/response layers
-- orchestration belongs in orchestration layers
-- heavy or retry-capable work belongs in async execution layers
-- chain interactions belong in on-chain integration layers
-- reporting and transparency publication belong in derived/reporting layers
-
----
+- topology may begin as a modular backend architecture but ownership rules must remain stable
+- async workloads should be separated from latency-sensitive request paths where heavy processing, retries, or reconciliation are required
+- contract registry and error catalog governance should be maintained as explicit artifacts
+- request tracing and correlation IDs are required for cross-domain supportability
+- public and internal rate limits may differ by surface family
+- platform operators need visibility into accepted, replayed, conflicted, and failed mutation outcomes
+- historical contract and publication versions must remain interpretable for audit and support
 
 ## 28. Acceptance Criteria
-
-1. The API architecture explicitly distinguishes first-party, platform, product, internal, admin, public, and event-driven interface families.
-2. The specification makes clear that canonical writes must terminate in the owning backend domain.
-3. The specification explicitly prevents aggregated read surfaces from becoming hidden write owners.
-4. The specification preserves separation between FUZE token, Platform Credits, stablecoin payout execution, treasury, governance, and transparency layers.
-5. The specification defines when synchronous versus asynchronous APIs should be used.
-6. The specification requires event-first coordination for important cross-domain side effects.
-7. The specification defines minimum response, error, idempotency, and versioning principles.
-8. The specification includes a concrete architecture-level database schema view with identifiable tables, keys, and constraints.
-9. The specification includes a Mermaid architecture diagram that matches the stated platform ownership and surface model.
-10. The specification includes a Mermaid data-design diagram that matches the stated schema view.
-11. The specification includes a flow view and Mermaid sequence diagram covering happy path, alternate flow, failure flow, retry flow, and admin override or review concepts.
-12. The specification aligns with the FUZE repository model and assigns primary API ownership to `fuze-backend-api`.
-13. The specification includes implementation notes for first-party frontend consumers and future contract derivation.
-14. The specification is usable as a governing source-of-truth file for downstream domain API specs and OpenAPI / AsyncAPI work.
-
----
+1. Every FUZE API can be classified into one surface family defined in this document.
+2. Every write-capable API maps to a single canonical owning domain.
+3. No frontend surface is treated as durable truth owner.
+4. Public APIs are narrower than internal and admin APIs in mutation authority.
+5. Derived/public read APIs are explicitly distinguishable from canonical write paths.
+6. Async operations use an accepted-state pattern with stable operation or job identifiers.
+7. Governance-, treasury-, credits-, billing-, and payout-sensitive APIs require stronger controls than routine runtime APIs.
+8. Event-driven interfaces are positioned as outcome propagation mechanisms, not hidden write paths.
+9. API contracts preserve the separation between FUZE token, Platform Credits, stablecoin payout execution, treasury, governance, and transparency artifacts.
+10. Architecture-level response, error, versioning, and idempotency rules are consistent across later domain API specs.
+11. The specification is implementable in `fuze-backend-api` and consumable by both frontend repos without shifting truth ownership into the UI.
+12. The file is derivation-ready for OpenAPI, AsyncAPI, and future SDK package planning.
 
 ## 29. Test Cases
+### Positive cases
+- classify a new workspace mutation API as a platform application API owned by the workspace domain
+- classify a product analysis submission API as a product-domain API with async acceptance semantics
+- classify a public registry lookup endpoint as a public read API exposing a canonical public artifact or derived public model
 
-### 29.1 Positive cases
+### Negative cases
+- reject a design where a dashboard aggregation API directly mutates subscription truth
+- reject a design where a product invents local credits balance semantics outside the platform credits domain
+- reject a design where a public API exposes raw payout entitlement mutation
 
-1. **Canonical mutation route uses owning domain**
-   - Given a Platform Credits reservation request
-   - When a first-party app calls the Platform Credits mutation API
-   - Then the mutation is processed by the credits-owning backend domain
-   - And no product frontend owns the mutation logic
+### Authorization cases
+- authenticated account can access its own scoped profile and credits summaries
+- workspace admin can trigger permitted workspace-scoped operations
+- ordinary user cannot invoke admin/control-plane routes
+- internal service without domain-specific authorization cannot mutate another domain’s truth through undocumented shortcuts
 
-2. **Accepted async operation returns durable reference**
-   - Given a long-running HerHelp generation request
-   - When the request is accepted
-   - Then an async operation reference is returned
-   - And the result is retrievable through status/result flows
+### Idempotency cases
+- repeated async job submission with same business identity returns the same logical operation reference
+- repeated payment-linked issuance command does not create duplicate credits mutation
+- repeated payout publication request resolves to previously applied or explicit conflict outcome
 
-3. **Derived read remains read-only**
-   - Given a dashboard summary view
-   - When the aggregated read endpoint composes billing and Platform Credits state
-   - Then the response presents derived data without mutating canonical billing or credits truth
+### Concurrency / replay cases
+- simultaneous conflicting state transitions surface as conflict, not silent double mutation
+- duplicate event delivery does not create duplicate downstream publication artifacts
+- duplicate webhook retry retains same event identity and distinct delivery-attempt lineage
 
-### 29.2 Negative cases
+### Reconciliation / ledger integrity cases
+- reporting artifact generation does not redefine canonical billing, credits, or payout truth
+- public registry publication references canonical contract and wallet sources without becoming chain-state owner
 
-4. **Cross-domain convenience write is rejected**
-   - Given a product domain attempts to mutate billing truth directly
-   - When it bypasses the billing-owning API
-   - Then the architecture is considered violated and the design fails review
-
-5. **Frontend-owned truth is rejected**
-   - Given `fuze-frontend-webapp` attempts to resolve credits conflicts locally
-   - When its behavior diverges from backend truth
-   - Then the architecture is considered invalid
-
-6. **Generic sensitive mutation endpoint is rejected**
-   - Given an admin API proposes a generic treasury action endpoint without narrow action typing
-   - Then the design fails review as too broad for a trust-sensitive domain
-
-### 29.3 Authorization cases
-
-7. **Scope-aware authorization required**
-   - Given a user belongs to one workspace only
-   - When they attempt a workspace-scoped mutation in another workspace
-   - Then the request is denied with an authorization error
-
-8. **Privileged override requires stronger control**
-   - Given an operator attempts a payout-related override
-   - When their role lacks payout authority
-   - Then the action is denied and logged
-
-### 29.4 Idempotency cases
-
-9. **Repeat with same idempotency key returns stable prior outcome**
-   - Given a retry of a Platform Credits reservation mutation with the same key and identical payload
-   - Then the same business outcome is returned without duplicate mutation
-
-10. **Repeat with same key but different payload conflicts**
-   - Given a retry with reused idempotency key and a changed payload
-   - Then the API returns a conflict response and rejects the second mutation
-
-### 29.5 Concurrency / replay cases
-
-11. **Inbound provider callback replay is safe**
-   - Given an external payment verification callback is replayed
-   - When the same event is received twice
-   - Then duplicate Platform Credits issuance does not occur
-
-12. **Async retry does not create second canonical result**
-   - Given an async operation experiences worker retry
-   - Then execution lineage is visible and the canonical business action is still applied at most once
-
-### 29.6 Event / webhook cases
-
-13. **Owning domain emits event after canonical mutation**
-   - Given a subscription renewal changes entitlement truth
-   - Then the billing-owning domain emits the downstream event
-   - And downstream consumers do not become owners of billing truth
-
-14. **Public webhook excludes internal-only controls**
-   - Given a public webhook contract is proposed for governance control events
-   - Then the proposal is rejected unless explicitly approved as a safe external surface
-
-### 29.7 Reconciliation / ledger integrity cases
-
-15. **Reporting lag does not redefine economic truth**
-   - Given a transparency publication job is delayed
-   - Then the canonical payout or Platform Credits truth remains unchanged
-   - And public reporting reflects delayed publication rather than rewriting truth
-
-### 29.8 Diagram consistency cases
-
-16. **Architecture Mermaid matches prose**
-   - Given the architecture diagram
-   - When reviewed against the architecture and ownership sections
-   - Then every major node and relationship used in the diagram is supported by the prose
-
-17. **Data Design Mermaid matches schema**
-   - Given the ER diagram
-   - When reviewed against the schema section
-   - Then every entity and relationship in the diagram exists in the schema prose
-   - And no additional unsupported entities appear
-
-18. **Sequence diagram matches flow view**
-   - Given the sequence diagram
-   - When reviewed against the flow section
-   - Then the submit, idempotency, async, audit, event, and retry behaviors remain consistent
-
----
+### Event and webhook cases
+- domain event is emitted only after owning-domain acceptance or state change
+- public webhook exposure is narrower than internal event production and preserves retry-safe identity
 
 ## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact OpenAPI envelope schema is deferred to downstream contract files.
-2. Exact auth token format and service credential mechanism are deferred to auth-specific API and security specifications.
-3. Exact pagination, filtering, and search conventions are deferred to shared contract design.
-4. Exact AsyncAPI event naming registry is deferred to event/webhook contract files.
-5. Exact route inventory by domain is deferred to downstream domain API specs.
-6. Exact public quota and monetization model for public APIs is deferred.
-7. Exact internal transport mix beyond HTTP-style request/response and event-driven coordination is deferred to runtime and implementation choices.
-
----
+1. Whether FUZE will standardize one exact response envelope across all surface families or allow bounded family-specific envelopes with shared semantics.
+2. Whether internal service APIs will remain HTTP-first, hybrid, or partially gateway-mediated in implementation.
+3. Whether path-based versioning will be used for all public APIs or whether some partner surfaces will use header-based or contract-metadata versioning.
+4. Whether some first-party app route families will intentionally remain private and not graduate into public contract families.
+5. Whether all public trust surfaces will be served directly from `fuze-backend-api` or whether some will be materialized and served through `fuze-public-registry` infrastructure.
 
 ## 31. Implementation Notes for `fuze-backend-api`
-
-### 31.1 Repository placement
-
-`fuze-backend-api` is the primary implementation owner of this specification.
-
-### 31.2 Required backend structure implications
-
-The backend should preserve explicit separation among:
-
-- request/response entrypoints
-- platform domains
-- product domains
-- orchestration
-- async execution
-- chain integration
-- reporting and transparency publication coordination
-- admin/control entrypoints
-
-### 31.3 Required backend behaviors
-
-- publish domain-owned APIs only from the owning modules
-- centralize auth, correlation, error envelope, and idempotency middleware where appropriate
-- keep domain mutation semantics in domain modules, not generic controllers
-- support accepted async operation patterns uniformly
-- emit events from owning domains after canonical mutation
-- preserve audit linkage for sensitive actions
-- keep public, admin, and internal route families physically and logically separated
-
----
+- treat this file as the top-level API boundary and surface-family contract for the backend
+- implement route families by owning domain, not by UI screen grouping
+- keep admin controllers and public controllers physically and logically separated
+- maintain shared correlation, audit, error, and idempotency middleware or modules without centralizing business truth away from domains
+- expose internal commands and queries through explicit contracts rather than private database coupling
+- isolate chain-adjacent adapters from ordinary product or app controllers
+- maintain a contract registry and error catalog as governed backend artifacts
 
 ## 32. Frontend Consumption Notes
+### For `fuze-frontend-webapp`
+- consume only public and first-party app-facing routes intended for user or workspace interaction
+- never treat cached UI state as canonical truth
+- rely on accepted-state plus polling or status retrieval patterns for async work
+- avoid hidden assumptions that first-party app routes are automatically public contracts
 
-### 32.1 `fuze-frontend-webapp`
-
-The webapp may consume:
-
-- first-party application APIs
-- approved public-read APIs where useful
-- product-domain APIs
-- async status/result APIs
-
-The webapp must **not**:
-- own canonical mutation logic
-- reconcile backend truth locally as authoritative truth
-- call internal service APIs directly
-- access privileged admin/control APIs
-
-### 32.2 `fuze-frontend-admin`
-
-The admin frontend may consume:
-
-- admin/control APIs
-- privileged operational read models
-- support and review endpoints
-- narrow explicit override endpoints
-
-The admin frontend must **not**:
-- become the owner of policy truth
-- become the owner of payout truth
-- become the owner of ledger truth
-- bypass backend audit and authorization logic
-
----
+### For `fuze-frontend-admin`
+- consume only admin/control-plane and authorized reporting interfaces appropriate to privileged workflows
+- do not implement business mutation locally
+- corrections, overrides, and approvals must be explicit backend-owned actions with auditable outcomes
+- admin UX may present richer operational detail, but must still respect canonical ownership boundaries
 
 ## 33. Contract Derivation Notes
+### OpenAPI / AsyncAPI
+- derive separate machine-readable contracts for public, internal, admin, and product surface families rather than collapsing them into one undifferentiated file
+- keep shared schemas, error catalog entries, idempotency semantics, and version markers consistent across derived contracts
+- represent async acceptance, status retrieval, and final artifact fetch patterns explicitly
+- represent event and webhook contracts separately via AsyncAPI or equivalent event contract artifacts
 
-### 33.1 OpenAPI / AsyncAPI derivation
-
-This specification should drive the creation of:
-
-- `public.openapi.yaml`
-- `internal-platform.openapi.yaml`
-- `admin-control-plane.openapi.yaml`
-- product-specific OpenAPI files
-- `platform-events.asyncapi.yaml`
-- `partner-webhooks.asyncapi.yaml`
-- shared error and schema registries
-
-### 33.2 Derivation rule
-
-Narrative API architecture comes first. Machine-readable contracts derive from it. Implementation derives from the contracts. SDKs derive later from the approved contracts.
-
-### 33.3 Future `fuze-sdk`
-
-Future SDK packages must derive from approved public or partner-safe contracts only. Internal and admin contracts should not be treated as default SDK surfaces unless explicitly approved.
-
----
-
-## Closing Summary
-
-The FUZE API architecture is the boundary-enforcement and capability-exposure layer of a multi-product, transparency-first platform ecosystem. It aligns writes with canonical ownership, distinguishes first-party, platform, product, internal, public, admin, and event-driven surfaces, treats asynchronous work as first-class where necessary, and applies stronger control discipline to Platform Credits, billing, governance, treasury, and payout-sensitive domains. By treating APIs as architecture rather than only transport, FUZE creates a durable implementation foundation for downstream domain API specifications, machine-readable contracts, and long-term platform scale.
+### Future `fuze-sdk`
+- derive SDK packages from approved public and partner-facing contracts only
+- do not let SDK ergonomics redefine API ownership or business semantics
+- separate shared platform SDK modules from product-specific SDK modules
+- preserve stable names for route families, error codes, operation references, and event identities to support reliable SDK generation
