@@ -1,680 +1,854 @@
-# WALLET_AWARE_USER_API_SPEC
+# WALLET_AWARE_USER_API_SPEC.md
 
-## 1. Title
+## Document Metadata
 
-**WALLET_AWARE_USER_API_SPEC.md**
-
----
-
-## 2. Document Metadata
-
-- **Document Name:** WALLET_AWARE_USER_API_SPEC.md
-- **API Classification:** public, internal, admin, derived-public, event-driven, chain-adjacent
-- **Owning Domain:** Wallet-Aware User Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** wallet-aware account linkage, verification, recognition, and holder-context stores in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for wallet linking, wallet verification, wallet-aware recognition, holder-context resolution, and user-facing wallet-bound participation behavior across the FUZE ecosystem
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE wallet-aware user operations. It translates the governing FUZE platform boundary, identity, auth, workspace, role/access, chain architecture, transparency, and API architecture rules into an implementation-ready API contract.
-
-This API exists because FUZE is Web3-aware but not wallet-only. A user may authenticate through ordinary linked login methods such as email/password, Google, or Telegram, while separately linking one or more wallets that enrich participation context, holder recognition, selected privileges, and payout-related visibility where policy allows. Wallet awareness must therefore be integrated without confusing wallet identity with canonical account identity.
-
-Accordingly, this specification defines how wallets are linked and verified, how wallet links are listed and removed, how holder-aware context is resolved for products and user-facing surfaces, how chain-aware references remain explicit, and how wallet-aware behavior stays consistent with the required separation between FUZE token, Platform Credits, stablecoin profit participation, treasury, governance, and account identity.
-
----
-
-## 4. Scope
-
-This specification covers:
-
-- wallet link initiation and verification APIs
-- wallet unlink and wallet-status APIs
-- wallet-aware account context and holder-summary APIs
-- scoped wallet-aware reads for first-party clients
-- internal service APIs for wallet-context and holder-context resolution
-- admin/control-plane APIs for correction, disablement, and conflict remediation
-- event emission requirements for wallet-aware lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
-
-This specification does **not** redefine:
-
-- canonical account identity or authentication session behavior
-- on-chain wallet ownership truth itself
-- Ethereum token contract logic
-- Base Platform Credits ledger logic
-- stablecoin payout execution logic
-- snapshot and eligibility pipeline rules in full detail
-- public contract registry publication rules in full detail
-- product-specific business logic beyond wallet-aware participation inputs
-
-Those remain governed by their own source-of-truth specifications.
+- **Document Name:** `WALLET_AWARE_USER_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / Production-grade interface-contract specification
+- **Status:** Draft for canonical API SPEC v2 approval
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-24
+- **Last Updated:** 2026-04-24
+- **Reviewed On:** 2026-04-24
+- **Document Owner:** FUZE Platform Wallet-Aware User Domain
+- **Approval Authority:** FUZE Platform Architecture and Governance Authority
+- **Review Cadence:** Quarterly or upon material change to wallet-linking, identity/account semantics, provider-link semantics, chain-boundary posture, eligibility/payout integration, public-registry exposure, security controls, or wallet-aware API route families
+- **Governing Layer:** API contract layer derived from refined system semantics
+- **Parent Registry:** `API_SPEC_INDEX.md` and FUZE API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend engineering, frontend engineering, API design, security engineering, audit, support operations, product engineering, chain-adjacent services, eligibility/payout systems, public-registry systems, reporting systems, SDK/OpenAPI authors, implementation-contract authors
+- **Primary Purpose:** Define the production-grade API contract for wallet-aware user operations: wallet linking, proof verification, wallet lifecycle, wallet-aware account context, holder-aware derived context, conflict handling, public-safe exposure, events, admin correction, and downstream contract derivation without redefining identity, session, authorization, chain, payout, credits, registry, or reporting truth.
+- **Primary Upstream References:** `WALLET_AWARE_USER_SPEC.md`; `IDENTITY_AND_ACCOUNT_SPEC.md`; `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md`; `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`; `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`; `FUZE_PROVIDER_RESOLUTION_AND_LINKING_SPEC.md`; `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`; `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`; `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`; `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`; `WORKSPACE_AND_ORGANIZATION_SPEC.md`; `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`; `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`; `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`; `API_ARCHITECTURE_SPEC.md`; `PUBLIC_API_SPEC.md`; `INTERNAL_SERVICE_API_SPEC.md`; `EVENT_MODEL_AND_WEBHOOK_SPEC.md`; `IDEMPOTENCY_AND_VERSIONING_SPEC.md`; `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`; `AUDIT_LOG_AND_ACTIVITY_SPEC.md`; `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- **Primary Downstream Dependents:** `ACCOUNT_ACCESS_AND_SESSION_CANONICAL_API_SPEC.md`; `PROVIDER_RESOLUTION_AND_LINKING_API_SPEC.md`; `SESSION_LIFECYCLE_AND_SECURITY_API_SPEC.md`; `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_API_SPEC.md`; `PROFIT_PARTICIPATION_API_SPEC.md`; `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md`; `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md`; `PUBLIC_CHAIN_REFERENCE_API_SPEC.md`; product integration API specs; wallet-aware implementation contracts; OpenAPI and AsyncAPI artifacts; SDK contracts; admin/control-plane tools; audit and reporting implementation layers
+- **API Surface Families Covered:** First-party application APIs; internal service APIs; admin/control-plane APIs; event/async APIs; reporting/read-model APIs; limited public-read companion exposure where explicitly policy-approved; chain-adjacent reference APIs
+- **API Surface Families Excluded:** Smart-contract APIs; raw chain-indexer APIs; payout execution contract APIs; platform credits ledger APIs; stablecoin payout claim execution APIs; public registry publication schema details; product-specific holder-benefit formulas; generalized KYC/legal identity APIs; wallet custody/key-management APIs
+- **Canonical System Owner(s):** FUZE Platform Wallet-Aware User Domain for wallet-link truth; Identity and Account Domain for canonical account identity; Auth/Session Domain for authentication and sessions; Chain/Registry/Eligibility/Payout/Audit domains for their separate truths
+- **Canonical API Owner:** FUZE Platform API Architecture working with the Wallet-Aware User Domain
+- **Supersedes:** Earlier `WALLET_AWARE_USER_API_SPEC.md` v1 material to the extent it conflicts with refined wallet-aware user semantics or this API SPEC v2 contract
+- **Superseded By:** Not yet known
+- **Related Decision Records:** Not yet known
+- **Canonical Status Note:** This API specification is normative for wallet-aware API contracts but does not own wallet-aware system semantics. The refined wallet-aware system specification owns semantic truth; this document owns API expression, route-family posture, request/response/error/status contract rules, and downstream implementation-contract guardrails.
+- **Implementation Status:** API contract baseline; downstream OpenAPI, AsyncAPI, service contracts, data contracts, admin tooling, SDKs, tests, and monitoring must conform
+- **Approval Status:** Drafted for production API SPEC v2 review; formal approval record not yet attached
+- **Change Summary:** Upgraded wallet-aware API guidance into API SPEC v2 format; aligned with active refined wallet-aware semantics dated 2026-04-21; separated wallet-link truth from canonical identity, auth/session, chain truth, eligibility, payout, public registry, authorization, and reporting truth; strengthened idempotency, replay, proof, conflict, admin, audit, event, migration, and derived-read rules; added implementation-useful Mermaid diagrams, flow view, acceptance criteria, and test cases.
 
 ---
 
-## 5. Source-of-Truth Inputs
+## Purpose
 
-### Primary FUZE docs and specs used
+This API specification defines how FUZE APIs expose and operate wallet-aware user capabilities while preserving the canonical FUZE separation between account identity, authentication, sessions, wallet linkage, chain truth, authorization, entitlements, eligibility, payouts, public registry publication, and reporting.
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+FUZE is Web3-aware, but it is not wallet-first. A wallet is a verified participation artifact attached to a canonical FUZE account. It may enrich holder-aware context, product display, eligibility inputs, public-safe registry views, or participation-related workflows, but it MUST NOT replace `account_id` as the actor anchor, MUST NOT become generic authorization truth, and MUST NOT collapse on-chain token ownership into off-chain account identity.
 
-#### Primary wallet / identity / chain sources
+This document governs the API contract layer for wallet-aware user operations. It turns refined wallet-aware semantics into allowed API surface families, route/resource families, request and response rules, idempotency rules, proof and replay handling, conflict handling, admin/control-plane constraints, event posture, read-model boundaries, audit/observability requirements, and downstream OpenAPI/AsyncAPI/SDK derivation guardrails.
+
+---
+
+## Scope
+
+This specification governs API contracts for:
+
+1. initiating wallet-link proof challenges;
+2. completing wallet-link proof verification;
+3. creating, listing, restricting, unlinking, invalidating, and re-enabling wallet links;
+4. managing preferred-wallet metadata where approved by policy;
+5. resolving wallet-aware account context for first-party and internal consumers;
+6. exposing holder-aware, token-aware, eligibility-facing, or registry-facing derived summaries without making those summaries canonical;
+7. detecting and representing wallet conflicts;
+8. supporting controlled admin/operator remediation;
+9. emitting wallet-aware domain events after canonical commits;
+10. enforcing idempotency, proof replay protection, audit lineage, authorization, correlation, traceability, versioning, migration, and contract derivation requirements.
+
+---
+
+## Out of Scope
+
+This specification does not govern:
+
+- canonical account identity semantics;
+- authentication method ownership or ordinary session issuance;
+- workspace membership, role assignment, permission evaluation, or entitlement truth;
+- smart-contract implementation detail;
+- wallet custody, private key management, seed phrase handling, or signing UX implementation;
+- exact wallet-signature format beyond API contract obligations to carry challenge/proof references;
+- chain-indexer implementation internals;
+- Ethereum token balances, transfers, or token-contract truth;
+- Platform Credits semantics;
+- stablecoin payout execution truth;
+- detailed snapshot/eligibility algorithms;
+- public registry publication schema details;
+- generalized legal identity, KYC, or AML workflows;
+- product-specific holder-benefit formulas unless those formulas consume wallet-aware inputs through approved contracts.
+
+---
+
+## Design Goals
+
+1. Preserve `account_id` as the durable actor anchor.
+2. Make wallet links explicit, proof-based, auditable, conflict-safe, and replay-safe.
+3. Permit one account to link zero, one, or many wallets without turning wallets into identity roots.
+4. Keep on-chain truth separate from off-chain wallet-link truth.
+5. Make wallet-aware context consumable by products, eligibility, registry, reporting, and public-read systems without letting those systems become hidden write owners.
+6. Support safe first-party UX while preventing frontend-owned wallet truth.
+7. Provide deterministic API behavior for duplicate proof submissions, retries, conflicts, degraded chain reads, and admin interventions.
+8. Support OpenAPI, AsyncAPI, SDK, monitoring, audit, and QA derivation without allowing downstream reinterpretation.
+
+---
+
+## Non-Goals
+
+This API specification is not intended to:
+
+- make wallet possession sufficient identity proof for all FUZE access;
+- treat wallet links as workspace authority, billing authority, admin authority, entitlement truth, or governance authority;
+- treat token balance reads as canonical wallet-link ownership;
+- permit public registry or reporting outputs to override private canonical wallet-link records;
+- permit product-local wallet tables to become source-of-record;
+- define exact cryptographic signing protocol internals;
+- replace implementation-contract specs, database schema specs, OpenAPI files, AsyncAPI files, service runbooks, or security playbooks.
+
+---
+
+## Core Principles
+
+### Account-First API Principle
+
+Every wallet-aware user API MUST anchor ordinary user operations to `account_id`. Wallet links attach participation context to the account; they do not replace the account.
+
+### Proof-Before-Link Principle
+
+A wallet link MUST NOT become active until an owner-controlled backend pathway validates acceptable proof of wallet control, applies policy and uniqueness checks, records lineage, and commits canonical wallet-link state.
+
+### Chain-Truth Separation Principle
+
+On-chain balances, transfers, and contract state remain chain truth. Wallet-link APIs may reference, observe, or derive from chain truth, but they MUST NOT store chain facts as if they were wallet-link ownership truth.
+
+### Authorization Separation Principle
+
+Wallet-aware context MAY influence selected product visibility, holder-aware experience, or eligibility inputs where approved, but MUST NOT replace workspace membership, roles, permissions, entitlements, admin authority, billing authority, or governance-sensitive authorization.
+
+### Derived-Read Safety Principle
+
+Holder summaries, eligibility-facing views, public registry views, support views, analytics, caches, and reports are derived. They MUST be marked as derived, regenerable, provenance-aware where needed, and unable to mutate canonical wallet-link truth.
+
+### Explicit Conflict Principle
+
+Wallet conflicts MUST become explicit durable conflict or review states. APIs MUST NOT silently overwrite active wallet mappings, silently merge accounts, or silently reassign wallets.
+
+### Admin Containment Principle
+
+Admin/control-plane APIs MAY correct, restrict, contain, or re-enable wallet links only through bounded, policy-constrained, reason-coded, audited, and least-privileged pathways.
+
+---
+
+## Canonical Definitions
+
+- **Account:** The canonical FUZE platform identity record and durable actor anchor.
+- **Wallet:** A blockchain address or wallet-controlled address that may be linked to a FUZE account.
+- **Wallet Link:** The platform-owned canonical record representing an account-to-wallet association.
+- **Wallet Proof:** Evidence that the actor controlling the authenticated account controlled the wallet at the time of proof, such as an approved signature challenge result.
+- **Wallet Verification Challenge:** A short-lived backend-issued challenge used to bind a specific account, wallet, chain family, nonce, and intended action.
+- **Preferred Wallet:** A policy-approved metadata designation for display or selected non-critical behavior; it is not universal payout, eligibility, or authority meaning unless another governing spec explicitly says so.
+- **Holder-Aware Context:** Derived platform context based on wallet links, chain truth, and policy.
+- **Eligibility-Facing Wallet Context:** Derived or input state consumed by eligibility or payout-preparation systems; it is not canonical wallet-link truth and not final payout truth.
+- **Wallet Conflict:** A controlled case where a wallet is contested, duplicated, misbound, security-sensitive, or otherwise unsafe to mutate through ordinary self-service.
+- **Public Wallet Representation:** A policy-approved derived publication artifact or public-safe reference. It does not own wallet-link truth.
+
+---
+
+## Truth Class Taxonomy
+
+| Truth Class | API Meaning | Canonical Owner | API Rule |
+|---|---|---|---|
+| Canonical identity truth | Account lifecycle and actor anchor | Identity and Account Domain | Wallet APIs MUST reference `account_id`; they MUST NOT redefine it. |
+| Wallet-link truth | Account-to-wallet association and lifecycle | Wallet-Aware User Domain | Wallet APIs own contract expression of wallet-link operations. |
+| Proof-input truth | Signatures, challenges, wallet claims, provider evidence | Input/evidence layer until accepted | Proof inputs are evidence only until accepted by owner-domain logic. |
+| Chain truth | Token balances, transfers, contract state | Chain / smart-contract systems | APIs may observe/reference; they MUST NOT rewrite chain truth or store it as link ownership. |
+| Policy truth | Proof policy, conflict policy, publication policy, eligibility policy | Relevant policy owners | APIs MUST capture policy/version references where material. |
+| Runtime truth | Challenge windows, request context, replay windows | Runtime/API layer | Runtime state is subordinate to account, wallet-link, and policy truth. |
+| Authorization truth | Workspace, roles, permissions, entitlements | Workspace / Authorization / Entitlement domains | Wallet context MAY be input; it MUST NOT be owner. |
+| Eligibility truth | Cycle-specific eligibility datasets | Snapshot / Eligibility domain | Wallet APIs expose only derived or input context. |
+| Payout truth | Payout ledger and execution outcome | Payout domains | Wallet APIs MUST NOT create payout truth. |
+| Public registry truth | Publication output | Public Registry / Transparency domains | Public views are derived and correctable, not canonical wallet-link owners. |
+| Derived read-model truth | Product summaries, holder caches, analytics, support views | Projection/reporting layers | Must be regenerable and non-mutating. |
+| Presentation truth | UI formatting, labels, display ordering | Frontend/product surfaces | Must not become contract or storage truth. |
+
+---
+
+## Architectural Position in the Spec Hierarchy
+
+This API specification sits below the refined wallet-aware user specification and the platform boundary/ownership specifications. It sits beside adjacent identity, auth/session, provider-linking, workspace, authorization, entitlement, chain, eligibility, payout, registry, audit, and event API specifications.
+
+The refined system specs own semantic truth. This API spec owns how that truth is exposed, invoked, protected, audited, and projected through API contracts.
+
+---
+
+## Upstream Semantic Owners
+
+Primary semantic owner:
+
 - `WALLET_AWARE_USER_SPEC.md`
-- `IDENTITY_AND_ACCOUNT_SPEC.md`
-- `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md`
-- `WORKSPACE_AND_ORGANIZATION_SPEC.md`
-- `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
 
-#### API and runtime sources
-- `API_ARCHITECTURE_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+Material adjacent semantic owners:
 
-#### Security and operations sources
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
-
-### Highest-priority interpretation applied
-
-For this file, the most important governing interpretation is:
-
-1. the canonical FUZE account remains the owner of platform identity
-2. wallet links are trust-bearing relationships attached to accounts, not replacements for account identity
-3. wallet-aware behavior must remain explicit and bounded
-4. wallet-aware user context may enrich product or payout-related views but must not collapse token, credits, payouts, or governance into one ambiguous concept
-5. products consume canonical wallet-aware context from shared platform APIs instead of inventing product-local wallet truth
-6. chain-aware reads and account-bound wallet relationships must remain distinct from on-chain system-of-record facts and from derived reporting models
-
-### Supporting external standards used only as guidance
-
-- HTTP semantics for read, mutation, conflict, and verification-flow behavior
-- RFC 9457 problem-details style for machine-readable error responses
-- common wallet-signature challenge and replay-protection patterns as general design guidance
-
-External guidance does not override FUZE source-of-truth documents.
+- `IDENTITY_AND_ACCOUNT_SPEC.md` for canonical account identity;
+- `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md` and account/session canonical documents for authentication and session truth;
+- `FUZE_PROVIDER_RESOLUTION_AND_LINKING_SPEC.md` for provider normalization and linked-login boundaries;
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md` and `CHAIN_ARCHITECTURE_SPEC.md` for chain boundary posture;
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` for eligibility truth;
+- payout and profit participation specs for payout truth;
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` and transparency specs for public publication truth;
+- `WORKSPACE_AND_ORGANIZATION_SPEC.md`, `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`, and entitlement specs for access control;
+- audit, security, event, idempotency, versioning, migration, and operations specs for cross-cutting API behavior.
 
 ---
 
-## 6. Governing Architecture and Ownership Interpretation
+## API Surface Families
 
-This API belongs to the **Wallet-Aware User Domain** because it owns the relationship between a canonical FUZE account and one or more linked wallets for recognition, holder-aware context, policy-aware product behavior, and selected payout-facing visibility.
+### Public API Surface
 
-This API is implemented primarily in `fuze-backend-api` because:
+General public anonymous wallet-link mutation APIs are not canonical. Public exposure MAY exist only as public-safe derived wallet registry lookup or public-chain-reference companion APIs governed by public registry and chain-reference specs.
 
-- backend owns durable wallet-link truth
-- wallet-aware context must be consistent across products
-- verification, conflict handling, disablement, and corrections are security-sensitive
-- products and public-facing surfaces require shared wallet-aware reads
-- admin interventions and audit generation must be backend-governed
+### First-Party Application Surface
 
-This API is **not** owned by:
+First-party application APIs support authenticated account holders listing, initiating, verifying, unlinking, and viewing wallet-aware context for their own account. These routes MUST be session-bound, account-scoped, least-disclosing, and replay-safe for mutations.
 
-- `fuze-frontend-webapp`, because frontend only initiates and consumes wallet-aware flows
-- `fuze-frontend-admin`, because admin may trigger privileged changes but must not own wallet-link truth
-- `fuze-contracts`, because wallet linking between account and wallet is off-chain application truth even though it references on-chain addresses
-- product domains such as QTB, AIMM, ZAGA, AIE, HerHelp, Botmad, or ToolGrid, because products consume canonical wallet-aware context rather than redefining it
-- payout or snapshot domains, because those domains consume wallet-aware linkage and on-chain snapshots but do not own canonical account-to-wallet linkage truth
+### Internal Service Surface
 
-### Architectural implications
+Internal service APIs allow trusted FUZE services to resolve wallet-aware account context, validate active wallet relationships, and consume derived holder context. Internal APIs MUST use service identity, explicit scope, least privilege, and read-only defaults unless explicitly owner-domain mutation routes are approved.
 
-- a canonical account may link one or more wallets
-- wallets must be verified through explicit proof before becoming active links
-- wallet links are trust-bearing but not universal identity replacements
-- wallet-aware context may affect selected product behavior and user-facing views, but not generic platform authorization by itself
-- holder-aware summaries are derived from canonical account-wallet linkage plus approved on-chain reference data and policy treatment
-- wallet-aware API surfaces must remain explicit about whether they expose durable link truth, derived holder context, snapshot-linked eligibility context, or public registry references
+### Admin / Control-Plane Surface
 
----
+Admin APIs support disablement, re-enable, conflict resolution, containment, and correction. They MUST be separate from ordinary user routes and require privileged operator identity, reason codes, policy references, case references where applicable, correlation IDs, audit lineage, and bounded effects.
 
-## 7. Domain Responsibilities
+### Event / Async Surface
 
-The wallet-aware user API domain is responsible for:
+Wallet-aware events are emitted after canonical commits. They inform consumers that wallet-link or derived-context state changed. Events are not mutation commands and MUST NOT be treated as permission to redefine wallet-link truth.
 
-1. initiating and completing wallet link verification
-2. maintaining active wallet-link relationships between accounts and wallets
-3. exposing wallet-link listings and wallet-status views
-4. resolving wallet-aware account context for first-party and internal consumers
-5. exposing holder-aware summaries and selected eligibility-facing views where policy allows
-6. supporting safe unlink, disablement, and correction flows
-7. enabling internal services to query wallet-aware truth safely
-8. emitting wallet-aware domain events
-9. generating audit records for sensitive wallet-aware actions
-10. preserving required separations between wallet linkage, on-chain truth, product privileges, payouts, and governance
+### Reporting / Projection Surface
 
-The domain is not responsible for:
+Reporting and projection APIs may expose derived wallet-aware summaries, stale/freshness status, public-safe references, and analytics. They MUST be non-mutating and provenance-aware where ambiguity matters.
 
-- authenticating the user into the platform
-- owning on-chain token balances or chain-state truth
-- executing payouts
-- authoring eligibility datasets
-- defining governance authority
-- replacing credits, billing, or entitlement systems with wallet logic
+### Chain-Adjacent Surface
+
+Chain-adjacent APIs may reference chain family, chain identifier, wallet address, transaction hash, block reference, snapshot source, or public chain reference. They MUST distinguish chain observations from accepted wallet-link state and final eligibility/payout outcomes.
 
 ---
 
-## 8. Out of Scope
+## System / API Boundaries
 
-The following are out of scope for this API specification:
+The wallet-aware API domain governs:
 
-- smart-contract implementation details
-- wallet custody or key management
-- generic blockchain explorer functionality
-- all future multi-chain expansion details
-- full eligibility algorithm design
-- payout-claim contract interaction details
-- detailed public contract registry schema
-- product-specific holder-benefit rules beyond wallet-aware inputs
+- wallet-link request and proof-challenge contracts;
+- wallet-link lifecycle mutation contracts;
+- wallet-aware account-context read contracts;
+- wallet conflict and remediation contracts;
+- wallet-aware event contracts;
+- wallet-aware audit and traceability requirements.
 
-Where later detailed specs are needed, they must remain compatible with this API.
+It does not govern:
 
----
-
-## 9. Canonical Entities and Data Ownership
-
-### Durable entities
-
-#### 9.1 wallet_links
-- **Owner:** Wallet-Aware User Domain
-- **Purpose:** canonical off-chain linkage between a FUZE account and a wallet address
-- **Nature:** source-of-truth durable entity
-
-#### 9.2 wallet_verification_challenges
-- **Owner:** Wallet-Aware User Domain
-- **Purpose:** short-lived verification challenge records for wallet proof
-- **Nature:** source-of-truth short-lived durable entity
-
-#### 9.3 wallet_link_actions
-- **Owner:** Wallet-Aware User Domain
-- **Purpose:** link, unlink, disable, re-enable, and corrective action records
-- **Nature:** durable action records with audit linkage
-
-#### 9.4 wallet_identity_conflicts
-- **Owner:** Wallet-Aware User Domain
-- **Purpose:** controlled conflict cases where a wallet is already linked or contested
-- **Nature:** durable investigation / remediation records
-
-#### 9.5 holder_context_snapshots
-- **Owner:** Wallet-Aware User Domain as a derived-consumption record, sourced from snapshot/eligibility systems
-- **Purpose:** account-bound or wallet-bound derived summary used for product/user-facing context
-- **Nature:** derived durable summary, not authoritative on-chain truth
-
-#### 9.6 wallet_audit_events
-- **Owner:** Audit / Activity domain, sourced by Wallet-Aware User Domain
-- **Purpose:** immutable trail for wallet-aware changes
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.7 wallet_holder_summaries
-- **Owner:** derived read-model layer
-- **Purpose:** convenience holder-aware and rank-aware summaries for user and product surfaces
-- **Nature:** derived
-
-#### 9.8 account_wallet_views
-- **Owner:** derived read-model layer
-- **Purpose:** account-facing combined wallet list and status summary
-- **Nature:** derived
-
-#### 9.9 public_wallet_link_views
-- **Owner:** derived/public read-model layer
-- **Purpose:** public-safe references when explicitly exposed
-- **Nature:** derived, not canonical account truth
-
-#### 9.10 snapshot_eligibility_views
-- **Owner:** derived read-model layer
-- **Purpose:** user-facing eligibility or claim-status visibility tied to wallet-aware account context
-- **Nature:** derived, not the authoritative eligibility pipeline
+- account creation, merge, or deletion semantics;
+- authentication provider onboarding;
+- ordinary session creation or revocation;
+- workspace membership, role, permission, or entitlement outcomes;
+- chain-state finality;
+- eligibility cycle computation;
+- payout ledger or payout execution;
+- public registry publication ownership;
+- product-local benefit policy.
 
 ---
 
-## 10. State Model and Lifecycle
+## Adjacent API Boundaries
 
-### 10.1 wallet link lifecycle
+- `IDENTITY_AND_ACCOUNT_API_SPEC.md` owns account identity APIs.
+- `AUTH_SESSION_AND_LINKED_LOGIN_API_SPEC.md` owns login, linked auth method, and session APIs.
+- `PROVIDER_RESOLUTION_AND_LINKING_API_SPEC.md` owns provider evidence normalization and access-path linking.
+- `ROLE_PERMISSION_AND_ACCESS_CONTROL_API_SPEC.md` and `ACCESS_EVALUATION_AND_EFFECTIVE_PERMISSION_API_SPEC.md` own authorization evaluation.
+- `ENTITLEMENT_AND_CAPABILITY_GATING_API_SPEC.md` owns capability gating.
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_API_SPEC.md` owns eligibility cycle computation.
+- `PAYOUT_LEDGER_API_SPEC.md` and `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md` own payout truth and execution.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` and public companion API specs own public publication and lookup contracts.
+- `AUDIT_LOG_AND_ACTIVITY_API_SPEC.md` owns durable audit record storage and query behavior.
 
-Possible states:
+Where overlap exists, the wallet-aware API provides wallet-link truth and derived wallet-aware inputs; adjacent APIs own their own domain outcomes.
+
+---
+
+## Conflict Resolution Rules
+
+1. Canonical account identity wins over wallet, provider, public registry, product-local, and derived presentation data.
+2. Canonical wallet-link records win over chain observations for account-to-wallet association.
+3. Chain truth wins for token balances, transfers, and contract events.
+4. Workspace/authorization/entitlement truth wins for access decisions.
+5. Eligibility and payout truth win for cycle-specific eligibility and payout execution outcomes.
+6. Public registry and transparency outputs are derived; they cannot override canonical private wallet-link truth.
+7. Product-local wallet state, UI state, cache state, analytics state, support displays, and exports are non-canonical.
+8. Contested wallet ownership MUST enter conflict or review state; it MUST NOT be silently reassigned.
+9. When proof, policy, or uniqueness cannot be verified, mutation APIs MUST fail closed or return accepted review state, not active link success.
+10. Historical snapshot, registry, or payout artifacts MUST NOT be silently rewritten by a later wallet-link change unless the owning downstream domain performs an explicit correction pathway.
+
+---
+
+## Default Decision Rules
+
+- Default actor anchor: `account_id`.
+- Default wallet-link owner: Wallet-Aware User Domain.
+- Default interpretation of wallet signature: proof input, not durable truth.
+- Default interpretation of chain observation: chain fact, not account mapping.
+- Default interpretation of preferred wallet: display/non-critical preference only.
+- Default interpretation of holder summary: derived and freshness-scoped.
+- Default interpretation of public wallet view: policy-approved derived publication.
+- Default outcome for ambiguous wallet collision: conflict/review, not overwrite.
+- Default outcome for replayed mutation: idempotent return of original terminal result when fingerprint matches; conflict when fingerprint differs.
+- Default outcome under degraded chain or proof infrastructure: block sensitive mutation or return bounded unavailable/error state.
+
+---
+
+## Roles / Actors / API Consumers
+
+- **Authenticated End User:** May manage wallet links for the current account through first-party routes.
+- **First-Party Client:** Initiates user wallet flows but never owns wallet truth.
+- **Internal FUZE Service:** Consumes wallet-aware context for approved product, eligibility, registry, reporting, or risk uses.
+- **Wallet-Aware User Service:** Owner-domain API and service layer for wallet-link truth.
+- **Identity Service:** Provides canonical account identity.
+- **Auth/Session Service:** Provides session validity and recent-auth posture.
+- **Policy / Risk Service:** Provides risk, proof, conflict, and publication policy decisions.
+- **Chain Observation / Indexing Service:** Provides chain observations; not wallet-link owner.
+- **Eligibility / Payout Services:** Consume wallet-aware inputs for their own downstream truth.
+- **Public Registry / Transparency Services:** Publish policy-approved derived outputs.
+- **Admin / Support Operator:** May act only through bounded audited control-plane routes.
+- **Audit / Observability Systems:** Record and inspect lineage, correlation, and state transitions.
+
+---
+
+## Resource / Entity Families
+
+### Canonical API Resources
+
+- `wallet_link`
+- `wallet_verification_challenge`
+- `wallet_conflict_case`
+- `wallet_mutation_operation`
+- `wallet_policy_evaluation_reference`
+- `wallet_event_reference`
+
+### Derived API Resources
+
+- `wallet_aware_account_context`
+- `holder_aware_summary`
+- `eligibility_facing_wallet_summary`
+- `public_wallet_reference_view`
+- `support_wallet_context_view`
+
+### Cross-Domain References
+
+- `account_id`
+- `session_id` or session reference where exposed internally
+- `chain_family`
+- `chain_id` or approved chain identifier
+- `wallet_address_normalized`
+- `snapshot_id` / `eligibility_cycle_id` where allowed
+- `public_registry_entry_id` where allowed
+- `audit_event_id`
+- `correlation_id`
+- `trace_id`
+- `operation_id`
+- `idempotency_key`
+
+---
+
+## Ownership Model
+
+Only wallet-aware owner-domain APIs may mutate canonical wallet-link truth. Product APIs, public APIs, registry APIs, reporting APIs, eligibility APIs, payout APIs, chain-indexer APIs, admin UIs, frontend stores, and caches MUST NOT directly write canonical wallet-link records.
+
+Admin APIs do not become owners. They invoke owner-domain workflows with stronger authorization, reason codes, audit, policy checks, and bounded state transitions.
+
+Derived view APIs do not become owners. They expose current or historical summaries whose provenance must map back to canonical wallet-link truth and adjacent owner-domain facts.
+
+---
+
+## Authority / Decision Model
+
+Wallet-aware API decision authority consists of:
+
+1. authenticated account context or approved secure flow;
+2. proof acceptance under wallet-aware policy;
+3. uniqueness/collision/conflict checks;
+4. security and risk evaluation;
+5. chain-family support validation;
+6. owner-domain transaction commit;
+7. audit and event emission;
+8. derived projection refresh.
+
+No route may skip owner-domain validation because a wallet signature, frontend session, public registry entry, product cache, or chain read appears convincing.
+
+---
+
+## Authentication Model
+
+First-party user wallet routes MUST require an authenticated session for the current account. Sensitive mutations SHOULD require recent-auth or equivalent step-up confirmation where policy requires.
+
+Internal service routes MUST require service identity, approved scopes, mTLS or equivalent service authentication where implemented, and policy-based least privilege.
+
+Admin routes MUST require privileged operator identity, strong session posture, explicit operator role, reason-coded action, and case/policy references where applicable.
+
+Wallet proof itself is not ordinary platform authentication unless a separate auth/session spec explicitly authorizes a wallet-auth access path. In this spec, wallet proof proves wallet control for link semantics; it does not by itself create a platform session.
+
+---
+
+## Authorization / Scope / Permission Model
+
+Wallet-aware APIs MUST evaluate:
+
+- authenticated account identity;
+- current session validity;
+- target account scope;
+- ownership of target wallet-link resource;
+- action sensitivity;
+- current wallet-link state;
+- chain-family support;
+- conflict/risk/review status;
+- admin/operator privilege for privileged flows;
+- internal service scope for service-to-service reads;
+- publication policy for public-safe views.
+
+Wallet-aware context MUST NOT automatically grant workspace ownership, billing authority, product administration, support access, governance-sensitive action, or entitlement.
+
+---
+
+## Entitlement / Capability-Gating Model
+
+Entitlement and capability gating may consume wallet-aware context as an input only when explicitly authorized by entitlement policy. Wallet-aware APIs MUST NOT output entitlement success as if wallet linkage alone created capability.
+
+Responses that include product-safe flags MUST label them as derived or policy-evaluated context and SHOULD include policy/freshness references where needed. Entitlement-denial reasons remain owned by entitlement APIs.
+
+---
+
+## API State Model
+
+### Wallet Link States
 
 - `pending_verification`
 - `active`
-- `disabled`
-- `removed`
+- `restricted`
+- `unlinked`
+- `superseded`
+- `invalidated`
 - `blocked_conflict`
 - `blocked_risk_review`
 
-### 10.2 verification challenge lifecycle
+Only `active` links may be used as ordinary wallet-aware participation context. Restricted, invalidated, superseded, or blocked links may be visible for continuity, audit, support, or remediation but MUST NOT be treated as active ordinary participation links.
 
-Possible states:
+### Challenge States
 
-- `created`
-- `ready`
+- `issued`
 - `completed`
-- `failed`
 - `expired`
-- `cancelled`
-
-### 10.3 wallet link action lifecycle
-
-Possible states:
-
-- `requested`
-- `pending_review`
-- `executed`
 - `failed`
 - `cancelled`
-- `closed`
 
-### 10.4 holder context summary lifecycle
+A challenge is short-lived runtime/proof state. It must not be a long-term account-to-wallet mapping unless completed and accepted by owner-domain logic.
 
-Possible states:
+### Conflict States
 
-- `pending_refresh`
+- `opened`
+- `pending_review`
+- `awaiting_evidence`
+- `contained`
+- `resolved`
+- `cancelled`
+- `escalated`
+
+Conflict state MUST be durable and auditable.
+
+### Derived Context States
+
 - `current`
 - `stale`
+- `refresh_pending`
+- `unavailable`
 - `superseded`
 
-Lifecycle notes:
-- wallet links become `active` only after explicit proof verification
-- `disabled` preserves history without asserting current active participation
-- `removed` terminates the active relationship while preserving audit history
-- `blocked_conflict` and `blocked_risk_review` prevent normal use until resolved
-- derived holder summaries may become `stale` without mutating canonical wallet-link truth
+Derived context state MUST NOT mutate canonical wallet-link truth.
 
 ---
 
-## 11. API Surface Overview
+## Lifecycle / Workflow Model
 
-The API surface is divided into four families:
+### Wallet Link Lifecycle
 
-### 11.1 Public / first-party user-facing APIs
-Used by `fuze-frontend-webapp` and approved first-party clients for:
-- listing linked wallets
-- creating wallet verification challenges
-- completing wallet link verification
-- unlinking wallets
-- reading wallet-aware account context
-- reading holder-aware summary and selected eligibility-facing views
-- selecting default/primary wallet for product-facing displays where policy allows
+1. User is authenticated to a canonical account.
+2. User requests a wallet challenge for a specific wallet address and chain family.
+3. API normalizes wallet address and validates chain support.
+4. API creates short-lived challenge and records correlation lineage.
+5. User completes proof through approved wallet interaction.
+6. API validates proof, challenge freshness, nonce, actor/account binding, chain family, and replay posture.
+7. API evaluates uniqueness, conflict, risk, account state, and policy.
+8. If accepted, owner-domain commit creates or activates `wallet_link`.
+9. API writes audit lineage and idempotency outcome.
+10. API emits wallet-aware events after commit.
+11. Derived projections refresh asynchronously.
 
-### 11.2 Internal service APIs
-Used by trusted internal services for:
-- resolving account-to-wallet linkage
-- resolving holder-aware and wallet-aware context
-- validating whether a wallet is active for an account
-- querying derived snapshot-related wallet-aware summaries safely
+### Wallet Unlink Lifecycle
 
-### 11.3 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- forced disablement or re-enable of wallet links
-- wallet-link conflict remediation
-- corrective unlink or reassignment workflows under controlled policy
-- emergency containment of suspicious wallet-aware relationships
+1. User requests unlink for an owned active wallet link.
+2. API validates session, target ownership, recent-auth where needed, conflict state, and policy blockers.
+3. API transitions link to `unlinked` or review/blocked state.
+4. API preserves lineage, emits event, and refreshes projections.
+5. Historical eligibility/payout/public registry artifacts remain governed by downstream owners.
 
-### 11.4 Event-driven interfaces
-Used for downstream side effects:
-- audit generation
-- security alerting
-- wallet-aware cache invalidation
-- product refresh triggers
-- notification handling
-- analytics and reporting
+### Wallet Conflict Lifecycle
+
+1. API detects duplicate, contested, misbound, suspicious, or policy-blocked wallet relation.
+2. API opens durable conflict state and blocks unsafe ordinary mutation.
+3. Admin/support/risk workflow collects evidence and applies policy.
+4. Owner-domain remediation transitions affected links with reason codes.
+5. API emits events and audit records.
+6. Downstream projections and public-safe outputs refresh without unauthorized historical rewrite.
 
 ---
 
-## 12. Authentication and Authorization Model
+## Architecture Diagram — Mermaid flowchart
 
-### 12.1 Authentication posture by route family
+```mermaid
+flowchart TB
+  subgraph Consumers[API Consumers]
+    U[Authenticated User]
+    FP[First-Party Client]
+    IS[Internal FUZE Services]
+    ADM[Admin / Support Operator]
+    PUB[Public / Reporting Consumers]
+  end
 
-#### Authenticated user routes
-Require valid authenticated session:
-- list linked wallets
-- begin wallet verification challenge
-- complete wallet link verification
-- unlink active wallet
-- read wallet-aware account context
-- read holder-aware summaries for current account
-- choose display-preferred wallet where supported
+  subgraph Surfaces[Wallet-Aware API Surface Families]
+    FA[First-Party Wallet APIs]
+    IA[Internal Wallet Context APIs]
+    AA[Admin Control-Plane APIs]
+    EV[Wallet-Aware Event APIs]
+    RA[Reporting / Public-Safe Read APIs]
+  end
 
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- account wallet-context resolution
-- active wallet validation
-- holder-context summary resolution
-- eligibility-facing wallet-context reads
+  subgraph Owner[Wallet-Aware User Domain]
+    WLS[Wallet Link Service]
+    Proof[Proof Challenge / Verification]
+    Conflict[Conflict / Remediation Workflow]
+    Policy[Wallet Policy Evaluation]
+  end
 
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- disable / re-enable wallet link
-- corrective unlink / remediation
-- conflict resolution state transitions
-- emergency containment of suspicious wallet links
+  subgraph Adjacent[Adjacent Owner Domains]
+    ID[Identity / Account Domain]
+    AUTH[Auth / Session Domain]
+    ACL[Workspace / Authorization / Entitlement]
+    CHAIN[Chain Observation / Indexing]
+    ELIG[Snapshot / Eligibility]
+    PAY[Payout / Ledger]
+    REG[Public Registry / Transparency]
+    AUD[Audit / Activity]
+  end
 
-### 12.2 Authorization checkpoints
+  subgraph Stores[Data Stores and Projections]
+    WLDB[(Canonical Wallet Link Store)]
+    CHDB[(Challenge Store)]
+    CFDB[(Conflict Case Store)]
+    IDEMP[(Idempotency Store)]
+    PROJ[(Derived Wallet Context Projections)]
+    AUDDB[(Audit Log Store)]
+  end
 
-Authorization must evaluate:
-- canonical account identity
-- session validity
-- target account scope
-- whether requested action is sensitive
-- whether link/unlink would violate policy
-- whether the wallet is already linked elsewhere
-- whether account or wallet link is in restricted or review state
-- whether admin/operator role is present for privileged flows
-
-### 12.3 Sensitive action rules
-
-The following require heightened checks:
-- wallet link completion
-- wallet unlink
-- admin disable/reenable
-- conflict remediation
-- corrective reassignment or emergency containment
-
-Sensitive flows may require:
-- recent re-auth assertion
-- proof freshness checks
-- replay-resistance validation
-- operator justification and case reference for admin routes
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-## 13.1 Public / First-Party User APIs
-
-### 13.1.1 `GET /v1/wallets`
-**Purpose:** list linked wallets for current account  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Response Summary:**
-- linked wallet list
-- chain family / network family classification
-- state
-- verification timestamps
-- primary/display-preferred indicators where supported
-- derived holder summary hints where safe
-**Side Effects:** none
-**Audit Requirements:** access logging only
-**Emitted Events:** none required
-
-### 13.1.2 `POST /v1/wallets/challenges`
-**Purpose:** create wallet verification challenge for linking a wallet to current account  
-**Caller Type:** authenticated user  
-**Request Body Summary:**
-- `wallet_address`
-- `chain_family`
-- optional `network_hint`
-- optional `intent` (`link`, future `reverify`)
-- optional `idempotency_key`
-**Response Summary:**
-- challenge ID
-- challenge message / signing payload
-- expiry metadata
-- expected verification method metadata
-**Side Effects:** creates verification challenge
-**Idempotency Behavior:** same request fingerprint may return current active challenge until expiry
-**Audit Requirements:** wallet challenge creation audit where policy requires
-**Emitted Events:** `wallet.challenge_created`
-
-### 13.1.3 `POST /v1/wallets/challenges/{challenge_id}/complete`
-**Purpose:** complete wallet proof verification and create or activate wallet link  
-**Caller Type:** authenticated user  
-**Request Body Summary:**
-- signed proof payload
-- optional `wallet_client_metadata`
-**Response Summary:**
-- resulting wallet link summary
-- state
-- active relationship metadata
-- conflict or review status if not fully successful
-**Side Effects:**
-- may activate wallet link
-- may create conflict/review state
-- may update verification lineage
-**Idempotency Behavior:** required by challenge ID and proof replay protection
-**Audit Requirements:** high-sensitivity audit
-**Emitted Events:** `wallet.linked`, `wallet.link_conflict_detected`
-
-### 13.1.4 `DELETE /v1/wallets/{wallet_link_id}`
-**Purpose:** unlink one active wallet from current account  
-**Caller Type:** authenticated user  
-**Request Body Summary:**
-- optional `reason_code`
-- optional `idempotency_key`
-**Response Summary:** removed wallet-link summary
-**Side Effects:** active link transitions to removed
-**Idempotency Behavior:** required
-**Audit Requirements:** high-sensitivity audit
-**Emitted Events:** `wallet.unlinked`
-
-### 13.1.5 `POST /v1/wallets/{wallet_link_id}/primary`
-**Purpose:** mark one linked wallet as the preferred display/interaction wallet for current account where policy allows  
-**Caller Type:** authenticated user  
-**Request Body Summary:**
-- optional `idempotency_key`
-**Response Summary:** updated account wallet preference summary
-**Side Effects:** updates account-level preference metadata
-**Audit Requirements:** standard audit if preference is security-sensitive in context
-**Emitted Events:** `wallet.primary_changed`
-
-### 13.1.6 `GET /v1/wallet-aware/me`
-**Purpose:** retrieve wallet-aware account context for current account  
-**Caller Type:** authenticated user  
-**Response Summary:**
-- linked wallet states
-- preferred wallet
-- derived holder summary
-- product-safe wallet-aware flags
-- selected eligibility-facing pointers where policy allows
-**Side Effects:** none
-
-### 13.1.7 `GET /v1/wallet-aware/holder-summary`
-**Purpose:** retrieve holder-aware summary for current account  
-**Caller Type:** authenticated user  
-**Response Summary:**
-- linked wallet references
-- derived holder-rank / holder-context summary where policy allows
-- freshness status of derived summary
-- policy-bounded participation signals
-**Side Effects:** none
-**Important Boundary:** this is a derived summary and not raw on-chain authoritative token-balance truth
-
-### 13.1.8 `GET /v1/wallet-aware/eligibility-summary`
-**Purpose:** retrieve user-facing eligibility or claim-summary view derived from wallet-aware account context  
-**Caller Type:** authenticated user  
-**Response Summary:**
-- relevant payout cycle references where policy allows
-- claim-status summary
-- snapshot-linked eligibility visibility summary
-- freshness and derivation metadata
-**Side Effects:** none
-**Important Boundary:** this does not author authoritative eligibility data; it reads policy-bounded derived visibility only
-
-## 13.2 Internal Service APIs
-
-### 13.2.1 `GET /internal/v1/accounts/{account_id}/wallet-context`
-**Purpose:** resolve wallet-aware account context for trusted services  
-**Caller Type:** internal trusted services  
-**Auth Expectation:** service-to-service identity only  
-**Response Summary:**
-- active wallets
-- preferred wallet reference
-- wallet states
-- derived holder summary refs where relevant
-**Side Effects:** none
-
-### 13.2.2 `POST /internal/v1/wallets/validations`
-**Purpose:** verify whether a wallet is actively linked to a specific account and fit for requested product context  
-**Caller Type:** internal trusted services  
-**Request Body Summary:**
-- `account_id`
-- `wallet_address`
-- `chain_family`
-- optional `required_state`
-- optional `product_context`
-**Response Summary:**
-- valid / invalid
-- matching wallet-link reference if any
-- denial reason
-**Side Effects:** none
-
-### 13.2.3 `GET /internal/v1/accounts/{account_id}/holder-context`
-**Purpose:** retrieve derived holder-aware context for trusted services  
-**Caller Type:** internal trusted services with least privilege  
-**Response Summary:**
-- derived holder-rank / participation summary
-- active wallet references used in derivation
-- freshness metadata
-- policy-bounded eligibility-facing references where allowed
-**Side Effects:** none
-
-## 13.3 Admin / Control-Plane APIs
-
-### 13.3.1 `POST /admin/v1/wallets/{wallet_link_id}/disable`
-**Purpose:** disable a wallet link without deleting historical linkage  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- optional `related_case_id`
-**Response Summary:** disabled wallet-link summary
-**Side Effects:** link transitions to disabled
-**Audit Requirements:** critical audit
-**Emitted Events:** `wallet.disabled`
-
-### 13.3.2 `POST /admin/v1/wallets/{wallet_link_id}/reenable`
-**Purpose:** re-enable a previously disabled wallet link where policy allows  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-**Response Summary:** updated wallet-link summary
-**Side Effects:** link transitions disabled -> active if allowed
-**Audit Requirements:** critical audit
-**Emitted Events:** `wallet.reenabled`
-
-### 13.3.3 `POST /admin/v1/wallet-conflicts/{conflict_id}/resolve`
-**Purpose:** resolve wallet-link conflict under controlled remediation policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `resolution_code`
-- `target_account_id` where applicable
-- `reason_code`
-- `operator_note`
-**Response Summary:** conflict resolution action summary
-**Side Effects:** may disable one link, close conflict, or complete corrective reassignment path
-**Audit Requirements:** critical audit
-**Emitted Events:** `wallet.conflict_resolved`
-
-### 13.3.4 `POST /admin/v1/wallet-containment`
-**Purpose:** emergency containment for suspicious wallet-aware relationships  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- wallet-link filters
-- account filters
-- `reason_code`
-- `operator_note`
-- optional `expires_at`
-**Response Summary:** containment action summary
-**Side Effects:** disables or suspends targeted wallet-aware links
-**Audit Requirements:** critical audit
-**Emitted Events:** `wallet.containment_executed`
+  U --> FP --> FA
+  IS --> IA
+  ADM --> AA
+  PUB --> RA
+  FA --> AUTH
+  FA --> ID
+  FA --> Proof
+  IA --> WLS
+  AA --> Conflict
+  Proof --> Policy
+  WLS --> Policy
+  Policy --> ACL
+  Policy --> CHAIN
+  WLS --> WLDB
+  Proof --> CHDB
+  Conflict --> CFDB
+  WLS --> IDEMP
+  WLS --> AUD
+  AUD --> AUDDB
+  WLS --> EV
+  EV --> ELIG
+  EV --> REG
+  EV --> PROJ
+  RA --> PROJ
+  ELIG -. consumes wallet-aware inputs .-> WLDB
+  PAY -. consumes eligibility outcomes, not wallet API truth .-> ELIG
+  REG -. publishes derived views .-> PROJ
+```
 
 ---
 
-## 14. Request Rules
+## Data Design — Mermaid Diagram
 
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive wallet-aware mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- frontend-supplied wallet ownership assertions are never sufficient without backend verification
+```mermaid
+erDiagram
+  ACCOUNT ||--o{ WALLET_LINK : owns_participation_context
+  ACCOUNT ||--o{ WALLET_VERIFICATION_CHALLENGE : requests
+  WALLET_LINK ||--o{ WALLET_LINK_ACTION : has_lifecycle_action
+  WALLET_LINK ||--o{ WALLET_CONFLICT_CASE : may_be_involved_in
+  WALLET_LINK ||--o{ WALLET_AUDIT_REFERENCE : emits_lineage
+  WALLET_LINK ||--o{ HOLDER_CONTEXT_PROJECTION : derives
+  WALLET_LINK ||--o{ ELIGIBILITY_WALLET_INPUT_VIEW : may_feed
+  WALLET_LINK ||--o{ PUBLIC_WALLET_REFERENCE_VIEW : may_publish
+  WALLET_VERIFICATION_CHALLENGE ||--o{ IDEMPOTENCY_RECORD : protected_by
+  WALLET_LINK_ACTION ||--o{ IDEMPOTENCY_RECORD : protected_by
+  WALLET_CONFLICT_CASE ||--o{ AUDIT_LOG_ENTRY : records
 
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- wallet link completion
-- wallet unlink
-- admin disable / re-enable
-- conflict resolution
-- containment actions
+  ACCOUNT {
+    string account_id PK
+    string account_state
+  }
 
-Heightened validation may include:
-- recent re-auth assertion
-- challenge freshness checks
-- signature replay checks
-- account-state validation
-- operator role confirmation
-- conflict / review state checks
+  WALLET_LINK {
+    string wallet_link_id PK
+    string account_id FK
+    string chain_family
+    string chain_identifier
+    string wallet_address_normalized
+    string status
+    boolean preferred_flag
+    datetime proof_verified_at
+    datetime linked_at
+    datetime updated_at
+    string policy_reference
+    string audit_reference
+  }
 
-### 14.3 Wallet uniqueness rule
-A wallet address in the same canonical chain family must not be actively linked to multiple accounts unless a controlled conflict/remediation workflow explicitly handles the case.
+  WALLET_VERIFICATION_CHALLENGE {
+    string wallet_challenge_id PK
+    string account_id FK
+    string chain_family
+    string wallet_address_normalized
+    string challenge_state
+    string nonce_hash
+    datetime issued_at
+    datetime expires_at
+    datetime completed_at
+    string correlation_id
+  }
 
-### 14.4 Scope integrity rule
-User-facing wallet-aware routes may operate only on the current authenticated account unless a route is explicitly internal or admin.
+  WALLET_LINK_ACTION {
+    string wallet_action_id PK
+    string wallet_link_id FK
+    string action_type
+    string action_state
+    string reason_code
+    string actor_reference
+    string operation_id
+    datetime created_at
+    datetime closed_at
+  }
+
+  WALLET_CONFLICT_CASE {
+    string wallet_conflict_case_id PK
+    string wallet_address_normalized
+    string chain_family
+    string conflict_state
+    string resolution_code
+    string policy_reference
+    datetime opened_at
+    datetime resolved_at
+  }
+
+  IDEMPOTENCY_RECORD {
+    string idempotency_key PK
+    string actor_reference
+    string request_hash
+    string terminal_status
+    string response_reference
+    datetime expires_at
+  }
+
+  HOLDER_CONTEXT_PROJECTION {
+    string projection_id PK
+    string account_id FK
+    string source_wallet_link_reference
+    string projection_state
+    string freshness_status
+    datetime computed_at
+  }
+
+  ELIGIBILITY_WALLET_INPUT_VIEW {
+    string input_view_id PK
+    string account_id FK
+    string eligibility_cycle_id
+    string derivation_reference
+    string state
+  }
+
+  PUBLIC_WALLET_REFERENCE_VIEW {
+    string public_reference_id PK
+    string publication_policy_reference
+    string wallet_link_reference
+    string exposure_state
+  }
+
+  AUDIT_LOG_ENTRY {
+    string audit_event_id PK
+    string actor_reference
+    string action_type
+    string target_reference
+    string reason_code
+    string correlation_id
+    datetime occurred_at
+  }
+```
 
 ---
 
-## 15. Response Rules
+## Flow View
 
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- chain family metadata
-- correlation references for mutations
+### Synchronous User Link Flow
 
-### 15.2 Async-accepted response rules
-If conflict remediation or some verification path becomes async, the response must:
-- return accepted status
-- include action or review ID
-- provide follow-up status semantics
+1. `POST /v1/wallets/challenges` receives wallet address, chain family, optional network hint, and idempotency key.
+2. API authenticates session and resolves current `account_id`.
+3. API normalizes wallet address and validates supported chain family.
+4. API checks whether an equivalent challenge exists for the same actor and request fingerprint.
+5. API creates or returns a valid challenge with expiration and signing payload.
+6. User signs challenge through wallet UX.
+7. `POST /v1/wallets/challenges/{challenge_id}/complete` receives proof payload.
+8. API validates challenge, proof, nonce, expiry, account binding, chain family, uniqueness, policy, and risk.
+9. API commits wallet-link state if accepted, or creates conflict/review state if unsafe.
+10. API records idempotency terminal result and audit lineage.
+11. API returns active link, conflict/review outcome, or structured error.
+12. Post-commit events refresh derived projections and notify downstream consumers.
 
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target wallet-link identifier
-- resulting state
-- whether the wallet is active for the account
-- whether holder-aware derived context may change downstream
+### Async / Accepted-State Flow
 
-### 15.4 Read response rules
-Read responses must distinguish:
-- durable wallet-link truth
-- derived holder-aware summaries
-- derived eligibility-facing summaries
-- public or product-safe convenience fields that are not canonical chain-state truth
+Some conflict remediation, containment, and derived context refresh operations MAY return `202 Accepted` with `operation_id` or `case_id`. `202 Accepted` means the request was accepted for processing; it does not mean final business success. Final outcome is represented by owner-domain state, events, and follow-up status routes.
+
+### Failure and Retry Flow
+
+- Expired challenge returns `WALLET_CHALLENGE_EXPIRED`.
+- Invalid proof returns `WALLET_PROOF_INVALID`.
+- Already-linked wallet returns `WALLET_ALREADY_LINKED` or opens conflict depending on policy.
+- Replayed identical request returns original idempotent terminal outcome.
+- Replayed key with different request hash returns `WALLET_IDEMPOTENCY_CONFLICT`.
+- Chain-read degradation does not invalidate canonical wallet-link truth; it may make derived holder context `stale` or `unavailable`.
+
+### Admin / Operator Flow
+
+1. Operator authenticates through admin/control-plane route.
+2. API evaluates operator role, policy, reason code, case reference, and target state.
+3. API performs owner-domain transition only if bounded workflow allows it.
+4. API records critical audit event with before/after summary.
+5. API emits event and refreshes derived/public outputs where approved.
 
 ---
 
-## 16. Error Model
+## Data Flows — Mermaid sequenceDiagram
 
-The API uses structured problem-details style error responses with stable error codes.
+```mermaid
+sequenceDiagram
+  autonumber
+  participant User as Authenticated User
+  participant Client as First-Party Client
+  participant API as Wallet-Aware API
+  participant Auth as Auth/Session Domain
+  participant Identity as Identity Domain
+  participant Policy as Policy/Risk Engine
+  participant Chain as Chain Observation / Proof Verification
+  participant Store as Wallet Link Store
+  participant Idem as Idempotency Store
+  participant Audit as Audit Log
+  participant Events as Event Bus
+  participant Projection as Derived Projection Layer
 
-### 16.1 Required error fields
+  User->>Client: Request wallet link
+  Client->>API: POST /v1/wallets/challenges
+  API->>Auth: Validate session and recent-auth posture if required
+  Auth-->>API: Authenticated account context
+  API->>Identity: Resolve account_id and account state
+  Identity-->>API: Canonical account accepted
+  API->>Idem: Check challenge idempotency key and request hash
+  API->>Store: Create wallet_verification_challenge
+  API-->>Client: 201 challenge payload and expiry
+  User->>Client: Sign challenge with wallet
+  Client->>API: POST /v1/wallets/challenges/{id}/complete
+  API->>Idem: Check proof completion replay state
+  API->>Chain: Verify proof against challenge and wallet address
+  Chain-->>API: Proof valid / invalid
+  API->>Policy: Evaluate uniqueness, conflict, risk, chain support, account state
+  Policy-->>API: Accept / deny / review
+  alt Accepted
+    API->>Store: Commit wallet_link active transactionally
+    API->>Idem: Store terminal success result
+    API->>Audit: Write wallet.linked lineage
+    API->>Events: Emit wallet.linked after commit
+    Events->>Projection: Refresh holder and wallet-aware summaries
+    API-->>Client: 200/201 wallet_link active
+  else Review or conflict
+    API->>Store: Open wallet_conflict_case or review state
+    API->>Audit: Write conflict/review lineage
+    API->>Events: Emit wallet.conflict_opened after commit
+    API-->>Client: 202 accepted with case_id or 409 conflict per policy
+  else Denied
+    API->>Idem: Store terminal failure if mutation reached terminal decision
+    API->>Audit: Write failed proof or policy denial where required
+    API-->>Client: Structured problem response
+  end
+```
+
+---
+
+## Request Model
+
+All mutation requests MUST include or support:
+
+- authenticated actor context from the platform session or service identity;
+- explicit `chain_family` where wallet address interpretation depends on chain family;
+- normalized wallet address treatment performed server-side;
+- `Idempotency-Key` for side-effecting operations vulnerable to replay;
+- `X-Correlation-ID` or equivalent correlation reference;
+- content type `application/json` unless a downstream contract explicitly specifies otherwise;
+- reason code and operator note for admin/control-plane mutations;
+- policy/case references where required by privileged workflows.
+
+Request bodies MUST NOT treat frontend-supplied wallet state, public registry displays, product-local wallet IDs, or chain-balance claims as canonical owner-domain assertions.
+
+---
+
+## Response Model
+
+Successful mutation responses MUST include:
+
+- stable resource identifier (`wallet_link_id`, `wallet_challenge_id`, `operation_id`, or `case_id` as applicable);
+- resulting state;
+- account scope reference where safe;
+- wallet address representation according to privacy policy;
+- chain family and chain identifier where applicable;
+- timestamps relevant to state;
+- audit/correlation references where safe to expose;
+- freshness and derivation markers for derived context.
+
+Read responses MUST distinguish:
+
+- canonical wallet-link fields;
+- proof/challenge runtime fields;
+- derived holder or eligibility summaries;
+- public-safe presentation fields;
+- stale or unavailable projection state.
+
+Admin responses MUST include resulting state, reason-code echo, operation/case identifier, and correlation reference. They MUST NOT expose sensitive risk heuristics to unauthorized clients.
+
+---
+
+## Error / Result / Status Model
+
+Wallet-aware APIs MUST use structured problem responses with stable machine-readable codes.
+
+Required fields:
+
 - `type`
 - `title`
 - `status`
@@ -682,660 +856,690 @@ The API uses structured problem-details style error responses with stable error 
 - `detail`
 - `instance`
 - `correlation_id`
+- optional `retry_after`
+- optional `operation_id`
+- optional `case_id`
 
-### 16.2 Common error codes
+### Core Error Codes
 
-#### Authentication / credential errors
 - `WALLET_SESSION_REQUIRED`
 - `WALLET_REAUTH_REQUIRED`
-- `WALLET_CHALLENGE_EXPIRED`
-- `WALLET_CHALLENGE_INVALID`
-
-#### Authorization / permission errors
 - `WALLET_PERMISSION_DENIED`
 - `WALLET_OPERATOR_PERMISSION_DENIED`
-
-#### State conflict errors
+- `WALLET_CHAIN_FAMILY_UNSUPPORTED`
+- `WALLET_ADDRESS_INVALID`
+- `WALLET_CHALLENGE_EXPIRED`
+- `WALLET_CHALLENGE_INVALID`
+- `WALLET_PROOF_INVALID`
+- `WALLET_PROOF_REPLAY_DETECTED`
 - `WALLET_ALREADY_LINKED`
-- `WALLET_LINK_ALREADY_TERMINAL`
 - `WALLET_CONFLICT_DETECTED`
 - `WALLET_STATE_INVALID`
-
-#### Policy / safety errors
-- `WALLET_ACCOUNT_RESTRICTED`
 - `WALLET_RISK_REVIEW_REQUIRED`
-- `WALLET_CHAIN_FAMILY_UNSUPPORTED`
-- `WALLET_LINK_NOT_ELIGIBLE`
-
-#### Request integrity errors
 - `WALLET_IDEMPOTENCY_KEY_REQUIRED`
-- `WALLET_REQUEST_INVALID`
-- `WALLET_REQUEST_UNPROCESSABLE`
-- `WALLET_PROOF_INVALID`
-
-#### Dependency or provider errors
-- `WALLET_VERIFICATION_UNAVAILABLE`
+- `WALLET_IDEMPOTENCY_CONFLICT`
+- `WALLET_DERIVED_CONTEXT_STALE`
 - `WALLET_DERIVED_CONTEXT_UNAVAILABLE`
+- `WALLET_ADMIN_REASON_REQUIRED`
+- `WALLET_POLICY_DENIED`
+- `WALLET_RATE_LIMITED`
 
-### 16.3 Error handling rules
-- do not expose internal security heuristics or operator-only details
-- do not imply raw on-chain truth from off-chain link failure states
-- distinguish invalid proof from conflict/review outcomes
-- return actionable but bounded explanations
-- include retry guidance only where safe
+### Status Semantics
 
----
-
-## 17. Idempotency and Mutation Safety
-
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- wallet verification challenge completion
-- wallet unlink
-- primary-wallet change
-- admin disable / re-enable
-- conflict resolution
-- containment actions
-
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key` where required
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
-
-### 17.3 Mutation safety rules
-- wallet link state transitions must be monotonic toward terminal states
-- challenge completion must be single-effective
-- wallet uniqueness must be checked transactionally at commit time
-- unlink must not silently delete historical audit lineage
-- derived holder summaries must be refreshed from canonical wallet-link truth and approved upstream sources
+- `200 OK`: read success or idempotent mutation replay returning prior success.
+- `201 Created`: new challenge or new wallet link created.
+- `202 Accepted`: review, conflict remediation, or async projection refresh accepted but not final.
+- `400 Bad Request`: malformed request.
+- `401 Unauthorized`: no valid authentication.
+- `403 Forbidden`: authenticated but not authorized.
+- `404 Not Found`: resource not visible or nonexistent in caller scope.
+- `409 Conflict`: state, uniqueness, idempotency, or contested wallet conflict.
+- `422 Unprocessable Entity`: semantically invalid proof or wallet data.
+- `429 Too Many Requests`: rate or abuse control.
+- `503 Service Unavailable`: dependency unavailable where safe to retry.
 
 ---
 
-## 18. Versioning and Compatibility Rules
+## Idempotency / Retry / Replay Model
 
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
+Idempotency is mandatory for:
 
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to wallet-link states or derived holder summary meaning
-- additional supported chain families may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
+- challenge creation where duplicate user actions are likely;
+- challenge completion;
+- wallet unlink;
+- preferred wallet updates;
+- admin disable/re-enable;
+- conflict resolution;
+- emergency containment;
+- any operation that mutates wallet-link state or wallet conflict state.
 
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of active wallet-link state
-- changing derived holder summary semantics incompatibly
-- removing key wallet-link or eligibility-summary fields
-- changing chain-family interpretation incompatibly
+Rules:
 
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for first-party consumers and future SDKs
+1. Idempotency scope MUST include actor/account, route family, request fingerprint, and target resource where applicable.
+2. Same key and same semantic request MUST return original terminal outcome.
+3. Same key and different semantic request MUST fail with `WALLET_IDEMPOTENCY_CONFLICT`.
+4. Proof challenge completion MUST be single-effective.
+5. Signature/proof replay MUST be detected separately from ordinary HTTP retry idempotency.
+6. Idempotency records MUST be retained for a policy-defined window suitable for wallet-link and admin risk.
+7. Transactional uniqueness checks MUST occur at canonical commit time.
+8. Derived projection refresh retries MUST NOT create duplicate canonical wallet-link mutations.
 
 ---
 
-## 19. Event Emission and Webhook Behavior
+## Rate Limit / Abuse-Control Model
 
-This domain is event-capable.
+Wallet-aware APIs MUST apply abuse controls to:
 
-### 19.1 Internal events
-The wallet-aware user domain must emit canonical internal events such as:
-- `wallet.challenge_created`
+- challenge issuance;
+- proof completion attempts;
+- repeated invalid proof submissions;
+- wallet-link collisions;
+- unlink/relink churn;
+- admin/control-plane bulk containment;
+- internal context-resolution hot paths.
+
+Rate limits MAY be scoped by account, session, wallet address, chain family, IP/device/risk signal, internal service identity, or operator identity. Error responses MUST be safe and avoid leaking sensitive risk heuristics.
+
+---
+
+## Endpoint / Route Family Model
+
+This specification defines route families, not final OpenAPI endpoint listings. Downstream OpenAPI MUST preserve the following route posture.
+
+### First-Party Application Routes
+
+- `GET /v1/wallets`
+- `POST /v1/wallets/challenges`
+- `POST /v1/wallets/challenges/{wallet_challenge_id}/complete`
+- `DELETE /v1/wallets/{wallet_link_id}`
+- `POST /v1/wallets/{wallet_link_id}/preferred`
+- `GET /v1/wallet-aware/me`
+- `GET /v1/wallet-aware/holder-summary`
+- `GET /v1/wallet-aware/eligibility-summary`
+
+### Internal Service Routes
+
+- `GET /internal/v1/accounts/{account_id}/wallet-context`
+- `POST /internal/v1/wallets/validations`
+- `GET /internal/v1/accounts/{account_id}/holder-context`
+- `GET /internal/v1/wallets/{wallet_link_id}`
+
+### Admin / Control-Plane Routes
+
+- `POST /admin/v1/wallets/{wallet_link_id}/disable`
+- `POST /admin/v1/wallets/{wallet_link_id}/reenable`
+- `POST /admin/v1/wallet-conflicts/{wallet_conflict_case_id}/resolve`
+- `POST /admin/v1/wallet-containment`
+- `GET /admin/v1/wallet-conflicts/{wallet_conflict_case_id}`
+
+### Event Families
+
+- `wallet.challenge_issued`
+- `wallet.proof_completed`
+- `wallet.proof_failed`
 - `wallet.linked`
 - `wallet.unlinked`
-- `wallet.disabled`
-- `wallet.reenabled`
-- `wallet.primary_changed`
-- `wallet.link_conflict_detected`
+- `wallet.restricted`
+- `wallet.invalidated`
+- `wallet.preferred_changed`
+- `wallet.conflict_opened`
 - `wallet.conflict_resolved`
-- `wallet.containment_executed`
-- `wallet.holder_context_refreshed`
-
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- account ID
-- wallet-link reference
-- wallet address reference or hashed reference as policy requires
-- chain family
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party webhooks for raw wallet-link mutations by default. Any future external wallet-aware webhook surface must be narrow, privacy-safe, security-reviewed, and governed by a separate contract.
+- `wallet.containment_applied`
+- `wallet.derived_context_refresh_requested`
+- `wallet.derived_context_refreshed`
 
 ---
 
-## 20. Audit and Activity Requirements
+## Public API Considerations
 
-The following actions must generate durable audit events:
+Public APIs MUST default to no exposure of private account-to-wallet associations. Public wallet lookup or registry exposure MAY exist only through public registry/public trust API specs, policy-approved publication rules, and public-safe derived views.
 
-- wallet challenge creation where policy requires
-- wallet link completion
-- wallet unlink
-- primary wallet change where policy requires
-- admin disable / re-enable
-- conflict remediation
-- containment actions
-- significant holder-context refresh or correction where policy requires
+Public APIs MUST NOT expose:
 
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- account ID
-- wallet-link reference
-- chain family
-- target wallet reference or policy-safe representation
-- action type
-- before/after state summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
-User-facing activity feeds may show only a filtered subset, but audit truth must remain durable and immutable.
+- private account linkage by wallet address unless explicitly approved;
+- unresolved conflict details;
+- internal risk/review state;
+- operator notes;
+- private eligibility or payout context;
+- full wallet history where privacy policy does not allow it.
 
 ---
 
-## 21. Data Model and Database Schema View
+## First-Party Application API Considerations
 
-### 21.1 `wallet_links`
-- `id` PK
-- `account_id` FK -> `accounts.id`
-- `wallet_address_normalized`
-- `chain_family`
-- `network_hint` nullable
-- `state`
-- `is_primary`
-- `verified_at` nullable
-- `created_at`
-- `updated_at`
-- `disabled_at` nullable
-- `removed_at` nullable
-- `created_by_actor_type`
-- `created_by_actor_id` nullable
+First-party routes should optimize for safe wallet-link UX without weakening backend ownership:
 
-**Constraints:**
-- unique (`wallet_address_normalized`, `chain_family`) for active/non-removed link space
-- at most one primary active wallet per account per policy
-- index on `account_id`
-- index on (`account_id`, `state`)
-- index on (`wallet_address_normalized`, `chain_family`)
-
-### 21.2 `wallet_verification_challenges`
-- `id` PK
-- `account_id` FK -> `accounts.id`
-- `wallet_address_normalized`
-- `chain_family`
-- `network_hint` nullable
-- `challenge_message_hash`
-- `nonce_hash`
-- `state`
-- `expires_at`
-- `created_at`
-- `completed_at` nullable
-- `failure_code` nullable
-- `correlation_id`
-
-**Constraints:**
-- index on `account_id`
-- index on `state`
-- index on `expires_at`
-
-### 21.3 `wallet_link_actions`
-- `id` PK
-- `wallet_link_id` FK -> `wallet_links.id` nullable
-- `account_id` FK -> `accounts.id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.4 `wallet_identity_conflicts`
-- `id` PK
-- `wallet_address_normalized`
-- `chain_family`
-- `conflict_type`
-- `state`
-- `primary_account_id` nullable
-- `secondary_account_id` nullable
-- `created_at`
-- `resolved_at` nullable
-- `resolution_code` nullable
-
-### 21.5 `holder_context_snapshots`
-- `id` PK
-- `account_id` FK -> `accounts.id`
-- `wallet_link_id` FK -> `wallet_links.id` nullable
-- `source_reference`
-- `summary_json`
-- `state`
-- `computed_at`
-- `superseded_at` nullable
-
-### 21.6 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.7 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical account-wallet relationship stays in `wallet_links`
-- verification proof lifecycle stays in `wallet_verification_challenges`
-- conflict/remediation actions stay in dedicated action and conflict tables
-- derived holder summaries stay separate from canonical wallet-link truth
-- snapshot-derived summaries are not the authoritative eligibility pipeline
-
-### Reconciliation notes
-- primary-wallet preference must reconcile with one active link only
-- link uniqueness must be rechecked at commit time
-- holder summary refreshes must preserve source references and freshness state
-- unlink or disable actions must not erase historical derivation lineage unexpectedly
+- challenge payloads MUST be backend-issued;
+- frontend MUST NOT invent challenge text as canonical;
+- proof completion MUST bind account, wallet, nonce, chain family, and challenge identifier;
+- reads MUST separate canonical wallet-link state from derived holder summaries;
+- unlink UX MUST surface blockers where safe without exposing sensitive risk details;
+- stale derived context MUST be explicitly labeled.
 
 ---
 
-## 22. Architecture Diagram — Mermaid flowchart
+## Internal Service API Considerations
 
-```mermaid
-flowchart LR
-    User[User Client]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    WalletAPI[Wallet-Aware User API<br/>fuze-backend-api]
-    WalletLinkStore[(wallet_links)]
-    ChallengeStore[(wallet_verification_challenges)]
-    ConflictStore[(wallet_identity_conflicts)]
-    HolderSummaryStore[(holder_context_snapshots)]
-    AuditSvc[Audit Service]
-    InternalSvc[Internal FUZE Services]
-    ControlPlane[Security Control Plane]
+Internal wallet context APIs MUST be least-privileged. They should expose only the fields needed for the requesting service purpose.
 
-    User --> WebApp
-    WebApp --> WalletAPI
-    AdminUI --> WalletAPI
-    InternalSvc --> WalletAPI
+Internal consumers MUST NOT cache wallet-aware context indefinitely for sensitive decisions. They MUST respect freshness metadata, invalidation events, and owner-domain reads for sensitive or final decisions.
 
-    WalletAPI --> WalletLinkStore
-    WalletAPI --> ChallengeStore
-    WalletAPI --> ConflictStore
-    WalletAPI --> HolderSummaryStore
-    WalletAPI --> AuditSvc
-
-    ControlPlane --> WalletAPI
-```
+Internal service mutation shortcuts are forbidden unless they call the same owner-domain validation pipeline as first-party or admin routes and are explicitly approved.
 
 ---
 
-## 23. Data Design — Mermaid Diagram
+## Admin / Control-Plane API Considerations
 
-```mermaid
-erDiagram
-    accounts ||--o{ wallet_links : has
-    accounts ||--o{ wallet_verification_challenges : creates
-    accounts ||--o{ wallet_link_actions : requests
-    wallet_links ||--o{ wallet_link_actions : affects
-    wallet_links ||--o{ holder_context_snapshots : influences
-    accounts ||--o{ holder_context_snapshots : summarizes
-    wallet_links ||--o{ wallet_identity_conflicts : may_conflict
+Admin APIs MUST:
 
-    accounts {
-        uuid id PK
-    }
+- be separate from first-party user routes;
+- require strong operator authentication and authorization;
+- require reason codes;
+- require operator notes where material;
+- require case references for conflict/remediation flows;
+- record before/after state summaries;
+- emit critical audit events;
+- prevent silent destructive rewrites;
+- support rollback only through explicit new owner-domain actions, not hidden database edits.
 
-    wallet_links {
-        uuid id PK
-        uuid account_id FK
-        string wallet_address_normalized
-        string chain_family
-        string state
-        boolean is_primary
-        datetime verified_at
-        datetime created_at
-        datetime updated_at
-    }
+Admin APIs MUST NOT:
 
-    wallet_verification_challenges {
-        uuid id PK
-        uuid account_id FK
-        string wallet_address_normalized
-        string chain_family
-        string state
-        datetime expires_at
-        datetime created_at
-        datetime completed_at
-    }
-
-    wallet_link_actions {
-        uuid id PK
-        uuid wallet_link_id FK
-        uuid account_id FK
-        string action_type
-        string state
-        string reason_code
-        datetime created_at
-        datetime executed_at
-    }
-
-    wallet_identity_conflicts {
-        uuid id PK
-        string wallet_address_normalized
-        string chain_family
-        string conflict_type
-        string state
-        datetime created_at
-        datetime resolved_at
-    }
-
-    holder_context_snapshots {
-        uuid id PK
-        uuid account_id FK
-        uuid wallet_link_id FK
-        string source_reference
-        string state
-        datetime computed_at
-        datetime superseded_at
-    }
-```
+- directly edit storage without owner-domain validation;
+- silently reassign wallets;
+- bypass idempotency;
+- conceal operator identity from audit;
+- cause public registry or eligibility corrections without invoking the owning downstream domain’s correction pathway.
 
 ---
 
-## 24. Flow View
+## Event / Webhook / Async API Considerations
 
-### 24.1 Happy path — link wallet
-1. authenticated user requests wallet verification challenge
-2. backend creates challenge bound to account, wallet, chain family, and expiry
-3. user signs challenge and submits proof
-4. backend verifies proof and uniqueness constraints
-5. wallet link becomes active
-6. audit event is written
-7. wallet-linked event is emitted
-8. downstream holder-context refresh may be triggered asynchronously
+Wallet-aware domain events are internal by default. Public webhooks, if ever approved, MUST expose narrower and safer event views than internal events.
 
-### 24.2 Happy path — read wallet-aware account context
-1. authenticated user requests wallet-aware summary
-2. backend loads active wallet links
-3. backend loads current derived holder summary if available
-4. response distinguishes durable wallet-link truth from derived holder context
-5. client receives wallet-aware account view
+Events MUST include:
 
-### 24.3 Happy path — unlink wallet
-1. authenticated user requests unlink of one active wallet
-2. backend validates account ownership and policy state
-3. wallet link transitions to removed
-4. audit and event are emitted
-5. downstream holder-context refresh may be triggered
+- event ID;
+- event type;
+- version;
+- occurred_at;
+- actor or system initiator reference where safe;
+- account reference where allowed;
+- wallet_link reference;
+- chain family;
+- resulting state;
+- correlation ID;
+- causation ID;
+- policy reference where material.
 
-### 24.4 Alternate path — wallet already linked elsewhere
-1. challenge completion succeeds cryptographically
-2. backend detects wallet already actively linked to another account
-3. automatic activation is blocked
-4. conflict record is created or updated
-5. response returns conflict/review state
-6. admin-controlled remediation may be required
-
-### 24.5 Failure path — invalid or replayed proof
-1. user submits proof for expired or mismatched challenge
-2. backend rejects proof
-3. no wallet-link activation occurs
-4. failure is returned with bounded error
-5. audit may record failed verification attempt where policy requires
-
-### 24.6 Failure and containment path — suspicious wallet-aware relationship
-1. security workflow flags suspicious wallet/account relationship
-2. admin containment route is called
-3. backend disables targeted wallet link(s)
-4. critical audit and containment event are emitted
-5. product and derived caches consume updated wallet-aware truth
-
-### 24.7 Retry behavior
-- challenge completion retries return same terminal outcome
-- unlink retries return same terminal removed result
-- disable/reenable retries return terminal state
-- conflict resolution retries return same final action result
+Events MUST NOT include raw proof secrets, nonces, sensitive risk heuristics, private operator notes, or more wallet information than the consumer is allowed to know.
 
 ---
 
-## 25. Data Flows — Mermaid sequenceDiagram
+## Chain-Adjacent API Considerations
 
-```mermaid
-sequenceDiagram
-    participant U as User Client
-    participant W as Web Frontend
-    participant API as Wallet-Aware API
-    participant C as Challenge Store
-    participant L as Wallet Link Store
-    participant H as Holder Summary Store
-    participant AUD as Audit Service
+Wallet APIs may accept and return chain-family metadata. They MUST:
 
-    U->>W: Request wallet link
-    W->>API: POST /v1/wallets/challenges
-    API->>C: Create verification challenge
-    API-->>W: challenge payload
-
-    U->>W: Submit signed proof
-    W->>API: POST /v1/wallets/challenges/{challenge_id}/complete
-    API->>C: Validate challenge
-    API->>L: Create or activate wallet link
-    API->>AUD: Write wallet link audit
-    API-->>W: wallet link summary
-
-    W->>API: GET /v1/wallet-aware/me
-    API->>L: Load active wallet links
-    API->>H: Load derived holder summary
-    API-->>W: wallet-aware account context
-```
+- normalize wallet addresses server-side;
+- distinguish chain identifier from wallet-link identity;
+- distinguish chain observation from accepted wallet-link state;
+- preserve chain finality uncertainty where material;
+- avoid representing token balance reads as account authority;
+- avoid rewriting historical wallet-link state from later chain observations;
+- route detailed chain reference/public lookup behavior to chain/public registry APIs.
 
 ---
 
-## 26. Security and Risk Controls
+## Data Model / Storage Support Implications
 
-1. **Wallet linking is not identity replacement**  
-   Account identity remains canonical even when wallet links are active.
+Implementation contracts MUST support at minimum:
 
-2. **Explicit proof verification**  
-   Wallet link activation requires challenge-bound proof verification.
+- durable `wallet_link` records;
+- durable short-lived `wallet_verification_challenge` records;
+- durable `wallet_conflict_case` or equivalent remediation records;
+- durable wallet action/operation records;
+- idempotency records;
+- audit event references;
+- projection/derived context records with freshness/provenance;
+- uniqueness constraints preventing active same-chain wallet assignment to multiple accounts except explicit conflict posture;
+- state transition history or lineage sufficient for recovery and audit.
 
-3. **Replay resistance**  
-   Challenge issuance and completion must prevent stale or replayed proofs from causing duplicate effect.
-
-4. **Uniqueness enforcement**  
-   Active wallet/address + chain-family collisions must be handled through explicit conflict flows, not silent overwrite.
-
-5. **Least privilege**  
-   Internal and admin wallet-aware routes must be narrowly authorized.
-
-6. **No product-owned wallet truth**  
-   Products may consume wallet-aware context but must not own canonical account-wallet linkage.
-
-7. **Derived context separation**  
-   Holder-aware and eligibility-facing summaries must remain explicitly derived, not confused with canonical chain-state truth.
-
-8. **Containment support**  
-   The domain must support fast disablement or containment of suspicious wallet-aware relationships.
-
-9. **Problem-details discipline**  
-   Error bodies must be structured and safe, without exposing hidden security heuristics.
-
-10. **Audit immutability**  
-    Sensitive wallet-aware mutations require durable immutable audit lineage.
+Destructive deletes are non-canonical for sensitive wallet history. Terminal states and explicit correction lineage are preferred.
 
 ---
 
-## 27. Operational Considerations
+## Read Model / Projection / Reporting Rules
 
-- wallet challenge creation and completion are latency-sensitive user-facing flows and should be highly available
-- challenge expiry sweeps must run regularly
-- holder-summary refresh may be asynchronous and must tolerate upstream derivation lag without mutating canonical link truth
-- active wallet-link uniqueness checks must be efficient and transaction-safe
-- wallet-aware derived caches should invalidate quickly on link state changes
-- monitoring should alert on:
-  - spikes in failed wallet verification attempts
-  - unusual wallet-link conflicts
-  - unusual admin disablement or containment actions
-  - repeated proof replay patterns
-  - holder-context refresh lag beyond policy thresholds
+Read models MAY summarize wallet-aware state only when:
 
----
+- they are clearly derived;
+- they can be regenerated from canonical owner truth and approved upstream sources;
+- they preserve freshness and provenance where material;
+- they do not invent wallet states;
+- they do not coalesce accounts by wallet unless explicitly governed;
+- they cannot mutate wallet-link truth;
+- they respect publication and privacy policy.
 
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between canonical account identity and wallet-aware linkage.
-2. Only `fuze-backend-api` owns canonical wallet-link truth.
-3. Wallet link activation requires explicit proof verification.
-4. A wallet in the same chain family cannot be actively linked to multiple accounts without controlled remediation.
-5. User-facing routes can list and manage only the current authenticated account’s wallet links.
-6. Unlink is idempotent and auditable.
-7. Holder-aware and eligibility-facing summaries are explicitly derived and not presented as raw on-chain source truth.
-8. Internal service routes are least-privilege and backend-only.
-9. Admin routes require reason-coded privileged authorization.
-10. Event emissions exist for major wallet-aware mutations.
-11. Response and error semantics are stable and machine-readable.
-12. Database schema separates canonical wallet-link truth from derived holder summaries.
-13. Products can consume canonical wallet-aware context without redefining wallet truth.
-14. Containment is supported and safely replayable.
-15. Mermaid diagrams remain consistent with prose and data model.
+If a derived view disagrees with canonical wallet-link records, canonical wallet-link records win for wallet association. If a derived holder view disagrees with chain truth, chain truth and the owning chain/eligibility policies govern the chain-specific meaning.
 
 ---
 
-## 29. Test Cases
+## Security / Risk / Privacy Controls
 
-### 29.1 Positive cases
-1. Authenticated user creates wallet verification challenge successfully.
-2. Valid signed proof activates wallet link successfully.
-3. Authenticated user lists linked wallets successfully.
-4. Authenticated user reads wallet-aware account context successfully.
-5. Authenticated user unlinks an active wallet successfully.
-6. Authenticated user changes primary wallet successfully.
-7. Admin disables a suspicious wallet link successfully.
+Wallet linkage is security-sensitive. APIs MUST support:
 
-### 29.2 Negative cases
-8. Unauthenticated call to wallet-link route is rejected.
-9. Expired challenge completion returns `WALLET_CHALLENGE_EXPIRED`.
-10. Invalid proof returns `WALLET_PROOF_INVALID`.
-11. Attempt to link wallet already actively linked elsewhere returns conflict/review outcome.
-12. Attempt to unlink another account’s wallet link is denied.
-13. Unsupported chain family returns `WALLET_CHAIN_FAMILY_UNSUPPORTED`.
+- proof-based linking;
+- challenge expiration;
+- nonce/replay protection;
+- uniqueness and collision detection;
+- unlink safeguards;
+- rate limiting and abuse monitoring;
+- suspicious-link review posture;
+- recent-auth or step-up checks where policy requires;
+- privacy-safe wallet address representation;
+- public exposure gating;
+- containment workflows;
+- audited privileged correction.
 
-### 29.3 Authorization cases
-14. Normal user cannot call admin disable route.
-15. Internal service without required privilege cannot resolve holder-context route.
-16. User cannot read another account’s wallet-aware summary via user routes.
-17. Product service cannot post product-local derived wallet truth as canonical input.
-
-### 29.4 Idempotency and replay cases
-18. Replaying challenge completion for the same challenge returns the same terminal outcome.
-19. Replaying unlink with same idempotency key returns original removed result.
-20. Replaying containment action with same idempotency key returns same terminal action summary.
-
-### 29.5 Concurrency cases
-21. Two concurrent link completions for same wallet/address + chain-family produce one activation and one conflict or terminal duplicate outcome.
-22. Concurrent unlink and disable actions produce consistent terminal wallet-link state.
-23. Concurrent primary-wallet changes preserve exactly one active primary wallet under policy.
-
-### 29.6 Recovery / admin cases
-24. Admin re-enable restores a disabled wallet link where policy allows.
-25. Conflict resolution closes wallet conflict under controlled remediation path.
-26. Containment action disables suspicious wallet-aware links immediately or through fast propagation path.
-
-### 29.7 Event and audit cases
-27. Successful wallet link emits `wallet.linked`.
-28. Unlink emits `wallet.unlinked`.
-29. Containment emits `wallet.containment_executed` and critical audit lineage.
+Wallet APIs MUST NOT over-disclose wallet associations in public or cross-account contexts.
 
 ---
 
-## 30. Open Questions or Explicit Deferred Decisions
+## Audit / Traceability / Observability Requirements
 
-1. Exact supported chain-family matrix at first production release is deferred.
-2. Exact multi-wallet preference behavior for all products is deferred.
-3. Exact derived holder-rank presentation model is deferred.
-4. Exact user-facing eligibility-summary detail level is deferred.
-5. Exact conflict remediation workflow for disputed wallet ownership is deferred.
-6. Exact public-read exposure rules for wallet-aware references are deferred.
+Every material wallet-aware mutation MUST produce durable lineage sufficient to answer:
 
----
+- who initiated the action;
+- which account was affected;
+- which wallet and chain family were involved;
+- what proof/challenge or evidence was accepted;
+- what policy version or rule set was used;
+- what previous and resulting states were;
+- whether conflict, review, or operator override occurred;
+- which idempotency key, operation ID, correlation ID, and trace ID connect the workflow;
+- what downstream events were emitted.
 
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  wallet-aware/
-  identity/
-  auth-session/
-  audit-log/
-  integrations/
-```
-
-Implementation guidance:
-- keep canonical wallet-link truth separate from derived holder and eligibility summaries
-- centralize challenge generation and proof verification in one domain service
-- perform uniqueness checks inside the commit boundary
-- treat conflict remediation and containment as domain actions, not ad hoc row patches
-- emit events only after canonical state commit succeeds
-- publish derived holder-aware views from canonical wallet-link truth and approved upstream summary sources; do not let derived views mutate wallet-link truth
+Observability MUST track challenge issuance/completion, proof failures, conflicts, replay detections, duplicate wallet attempts, admin actions, projection lag, dependency degradation, rate limiting, and event delivery failures.
 
 ---
 
-## 32. Frontend Consumption Notes
+## Failure Handling / Edge Cases
 
-### For `fuze-frontend-webapp`
-- may initiate and complete wallet-link flows
-- may list linked wallets and read wallet-aware account context
-- must not infer canonical wallet-link truth from client-side wallet state alone
-- must treat backend wallet-aware decisions as authoritative
-- should clearly distinguish durable link state from derived holder or eligibility summaries
+### Account Has No Wallet
 
-### For `fuze-frontend-admin`
-- may trigger privileged disable / re-enable / conflict-remediation / containment actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate wallet-link truth client-side
-- should present immutable audit-linked summaries after privileged actions
+The account remains a valid FUZE account. APIs return empty wallet lists and derived holder context marked absent or unavailable without treating the account as invalid.
+
+### Wallet Already Linked Elsewhere
+
+The API returns conflict or review posture. It MUST NOT silently reassign the wallet.
+
+### Challenge Expires
+
+Completion returns `WALLET_CHALLENGE_EXPIRED`. A new challenge may be requested subject to rate limits.
+
+### Proof Replay
+
+Replay is rejected or idempotently returned if it matches the same terminal operation. It MUST NOT create duplicate wallet links.
+
+### Chain Reads Degraded
+
+Existing active wallet links remain platform truth. Derived holder/token context may be `stale` or `unavailable`.
+
+### Wallet Unlinked After Historical Snapshot
+
+Current wallet-aware context changes prospectively. Historical eligibility or payout artifacts are governed by downstream cycle policy and MUST NOT be silently rewritten by wallet unlink.
+
+### Product Cache Stale
+
+Fresh owner-domain reads and invalidation events override product cache for sensitive decisions.
+
+### Support Error or Misbinding
+
+A conflict/remediation case is required. Corrective action must be reason-coded, audited, and lineage-preserving.
 
 ---
 
-## 33. Contract Derivation Notes
+## Migration / Versioning / Compatibility / Deprecation Rules
 
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- wallet-link operations
-- verification challenge operations
-- wallet-aware account summary operations
-- holder-summary and eligibility-summary operations
-- internal wallet-context operations
-- admin remediation and containment operations
-- shared problem-details schema
-- wallet-aware events in AsyncAPI
+Wallet-aware APIs are versioned by route family (`/v1`, `/internal/v1`, `/admin/v1`) and event version.
 
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- shared wallet-link helpers
-- wallet-aware summary helpers
-- typed chain-family and wallet-link models
-- problem-error models for wallet-aware outcomes
+Compatible changes include additive fields, new derived summaries, additional safe error metadata, and new supported chain families where existing semantics remain stable.
 
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+Breaking changes include:
+
+- changing the meaning of `active`, `restricted`, `unlinked`, `invalidated`, or `blocked_conflict`;
+- changing wallet uniqueness semantics;
+- changing proof acceptance semantics incompatibly;
+- changing public exposure posture;
+- removing idempotency requirements;
+- treating wallet proof as login without auth/session spec approval;
+- collapsing wallet-link truth into eligibility, payout, registry, or product truth.
+
+Deprecations MUST include documented migration windows, compatibility guidance, and contract tests.
+
+---
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI artifacts MUST preserve:
+
+- route-family separation;
+- stable resource identifiers;
+- canonical vs derived field distinction;
+- status and error code semantics;
+- idempotency-key requirements;
+- correlation and operation references;
+- admin reason-code requirements;
+- privacy-safe wallet address representation;
+- derived context freshness markers.
+
+AsyncAPI artifacts MUST preserve:
+
+- event versioning;
+- canonical commit-before-event rule;
+- causation/correlation IDs;
+- non-mutating consumer semantics;
+- absence of sensitive proof/risk/operator secrets.
+
+SDKs MUST NOT flatten all wallet states into a boolean such as `hasWallet` for contract-sensitive behavior. SDK convenience helpers MAY exist only if they preserve state, freshness, and derived/canonical distinctions.
+
+---
+
+## Implementation-Contract Guardrails
+
+1. Do not build frontend-only wallet linking state.
+2. Do not store wallet associations only in product-local tables.
+3. Do not let chain indexers update wallet-link ownership directly.
+4. Do not let public registry outputs become source-of-record.
+5. Do not let eligibility or payout datasets rewrite wallet-link history.
+6. Do not let admin tools bypass owner-domain workflows.
+7. Do not omit idempotency for sensitive wallet mutations.
+8. Do not omit audit lineage for proof acceptance, unlink, conflict, or admin correction.
+9. Do not expose private wallet-link details publicly without publication policy.
+10. Do not represent wallet proof as authentication unless the auth/session API spec explicitly adopts that flow.
+
+---
+
+## Downstream Execution Staging
+
+1. Define canonical wallet-link and challenge storage contracts.
+2. Define first-party wallet challenge and completion OpenAPI.
+3. Define internal wallet-context service contract.
+4. Define admin conflict/remediation control-plane contract.
+5. Define idempotency, audit, and observability implementation contracts.
+6. Define event schemas and projection refresh semantics.
+7. Define public-safe registry integration separately.
+8. Define eligibility/payout consumption contracts separately.
+9. Add contract tests, regression tests, migration tests, and boundary-violation tests.
+
+---
+
+## Required Downstream Specs / Contract Layers
+
+- Wallet link storage contract
+- Wallet proof/challenge implementation contract
+- Wallet conflict and remediation implementation contract
+- Wallet-aware event AsyncAPI contract
+- Wallet-aware OpenAPI contract
+- Wallet context internal service contract
+- Admin/control-plane wallet correction contract
+- Wallet-aware audit mapping contract
+- Public registry wallet-reference contract
+- Eligibility wallet-input contract
+- SDK state model contract
+
+---
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns include:
+
+- product-local canonical wallet tables;
+- frontend-only wallet link truth;
+- wallet address as universal user ID;
+- wallet signature as generic session authority without auth/session approval;
+- chain balance as workspace authorization;
+- public registry as wallet-link owner;
+- payout or snapshot data rewriting wallet-link records;
+- admin direct database edits without owner-domain API and audit;
+- derived holder cache used for final sensitive decision after freshness expiry;
+- boolean-only wallet state in SDKs for contract-sensitive behavior;
+- route aliases that hide whether a response is canonical, derived, public, or presentation truth.
+
+Detection SHOULD be implemented through contract tests, schema linting, audit monitoring, route review, and data lineage review.
+
+---
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example — User Links Wallet
+
+An authenticated user requests a challenge, signs it, and backend verifies proof and commits an active wallet link for the user’s `account_id`. The active link becomes wallet-link truth. Holder summary refreshes asynchronously as derived context.
+
+### Canonical Example — Product Consumes Holder Context
+
+A product calls an internal wallet-context API and receives a derived holder summary with freshness metadata. The product uses it for approved display behavior but does not create its own wallet mapping table.
+
+### Canonical Example — Wallet Conflict
+
+A wallet already linked to another account is claimed by a second account. The API opens conflict/review state and blocks silent reassignment.
+
+### Anti-Example — Wallet as Identity
+
+A product treats `wallet_address` as the canonical FUZE user identity and bypasses `account_id`. This is forbidden.
+
+### Anti-Example — Chain Balance as Authorization
+
+A route grants workspace admin authority because a wallet holds tokens. This is forbidden.
+
+### Anti-Example — Public Registry Override
+
+A public wallet registry entry is used to rewrite canonical private wallet-link state. This is forbidden.
+
+### Anti-Example — Admin Storage Edit
+
+A support operator edits wallet-link rows directly without reason code, policy reference, and audit lineage. This is forbidden.
+
+---
+
+## Acceptance Criteria
+
+1. Every wallet-link mutation route requires authenticated actor or approved service/admin identity.
+2. Wallet challenge creation records account binding, wallet address, chain family, nonce/hash, expiry, and correlation reference.
+3. Challenge completion rejects expired, invalid, mismatched, or replayed proof inputs.
+4. Active wallet links cannot be duplicated across accounts for the same chain family outside explicit conflict/remediation posture.
+5. Wallet-link state transitions are durable and auditable.
+6. User routes cannot mutate wallets outside the current account scope.
+7. Admin routes require privileged operator identity, reason code, correlation ID, and audit write.
+8. Public/read/reporting outputs are explicitly derived and non-mutating.
+9. Holder summaries expose freshness/provenance and cannot become canonical wallet-link truth.
+10. Chain observations are never stored as account-to-wallet ownership without proof acceptance and owner-domain commit.
+11. Wallet-aware context is not treated as workspace, permission, entitlement, billing, or governance authority.
+12. Idempotency keys are enforced for sensitive mutations.
+13. Replaying a matching idempotent request returns the original terminal result.
+14. Reusing an idempotency key with a different request fails with conflict.
+15. Conflict cases are represented explicitly and cannot be resolved silently.
+16. Events are emitted only after canonical commit.
+17. Event consumers are documented as non-owners of wallet-link truth.
+18. Derived projection failures do not roll back committed canonical wallet-link state.
+19. Degraded chain reads mark derived context stale/unavailable without invalidating wallet links.
+20. OpenAPI/AsyncAPI/SDK artifacts preserve canonical/derived/admin/public distinctions.
+21. Migration plans exist for any wallet state or proof semantics change.
+22. Audit logs can answer actor, target, proof basis, policy, before/after state, reason, correlation, and event lineage.
+
+---
+
+## Test Cases
+
+### Positive Path Tests
+
+1. Authenticated user creates wallet challenge for supported chain family and receives challenge payload.
+2. User completes valid proof; API creates active wallet link and emits `wallet.linked`.
+3. User lists wallets and sees active wallet with verification timestamp.
+4. Internal service resolves wallet context with service identity and approved scope.
+5. Derived holder summary returns `current` freshness when projection is up to date.
+6. User unlinks wallet; state transitions to `unlinked`, audit is written, event is emitted.
+
+### Negative Path Tests
+
+7. Unauthenticated request to create challenge returns `WALLET_SESSION_REQUIRED`.
+8. Unsupported chain family returns `WALLET_CHAIN_FAMILY_UNSUPPORTED`.
+9. Invalid wallet address returns `WALLET_ADDRESS_INVALID`.
+10. Expired challenge completion returns `WALLET_CHALLENGE_EXPIRED`.
+11. Invalid signature returns `WALLET_PROOF_INVALID`.
+12. Proof for different wallet address fails.
+13. User attempts to unlink another account’s wallet and receives authorization failure.
+
+### Authorization / Entitlement Tests
+
+14. Valid wallet link does not grant workspace admin authority.
+15. Valid wallet link does not grant billing authority.
+16. Product feature gating that uses holder context must call entitlement/capability policy and cannot infer entitlement from wallet link alone.
+17. Internal service without wallet-context scope is denied.
+
+### Idempotency / Retry / Replay Tests
+
+18. Repeating challenge creation with same idempotency key and same request returns same active challenge where policy allows.
+19. Repeating challenge completion with same proof returns same terminal result.
+20. Reusing idempotency key with different wallet address returns `WALLET_IDEMPOTENCY_CONFLICT`.
+21. Replaying a completed proof outside the original operation fails or returns original terminal result without new link.
+22. Concurrent attempts to link same wallet to two accounts produce one accepted link and one conflict/review outcome.
+
+### Conflict / Admin Tests
+
+23. Wallet already active on another account opens conflict or returns conflict according to policy; no silent reassignment occurs.
+24. Admin disable without reason code fails.
+25. Admin disable with valid operator, reason, and policy succeeds and writes critical audit.
+26. Conflict resolution requires case ID and produces before/after lineage.
+27. Emergency containment is idempotent and bounded to requested scope.
+
+### Rate Limit / Abuse Tests
+
+28. Excessive challenge creation for the same account or wallet returns `WALLET_RATE_LIMITED`.
+29. Repeated invalid proof attempts trigger risk/review posture.
+30. Internal service excessive validation requests are rate-limited or degraded according to service policy.
+
+### Degraded Mode Tests
+
+31. Chain observation dependency unavailable does not invalidate existing wallet link.
+32. Holder summary returns `stale` or `unavailable` when projection fails.
+33. Sensitive link completion fails closed if required proof verification dependency is unavailable.
+
+### Audit / Observability Tests
+
+34. Wallet linked audit includes actor, account, wallet, chain, proof basis, policy reference, before/after, correlation, and trace.
+35. Admin remediation audit includes operator, reason, case, before/after, and event references.
+36. Event delivery failure is observable and retryable without duplicate wallet mutation.
+
+### Migration / Compatibility Tests
+
+37. Adding new optional response field does not break existing clients.
+38. Changing wallet-link state enum without versioned migration fails compatibility review.
+39. SDK preserves wallet states and does not flatten contract-sensitive states into a boolean.
+40. Public API exposure change requires public registry/public trust approval and privacy review.
+
+### Boundary-Violation Tests
+
+41. Product route attempting to write wallet-link storage directly fails contract review.
+42. Public registry route attempting to mutate wallet-link truth fails contract review.
+43. Eligibility pipeline attempting to rewrite wallet history fails contract review.
+44. Chain indexer attempting to mark wallet active without proof acceptance fails contract review.
+45. Admin database edit without API/audit path is detected as non-canonical.
+
+---
+
+## Dependencies / Cross-Spec Links
+
+This specification depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
+- `SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `WALLET_AWARE_USER_SPEC.md`
+- `IDENTITY_AND_ACCOUNT_SPEC.md`
+- `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`
+- `FUZE_PROVIDER_RESOLUTION_AND_LINKING_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_CONTINUITY_SPEC.md`
+- `FUZE_ACCOUNT_RECOVERY_AND_CONFLICT_HANDLING_SPEC.md`
+- `SESSION_LIFECYCLE_AND_SECURITY_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
+- `WORKSPACE_AND_ORGANIZATION_SPEC.md`
+- `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`
+- `ENTITLEMENT_AND_CAPABILITY_GATING_SPEC.md`
+- `API_ARCHITECTURE_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+
+---
+
+## Explicitly Deferred Items
+
+The following are intentionally deferred:
+
+- exact wallet-signature protocol and message format;
+- exact supported wallet clients;
+- exact multi-chain expansion beyond approved chain families;
+- exact chain-indexer design;
+- exact public registry schema;
+- exact eligibility formula and payout-cycle mapping;
+- exact product benefit formulas;
+- exact support UX for conflict review;
+- exact privacy redaction rules for every public jurisdiction or channel;
+- exact KYC/legal identity posture if introduced later;
+- exact wallet-auth login posture unless adopted in auth/session specs.
+
+---
+
+## Final Normative Summary
+
+`WALLET_AWARE_USER_API_SPEC.md` governs the API expression of FUZE wallet-aware user semantics. Wallet APIs create, verify, expose, restrict, and audit account-to-wallet links, but they do not own canonical account identity, authentication, sessions, authorization, entitlements, chain truth, eligibility truth, payout truth, or public registry truth. Wallet links are proof-based, account-rooted, chain-aware, conflict-safe, idempotent, auditable, and projection-friendly. Derived holder, eligibility, public, reporting, and product views may consume wallet-aware truth but must remain downstream and non-canonical. Admin correction is allowed only through bounded, reason-coded, policy-constrained, audited owner-domain workflows.
+
+Downstream implementation layers MUST preserve these boundaries. No frontend, product service, chain indexer, registry, reporting surface, eligibility pipeline, payout service, SDK convenience layer, or admin tool may reinterpret wallet-aware context as a universal identity, authorization, entitlement, payout, or governance model.
+
+---
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit.
+- [x] Accepted-state vs final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behavior is explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI, AsyncAPI, and SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Architecture Diagram clarifies consumers, surfaces, owner domains, services, stores, events, chain-adjacent systems, and downstream consumers.
+- [x] Data Design diagram uses Mermaid syntax.
+- [x] Data Design distinguishes canonical data from derived, public-read, provider/proof-input, and projection data.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax.
+- [x] Data Flows distinguish accepted/review state from final wallet-link success.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.
