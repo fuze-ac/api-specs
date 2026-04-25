@@ -1,176 +1,1011 @@
-# EVENT_MODEL_AND_WEBHOOK_SPEC.md
+# FUZE Event Model and Webhook API Specification
 
-## 1. Title
-FUZE Event Model and Webhook Specification
+## Document Metadata
 
-## 2. Document Metadata
-- Document Name: EVENT_MODEL_AND_WEBHOOK_SPEC.md
-- Status: Active Draft for Approval
-- API Classification: event-driven, internal coordination, derived-public, and controlled external webhook contract
-- Owning Domain: Platform Eventing / Integration Architecture
-- Primary Implementing Repo: `fuze-backend-api`
-- Supporting Repos: `fuze-frontend-webapp`, `fuze-frontend-admin`, `fuze-public-registry`, future `fuze-sdk`
-- Supporting System Components: worker runtime, scheduler, webhook dispatcher, event store / outbox, retry and delivery observability services
-- Primary System of Record: owning backend domains inside `fuze-backend-api`, with explicit chain-native truth in `fuze-contracts` where applicable
-- Canonical Folder Target: `fuze.ac > docs > api-spec`
-- Interpretation Mode: canonical event and webhook contract source of truth
+- **Document Name:** `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / production-grade interface-contract specification
+- **Status:** Draft production API specification pending FUZE approval workflow
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-24
+- **Last Updated:** 2026-04-24
+- **Reviewed On:** 2026-04-24
+- **Document Owner:** FUZE Platform Eventing and Webhook Governance Domain; named individual owner not explicitly specified in retrieved governing materials
+- **Approval Authority:** FUZE platform architecture / API governance approval workflow; named approval authority not explicitly specified in retrieved governing materials
+- **Review Cadence:** Review whenever event semantics, webhook exposure posture, public API posture, internal service posture, replay/idempotency posture, migration/versioning posture, security controls, delivery infrastructure, or public trust publication rules materially change
+- **Governing Layer:** API SPEC v2 interface-contract layer for event-driven APIs, webhook-management APIs, internal event interfaces, outbound webhook contracts, and AsyncAPI/OpenAPI derivation guardrails
+- **Parent Registry:** `API_SPEC_INDEX.md` for v1 API-family source material and the API SPEC v2 canonical file registry supplied in the production prompt
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend engineering, integration engineering, API contract authors, AsyncAPI/OpenAPI authors, SDK authors, workflow/runtime engineering, queue/worker engineering, public API governance, security, audit, operations, support/control-plane operators, product integration teams
+- **Primary Purpose:** Define the production-grade FUZE API contract posture for internal events, integration events, operational events, webhook management APIs, outbound webhook delivery contracts, replay/redelivery controls, event projection boundaries, and implementation-contract derivation without redefining refined event semantics or owner-domain truth
+- **Primary Upstream References:** `REFINED_SYSTEM_SPEC_INDEX.md`, `API_SPEC_INDEX.md`, `DOCS_SPEC_INDEX.md`, `SYSTEM_SPEC_INDEX.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`, `WORKFLOW_AND_AUTOMATION_SPEC.md`, `JOB_QUEUE_AND_WORKER_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`, `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`, `TRANSPARENCY_REPORTING_SPEC.md`, `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`, `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`, `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- **Primary Downstream Dependents:** domain event catalogs, webhook event catalogs, internal broker contracts, event outbox implementations, webhook dispatchers, webhook endpoint-management APIs, delivery-attempt stores, consumer checkpoint implementations, replay/redelivery tooling, AsyncAPI files, OpenAPI files for webhook management APIs, public SDKs, partner integration contracts, observability dashboards, support tooling, migration plans, contract validation suites
+- **API Surface Families Covered:** internal event publication, internal event consumption, event outbox/store access, event projection, webhook endpoint management, outbound webhook delivery, redelivery/replay control, delivery-observability reads, admin/control remediation APIs, AsyncAPI derivation, OpenAPI derivation for management routes
+- **API Surface Families Excluded:** arbitrary public subscription to all internal events, ordinary public REST resource APIs outside webhook management, domain-specific business mutation APIs, workflow-state APIs, queue lease APIs, audit-log APIs, full notification-copy APIs, direct database schemas, exact broker-vendor configuration, smart-contract ABI definitions
+- **Canonical System Owner(s):** Owner domains own business event meaning; Platform Eventing and Webhook Governance owns shared event/webhook contract posture; Integration/Webhook domain owns external webhook projection and delivery posture; Audit domain owns audit records; Security/Risk owns destination, secret, and abuse controls; Migration/Versioning owns contract evolution posture
+- **Canonical API Owner:** FUZE Platform Eventing and Webhook API Governance Domain
+- **Supersedes:** API v1 / pre-v2 interpretations that treat events as transport-only messages, mirror internal events as public webhooks, treat audit/activity records as event contracts, let queue/workflow infrastructure redefine business event meaning, or treat webhook delivery success/failure as owner-domain business success/failure
+- **Superseded By:** None currently defined
+- **Related Decision Records:** Not explicitly specified in retrieved materials
+- **Canonical Status Note:** This document is the API SPEC v2 interface-contract expression of the refined FUZE event and webhook semantics. Refined system specs remain authoritative for semantic truth. This API spec governs the API contract layer and downstream machine-readable contract derivation.
+- **Implementation Status:** Normative target for implementation planning and contract validation; downstream implementation status not explicitly specified
+- **Approval Status:** Draft pending explicit FUZE approval workflow
+- **Change Summary:** Converts the refined FUZE Event Model and Webhook system specification into a production-grade API SPEC v2 contract document; adds route/resource family posture, request/response/error/status classes, idempotency/replay rules, public/internal/admin/event distinctions, diagrams, flow views, acceptance criteria, test cases, and derivation guardrails.
 
-## 3. Purpose
-This document defines the canonical event model and webhook contract architecture for FUZE. Its purpose is to establish how meaningful domain outcomes are emitted, classified, versioned, persisted, consumed, retried, replayed, and exposed externally where allowed, while preserving domain ownership, mutation safety, auditability, transparency discipline, and strict separation among FUZE token participation, Platform Credits, stablecoin profit participation, treasury controls, and governance controls.
+---
 
-FUZE is a platform-first, multi-product system with shared identity, workspaces, billing, Platform Credits, AI orchestration, workflow automation, async jobs, chain-adjacent execution, transparency reporting, governance-sensitive controls, and payout-sensitive operations. In such an environment, request-response APIs alone are insufficient. The platform requires a formal event model to coordinate durable side effects across domains and a narrower, more stable webhook layer for approved external integrations.
+## Purpose
 
-## 4. Scope
-This specification covers:
-- the canonical role of events in FUZE
-- the distinction among events, APIs, audit records, activity feeds, jobs, and derived public artifacts
-- event ownership, classification, timing semantics, and payload discipline
-- internal event contracts for platform, product, chain-adjacent, workflow, and reporting domains
-- public webhook contract boundaries and delivery behavior
-- retry, replay, deduplication, idempotency, and ordering expectations
-- authentication, authorization, signing, and destination-safety requirements for webhook delivery
-- event-oriented governance entities and delivery-tracking schema
-- implementation expectations for `fuze-backend-api`
-- downstream consumption expectations for `fuze-frontend-webapp`, `fuze-frontend-admin`, and future `fuze-sdk`
+This API specification defines how FUZE expresses the refined event model and webhook architecture at the interface-contract layer.
 
-This specification does not define every domain-specific payload field, every broker technology detail, or every exact OpenAPI / AsyncAPI machine-readable schema. Those are derived from this narrative source of truth and the narrower domain API specifications.
+It governs how FUZE APIs, internal services, brokers, outboxes, webhook-management routes, dispatchers, replay tooling, AsyncAPI artifacts, OpenAPI artifacts, SDKs, and partner contracts MUST represent event and webhook behavior while preserving refined system semantics.
 
-## 5. Source-of-Truth Inputs
-### Governing FUZE indexes
-- `DOCS_SPEC.md`
-- `SYSTEM_SPEC_INDEX.md`
+This document does **not** own the semantic meaning of domain events. The refined system specifications and owner-domain specifications own semantic truth. This document owns the API contract expression of that truth.
 
-### Highest-priority FUZE system specifications used
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+The event and webhook API layer exists to ensure that:
 
-### Additional FUZE system specifications used
-- `EVENT_MODEL_AND_WEBHOOK_SPEC_refreshed.md`
-- `API_ARCHITECTURE_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md`
-- `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`
-- `WORKFLOW_AND_AUTOMATION_SPEC.md`
-- `JOB_QUEUE_AND_WORKER_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-- `PLATFORM_CREDITS_SPEC.md`
-- `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md`
-- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
-- `PAYOUT_LEDGER_SPEC.md`
-- `PAYMENT_RAILS_INTEGRATION_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `MULTISIG_AND_TIMELOCK_SPEC.md`
-- `GOVERNANCE_MODEL_SPEC.md`
-- `TREASURY_CONTROL_POLICY_SPEC.md`
-- `VAULT_ACTION_POLICY_SPEC.md`
+1. owner-domain events are emitted only by the domains that own the business meaning;
+2. event records are durable, immutable, classified, versioned, traceable, and replay-safe;
+3. internal event consumers receive contracts that are richer than public webhooks but still bounded by least privilege;
+4. public webhooks are curated outbound projections, not raw mirrors of internal event truth;
+5. webhook endpoint-management APIs are authenticated, authorized, idempotent, audited, scoped, and abuse-resistant;
+6. redelivery and replay create lineage-bearing operational effects, not new business facts;
+7. downstream OpenAPI, AsyncAPI, SDK, broker, worker, and dispatcher contracts cannot reinterpret event meaning, exposure class, or mutation authority.
 
-### FUZE core docs used for architectural alignment
-- `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `FUZE_PLATFORM_CREDITS.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
-- `TOKEN_CONTRACT_ARCHITECTURE_.md`
-- `ALLOCATION_WALLET_MAP.md`
+---
 
-### Supporting format and quality guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
+## Scope
 
-### External standards used only as supporting design guidance
-- RFC 9110 for HTTP semantics and idempotent method meaning
-- RFC 9457 for structured problem details in HTTP error responses
-- CloudEvents core event-envelope design guidance for stable event metadata shape
-- official webhook-signature validation guidance patterns reflected by GitHub and Stripe documentation
+This specification governs the API contract posture for:
 
-### Source priority interpretation
-Where ambiguity exists, platform-wide ownership and architecture documents override narrower local or product assumptions. Docs-level conflicts follow `DOCS_SPEC.md`. System-spec conflicts follow `SYSTEM_SPEC_INDEX.md`. Internal events and public webhooks must never collapse FUZE token, Platform Credits, payout execution, treasury, or governance into one ambiguous economic surface.
+- internal event publication interfaces;
+- internal event-consumption contracts;
+- event envelopes and minimum contract metadata;
+- event outbox / event store interaction contracts;
+- consumer checkpoint and replay-safe consumption requirements;
+- event classification, versioning, payload discipline, exposure classification, and timing semantics;
+- webhook projection eligibility and projection contract rules;
+- webhook endpoint-registration, verification, update, disablement, secret-rotation, delivery-list, and redelivery route families;
+- outbound webhook delivery envelope, signing, retry, and delivery-attempt posture;
+- admin/control-plane remediation APIs for quarantine, disablement, replay, redelivery, and policy override;
+- error/result/status classes for event and webhook APIs;
+- idempotency, retry, replay, deduplication, ordering, and compatibility rules;
+- audit, traceability, correlation, observability, and migration requirements;
+- AsyncAPI/OpenAPI/SDK derivation guardrails.
 
-## 6. Governing Architecture and Ownership Interpretation
-Events in FUZE belong primarily to `fuze-backend-api` because the backend owns business truth, orchestration, workers, schedulers, integration ingress, and domain-controlled side effects. `fuze-frontend-webapp` and `fuze-frontend-admin` may display event-driven status and trigger privileged actions through backend APIs, but neither frontend owns durable truth, canonical event production, or webhook delivery authority by itself. `fuze-contracts` owns on-chain execution truth where state is explicitly committed to Ethereum or Base. `fuze-public-registry` exposes derived trust artifacts and public publication outputs, but does not originate upstream business truth.
+---
 
-The governing architecture rules for this specification are:
-- only the owning domain emits canonical domain events for its truth
-- events communicate accepted or completed domain outcomes, not speculative UI intentions
-- webhook exposure is narrower than internal event production
-- audit logs and activity feeds are downstream correlated outputs, not substitutes for event contracts
-- chain-adjacent events may describe observed contract-native state or accepted orchestration outcomes, but may not misrepresent off-chain policy as on-chain truth
-- public webhooks must not expose sensitive governance, treasury, fraud, or internal support-control internals
+## Out of Scope
 
-## 7. Domain Responsibilities
-### Platform eventing domain responsibilities
-- define event taxonomy and stable naming rules
-- define the canonical envelope for event metadata
-- govern retry, replay, deduplication, and delivery-attempt lineage
-- govern webhook registration, signing, verification, and destination health handling
-- ensure event-driven behavior respects canonical entity ownership and control-plane constraints
+This specification does not define:
 
-### Domain responsibilities by event owner
-- **Identity and account domains** own account, session, and linked-login lifecycle events.
-- **Workspace and access domains** own workspace, membership, role, and entitlement-scope events.
-- **Wallet-aware domain** owns wallet-link and holder-context events.
-- **Billing and payment domains** own payment verification, subscription, invoice, receipt, and entitlement-change events.
-- **Platform Credits domain** owns credits issuance, spend, adjustment, hold, release, settlement, and balance-affecting events.
-- **AI orchestration domain** owns AI request acceptance, routing, execution-progress, and result-completion events.
-- **Workflow and job domains** own workflow-run and job-lifecycle events.
-- **Governance, treasury, vault, and payout domains** own sensitive control-path and payout-cycle events.
-- **Transparency and public-registry domains** own derived publication events once publication has been accepted by the publishing domain.
-- **Product domains** own product-specific request, job, and result events without redefining shared platform primitives.
+- every domain-specific event payload field;
+- every event name in every FUZE domain event catalog;
+- the exact broker product, queue vendor, storage engine, signature library, or infrastructure topology;
+- queue lease, heartbeat, backoff, dead-letter, or worker implementation details beyond interface contract implications;
+- workflow-instance meaning or workflow-step semantics;
+- audit-log schema beyond required correlation and lineage references;
+- public notification copy, email copy, or frontend activity-feed wording;
+- exact SDK package structure;
+- exact OpenAPI or AsyncAPI files;
+- direct database DDL;
+- smart-contract ABI definitions or chain-native event definitions.
 
-## 8. Out of Scope
-This specification does not:
-- define the exact transport vendor or broker product
-- guarantee exactly-once delivery semantics
-- make every internal event publicly consumable
-- let event consumers bypass canonical write ownership
-- define every domain-specific payload field in full
-- replace audit or activity specifications
-- replace queue / worker implementation details
-- expose governance-, treasury-, fraud-, or payout-sensitive internals by default
-- treat frontend local state transitions as canonical platform events
+These concerns belong in adjacent implementation contracts, provided they preserve this document's normative rules.
 
-## 9. Canonical Entities and Data Ownership
-### Canonical business entities referenced by events
-These entities remain owned by their home domains and are only referenced by event payloads:
-- `account`
-- `session`
-- `linked_login_method`
-- `workspace`
-- `workspace_membership`
-- `role_assignment`
-- `wallet_link`
-- `payment_record`
-- `subscription`
-- `entitlement`
-- `invoice`
-- `receipt`
-- `credits_account`
-- `credits_ledger_entry`
-- `workflow_instance`
-- `workflow_step_execution`
-- `job`
-- `audit_event`
-- `payout_cycle`
-- `payout_execution`
-- `transparency_publication`
-- `public_registry_entry`
-- product-domain request / result entities
+---
 
-### Event-governance entities
-#### `event_record`
-Canonical persistent event envelope representing a domain-originated event accepted for downstream consumption.
+## Design Goals
 
-Owner:
-- platform eventing infrastructure under backend control, storing events emitted by the owning domain
+1. Preserve owner-domain mutation and event-publication boundaries.
+2. Make event and webhook contracts durable, versioned, replay-safe, and auditable.
+3. Distinguish domain events, integration events, operational events, and public webhook projections.
+4. Prevent public webhooks from becoming broad external mirrors of internal events.
+5. Prevent event receipt from becoming hidden write authority.
+6. Represent accepted async intent separately from final business outcomes.
+7. Treat at-least-once delivery, duplicate delivery, and replay as expected conditions.
+8. Ensure webhook-management APIs are idempotent, scoped, policy-governed, and auditable.
+9. Support future AsyncAPI/OpenAPI/SDK generation without semantic drift.
+10. Provide enough testable contract detail for implementation QA, production readiness, and regression validation.
 
-Durable facts:
+---
+
+## Non-Goals
+
+This specification is not intended to:
+
+- make every internal event externally subscribable;
+- promise exactly-once delivery;
+- replace owner-domain APIs with event publication;
+- allow consumers to mutate foreign owner-domain state merely because an event was received;
+- convert audit records, activity feeds, reporting rows, or dashboards into canonical event contracts;
+- expose governance-sensitive, treasury-sensitive, fraud-sensitive, payout-sensitive, or unpublished economic internals through public webhooks by default;
+- allow queue/workflow/broker implementation details to define business event meaning;
+- guarantee global total ordering across FUZE event families;
+- use webhook delivery success or failure to determine whether the underlying business fact occurred.
+
+---
+
+## Core Principles
+
+### Owner-Domain Event Principle
+
+Only the domain that owns a business fact or accepted intent MAY emit the canonical event describing that fact or accepted intent.
+
+### Event-Is-Not-Write-Authority Principle
+
+Receiving an event does not grant mutation authority over the underlying domain truth. Consumers MUST use owner-domain APIs or approved internal contracts for any downstream mutation.
+
+### Internal-Is-Broader-Than-Public Principle
+
+Internal event families MAY be richer than public webhooks. Public webhook exposure MUST remain narrower, explicitly approved, stable, and public-safe.
+
+### Accepted-vs-Final Principle
+
+Accepted intent, in-progress operational state, and final business outcome are different meanings and MUST NOT be collapsed in event names, payloads, statuses, responses, or webhook projections.
+
+### Immutable-Envelope Principle
+
+Accepted event envelopes are immutable historical records. Corrections occur through later events or explicit correction/remediation lineage, not through destructive rewrite.
+
+### Derived-Public-Projection Principle
+
+Webhook payloads are derived, externally supported projections of internal truth. They are not the canonical owner-domain record and MUST NOT become hidden mutation owners.
+
+### Normalization-Before-Influence Principle
+
+Provider callbacks, partner signals, chain observations, and other external inputs MUST remain provider-input truth until normalized and accepted by the appropriate owner domain.
+
+### Replay-Safe Principle
+
+Replay, retry, duplicate delivery, and redelivery are ordinary operating conditions. Contracts MUST be safe under at-least-once handling.
+
+### Sensitive-Surface Restraint Principle
+
+Control-sensitive, fraud-sensitive, treasury-sensitive, governance-sensitive, payout-sensitive, and unpublished economic event families default to internal-only exposure and narrower consumption grants.
+
+### Auditability Principle
+
+Publication, projection, dispatch, replay, redelivery, quarantine, disablement, secret rotation, and override actions MUST be reconstructible through durable lineage.
+
+---
+
+## Canonical Definitions
+
+- **Domain Event:** A canonical event emitted by the owner domain to represent an accepted intent or business fact under that domain's semantic ownership.
+- **Integration Event:** A stable internal coordination event derived from owner-domain truth for downstream collaboration without ownership transfer.
+- **Operational Event:** An event describing execution-plane or operational progression, such as queued, running, retrying, failed, canceled, quarantined, or completed operational states.
+- **Public Webhook Event:** A curated external projection of an approved internal event or owner-domain outcome.
+- **Event Envelope:** The metadata wrapper that gives an event identity, classification, lineage, timing, version, and handling context.
+- **Event Payload:** The event body describing the fact, accepted intent, operational transition, or projection content.
+- **Webhook Projection:** The externally supported representation of internal event truth after public-safety filtering, schema shaping, and version assignment.
+- **Consumer Checkpoint:** A durable consumer-local record used for dedupe, progress tracking, and replay-safe consumption.
+- **Replay:** Bounded reprocessing of previously accepted event records while preserving original event identity and marking replay lineage.
+- **Redelivery:** Bounded re-attempt of outbound webhook dispatch for an already projected external event. Redelivery creates new delivery attempts, not new business events.
+- **Public Exposure Class:** Contract classification determining whether and how an internal event may be externally projected.
+- **Delivery Attempt:** A single outbound attempt to deliver a webhook projection to a registered endpoint.
+- **Webhook Endpoint:** A registered external destination owned by an account, workspace, or partner scope.
+- **Webhook Event Catalog:** The approved externally supported event-family list, schema versions, exposure rules, and compatibility posture.
+
+---
+
+## Truth Class Taxonomy
+
+This API spec MUST preserve these truth classes:
+
+| Truth Class | Owner | API Contract Treatment |
+|---|---|---|
+| Semantic truth | Owner domain and refined system specs | API contracts express but do not redefine event meaning. |
+| API contract truth | Event/Webhook API governance | Defines surfaces, envelopes, errors, versions, route families, and derivation rules. |
+| Policy truth | Security, public API, event governance, migration/versioning, owner domains | Determines exposure class, subscription eligibility, retention, replay, compatibility, and destination rules. |
+| Runtime truth | Dispatcher, broker, workflow, queue, worker, and eventing implementations | Exposed as status, delivery, retry, checkpoint, and operation records without redefining business truth. |
+| Ledger / storage truth | Event store, outbox, delivery store, checkpoint store | Durable event, projection, delivery, replay, and idempotency records. |
+| Provider-input truth | Integration/provider normalization domains | Raw callbacks/signals before owner-domain validation; not canonical business events. |
+| Event / async execution truth | Eventing, workflow, queue, and worker domains | Distinguishes accepted, queued, running, completed, failed, and replayed operational meanings. |
+| Projection/reporting truth | Reporting, transparency, public registry, dashboards | Derived and read-only unless a narrower spec grants a write path. |
+| Public read-model truth | Public API / publication domains | Public webhook payloads and registry outputs are curated projections, not raw owner-domain storage. |
+| Presentation truth | UI/SDK/support views | Labels and copy are non-canonical. |
+
+Truth classes MUST remain separate. No broker, gateway, SDK, dashboard, webhook, activity feed, or reporting view may become the owner of semantic truth.
+
+---
+
+## Architectural Position in the Spec Hierarchy
+
+This API spec sits below the refined semantic layer and expresses its requirements at the API contract layer.
+
+### Upstream Semantic Owners
+
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md` owns canonical event and webhook system semantics.
+- `API_ARCHITECTURE_SPEC.md` owns shared interface-family posture, accepted-state semantics, and API boundary discipline.
+- `PUBLIC_API_SPEC.md` owns public/external contract posture and external exposure constraints.
+- `INTERNAL_SERVICE_API_SPEC.md` owns service-to-service caller identity, internal authorization, and internal contract posture.
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md` owns replay-safe handling, version classes, conflict interpretation, and contract evolution posture.
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` owns coexistence, cutover, deprecation, sunset, supersession, and historical interpretability.
+- Owner-domain refined specs own domain-specific business meaning and lifecycle semantics.
+- Security, audit, monitoring, secrets, workspace access, account/session, and entitlement specs own their respective cross-cutting policy meanings.
+
+### What This API Spec Governs
+
+This document governs API contract expression: route families, event envelope requirements, webhook-management contracts, delivery contracts, error/status semantics, idempotency/replay treatment, authorization expectations, audit references, derived/public projection limits, and implementation-contract derivation guardrails.
+
+### What Adjacent API Specs Govern
+
+- `PUBLIC_API_SPEC.md` governs non-webhook public route families and external API publication posture.
+- `INTERNAL_SERVICE_API_SPEC.md` governs synchronous service-to-service APIs and owner-domain service collaboration.
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md` governs cross-cutting replay and version semantics.
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` governs version transitions and coexistence.
+- `INTEGRATION_CONNECTOR_FRAMEWORK_API_SPEC.md` governs connector/provider integration families beyond the event/webhook contract layer.
+
+### What Implementation-Contract Specs Govern
+
+Implementation-contract specs MAY define broker topics, storage schemas, TTLs, exact retry schedules, SDK package shapes, route-by-route payload schemas, and operational runbooks, but they MUST preserve the semantic and API contract rules here.
+
+---
+
+## API Surface Families
+
+### 1. Internal Event Publication Surface
+
+Used by authenticated owner-domain services and approved worker classes to publish accepted event records.
+
+- **Surface Type:** internal service / eventing capability
+- **Allowed Callers:** owner-domain services or delegated services with explicit publish grants
+- **Forbidden Callers:** public clients, frontend clients, unscoped internal services, reporting dashboards, external providers before normalization
+- **Canonical Write Owner:** producer owner domain for event meaning; eventing platform for envelope and persistence contract
+- **Contract Mode:** internal, durable, replay-aware, non-public
+
+### 2. Internal Event Consumption Surface
+
+Used by authenticated services/workers to consume event families under least-privilege grants.
+
+- **Surface Type:** internal broker/pull/subscription contract
+- **Allowed Callers:** internal services and workers with family/topic grants
+- **Delivery Posture:** at-least-once; duplicate delivery expected
+- **Consumer Obligation:** idempotent handling and checkpointing
+
+### 3. Event Store / Outbox Surface
+
+Durable persistence and retrieval for accepted event records, replay windows, and publication lineage.
+
+- **Surface Type:** internal implementation-facing contract
+- **Allowed Callers:** eventing infrastructure, replay tooling, authorized admin/control surfaces, observability readers
+- **Forbidden Use:** direct domain-state mutation or public raw event-store access
+
+### 4. Webhook Projection Surface
+
+Transforms approved internal event truth into externally supported public webhook payloads.
+
+- **Surface Type:** internal projection contract
+- **Allowed Callers:** webhook projection service and approved publication services
+- **Canonical Owner:** webhook/integration governance for projection shape; owner domain for underlying semantic meaning
+- **Projection Rule:** public payloads MUST be derived and filtered; not raw event payload mirrors
+
+### 5. Webhook Management API Surface
+
+Authenticated API route family for endpoint registration, verification, update, disablement, secret rotation, delivery visibility, and redelivery.
+
+- **Surface Type:** public/authenticated public/partner/admin route family
+- **Allowed Callers:** account/workspace/partner owners with scope grants, first-party clients, approved admin/control actors
+- **Mutation Posture:** idempotent, audited, reason-coded where sensitive
+- **Authorization:** owner scope or explicit admin/control authorization
+
+### 6. Outbound Webhook Delivery Surface
+
+FUZE-to-external HTTP delivery contract for approved webhook projections.
+
+- **Surface Type:** outbound external delivery contract
+- **Allowed Sender:** FUZE webhook dispatcher
+- **Receiver Obligation:** verify signature, tolerate duplicate delivery, handle unknown additive fields according to version rules
+- **Delivery Posture:** at-least-once with bounded retry and delivery attempt tracking
+
+### 7. Admin / Control-Plane Eventing Surface
+
+Privileged API families for quarantine, forced disablement, bounded replay, redelivery, policy override, endpoint suspension, and emergency suppression.
+
+- **Surface Type:** admin/control-plane
+- **Allowed Callers:** approved support/security/platform operators or automation under policy
+- **Requirements:** reason code, actor attribution, policy version, audit record, correlation ID, bounded scope
+
+### 8. Event / Webhook Catalog Surface
+
+Internal and public-safe contract artifacts describing supported event families, versions, exposure classes, and lifecycle status.
+
+- **Surface Type:** documentation / catalog / machine-readable contract artifact
+- **Allowed Consumers:** internal services, contract generators, SDKs, partner docs where public-safe
+- **Rule:** catalogs describe supported contracts; they do not confer mutation authority.
+
+---
+
+## System / API Boundaries
+
+### Public vs Internal Boundary
+
+Internal events are not public APIs. Public webhook payloads are curated derived projections and MUST NOT expose all internal event metadata, sensitive fields, raw policy evaluation, provider internals, workflow internals, fraud indicators, treasury controls, governance-sensitive state, or unpublished economic details.
+
+### Event vs Internal Service API Boundary
+
+Events are asynchronous notifications of accepted intents, facts, or operational state. They are not substitutes for owner-domain APIs. If a consumer must mutate another domain's truth, it MUST call an approved owner-domain API or submit an approved accepted intent.
+
+### Event vs Audit Boundary
+
+Events and audit records are correlated but not interchangeable. Events coordinate downstream behavior; audit records preserve evidentiary lineage for actions, policy decisions, and privileged operations. Audit logs may reference events, but an audit entry is not an event contract.
+
+### Event vs Workflow / Queue Boundary
+
+Workflow and queue systems MAY emit operational events, but they do not own business-event meaning unless they are the owner domain for that operational truth. Queue retry does not define business retry semantics.
+
+### Event vs Reporting / Projection Boundary
+
+Reports, dashboards, status pages, public registries, and transparency artifacts MAY derive from events. They MUST NOT become hidden mutation owners or redefine event truth.
+
+### Event vs Provider / Chain Boundary
+
+Provider callbacks and chain observations are provider-input truth until normalized and accepted by the owner domain. Chain-native facts remain chain-native; off-chain event projections MUST NOT misrepresent on-chain truth.
+
+---
+
+## Adjacent API Boundaries
+
+- `PUBLIC_API_SPEC.md` governs external route exposure; this spec governs outbound webhook projection and delivery.
+- `INTERNAL_SERVICE_API_SPEC.md` governs synchronous service collaboration; this spec governs asynchronous event collaboration.
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md` governs replay identity and version compatibility; this spec applies those rules to events and webhooks.
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` governs coexistence/cutover/deprecation for event and webhook versions.
+- `WORKFLOW_AND_AUTOMATION_SPEC.md` governs workflow meaning; this spec governs event notifications emitted around workflow states.
+- `JOB_QUEUE_AND_WORKER_SPEC.md` governs queue mechanics; this spec governs contract-level event implications of queue-driven execution.
+- `SECURITY_AND_RISK_CONTROL_SPEC.md` governs destination restrictions, secret handling, sensitive topic classification, and abuse response.
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md` governs immutable audit evidence and activity-feed derivations.
+
+---
+
+## Conflict Resolution Rules
+
+1. Active refined registry and constitutional/spec-index materials win over narrower API documents.
+2. Owner-domain refined specs win on domain business meaning and mutation authority.
+3. `EVENT_MODEL_AND_WEBHOOK_SPEC.md` wins on event classification, envelope immutability, webhook projection posture, replay/redelivery semantics, and public-exposure discipline.
+4. This API spec wins on interface-contract requirements for event/webhook APIs and downstream OpenAPI/AsyncAPI derivation.
+5. `PUBLIC_API_SPEC.md` wins on external route exposure outside webhook-specific outbound contracts.
+6. `INTERNAL_SERVICE_API_SPEC.md` wins on synchronous service-to-service API semantics.
+7. `IDEMPOTENCY_AND_VERSIONING_SPEC.md` wins on replay identity, conflict semantics, and version taxonomy.
+8. `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` wins on coexistence, cutover, sunset, and migration lineage.
+9. Workflow, queue, dashboard, SDK, gateway, broker, or frontend convenience never wins over owner-domain truth or event contract rules.
+10. When ambiguity remains, FUZE MUST choose the more conservative architecture-consistent interpretation and escalate the ambiguity into downstream refinement or a recorded decision.
+
+---
+
+## Default Decision Rules
+
+1. Event publication defaults to internal-only unless public exposure is explicitly approved.
+2. Canonical business events default to owner-domain publication after acceptance or commit.
+3. Public webhooks default to minimal, stable, identifier-forward projections.
+4. Delivery defaults to at-least-once, never exactly-once.
+5. Consumers default to idempotent and replay-safe behavior.
+6. Webhook endpoint mutations default to idempotency-required.
+7. Redelivery defaults to creating a new delivery attempt for the same event/projection lineage.
+8. Replay defaults to preserving original event identity with explicit replay context.
+9. Sensitive event families default to non-public exposure and restricted internal grants.
+10. If an event contract cannot name owner domain, event class, truth class, version, exposure class, payload stability posture, retention posture, and replay posture, it is incomplete and MUST NOT ship as production-grade.
+
+---
+
+## Roles / Actors / API Consumers
+
+### Human Actors
+
+- account owners
+- workspace owners and administrators
+- partner operators
+- support operators
+- security operators
+- product operators
+- governance or approval actors
+- external developers consuming webhook contracts
+
+### System Actors
+
+- owner-domain services
+- product domain services
+- integration adapters
+- provider normalization services
+- workflow engines
+- queues and workers
+- AI orchestration services
+- event outbox/store
+- internal event consumers
+- webhook projection service
+- webhook dispatcher
+- delivery retry scheduler
+- audit service
+- monitoring and alerting systems
+- public registry and transparency systems
+- admin/control-plane tooling
+- SDK and contract-generation pipelines
+
+### Caller Classes
+
+- `owner_domain_service`
+- `delegated_domain_service`
+- `internal_consumer_service`
+- `workflow_worker`
+- `webhook_endpoint_owner`
+- `partner_integrator`
+- `support_operator`
+- `security_operator`
+- `control_plane_automation`
+- `contract_generator`
+
+---
+
+## Resource / Entity Families
+
+### Event Resources
+
+- `event_record`
+- `event_envelope`
+- `event_payload`
+- `event_family`
+- `event_version`
+- `event_catalog_entry`
+- `event_publication_attempt`
+- `event_replay_operation`
+
+### Consumer Resources
+
+- `event_subscription`
+- `event_consumer_checkpoint`
+- `event_consumer_failure`
+- `consumer_deduplication_record`
+
+### Webhook Resources
+
+- `webhook_endpoint`
+- `webhook_endpoint_secret_version`
+- `webhook_endpoint_verification`
+- `webhook_subscription_filter`
+- `webhook_event_projection`
+- `webhook_delivery`
+- `webhook_delivery_attempt`
+- `webhook_redelivery_operation`
+- `webhook_quarantine`
+
+### Governance / Lineage Resources
+
+- `correlation_reference`
+- `causation_reference`
+- `audit_lineage_reference`
+- `policy_version_reference`
+- `idempotency_reference`
+- `contract_version_reference`
+- `migration_reference`
+- `operator_reason_code`
+
+---
+
+## Ownership Model
+
+### Owner Domain Owns
+
+- event semantic meaning;
+- accepted intent or business fact represented by domain events;
+- domain-specific payload fields;
+- domain-specific equivalence rules for idempotent publication;
+- domain-specific event timing semantics;
+- authoritative lifecycle meaning.
+
+### Eventing Governance Owns
+
+- event envelope structure;
+- shared publication discipline;
+- event class taxonomy;
+- event persistence posture;
+- shared replay and consumer checkpoint expectations;
+- event catalog governance;
+- contract-level event version posture.
+
+### Webhook / Integration Governance Owns
+
+- webhook projection eligibility;
+- public webhook payload shape conventions;
+- endpoint-management route posture;
+- delivery-attempt semantics;
+- outbound signing and delivery contract rules;
+- redelivery posture;
+- webhook catalog governance.
+
+### Security / Risk Owns
+
+- destination allow/deny policy;
+- signing secret constraints;
+- sensitive topic restrictions;
+- abuse response;
+- endpoint quarantine policy;
+- rate-limit and threat controls.
+
+### Audit Owns
+
+- immutable audit records for management actions, privileged reads, replay, redelivery, quarantine, endpoint changes, secret rotation, and policy overrides.
+
+### Consumer Domains Own
+
+- consumer checkpoint state;
+- idempotent processing decisions;
+- downstream side effects within their domain;
+- failure handling for their own event handlers.
+
+---
+
+## Authority / Decision Model
+
+### Authority to Publish Events
+
+A caller MAY publish an event only when all conditions hold:
+
+1. caller authenticates as a service principal or approved worker class;
+2. caller is the owner domain or has explicit delegated publish authority;
+3. owner-domain action has been accepted or committed;
+4. required envelope fields are present;
+5. event class, version, sensitivity, exposure, retention, and replay posture are known;
+6. publication can be durably persisted before acknowledgement.
+
+### Authority to Consume Events
+
+A service MAY consume an event family only when:
+
+1. service identity is authenticated;
+2. service has explicit event-family, domain, topic, or exposure-class grants;
+3. consumer contract is compatible with event version;
+4. consumer accepts idempotent and replay-safe processing obligations;
+5. sensitive topics are permitted by trust tier and policy.
+
+### Authority to Project Public Webhooks
+
+An event MAY be projected into a public webhook only when:
+
+1. exposure class explicitly permits external projection;
+2. public webhook catalog contains the event family and version;
+3. payload can be filtered into a stable public contract;
+4. projection does not expose restricted internals;
+5. target endpoint is registered, verified, active, scoped, and eligible;
+6. subscription filters match;
+7. delivery policy permits dispatch.
+
+### Authority to Administer Endpoints / Deliveries
+
+Endpoint disablement, forced quarantine, forced redelivery, forced replay, and policy override MUST be admin/control-plane actions requiring reason code, actor attribution, policy version, audit lineage, and bounded scope.
+
+---
+
+## Authentication Model
+
+### Internal Publication
+
+- MUST authenticate using service principal identity.
+- MUST NOT rely solely on network location, broker access, or shared infrastructure trust.
+- MUST include `producer_service`, `producer_domain`, environment, and contract version context.
+
+### Internal Consumption
+
+- MUST authenticate using service principal identity or worker identity.
+- MUST enforce event-family/topic grants.
+- MUST enforce sensitivity and exposure-class constraints.
+
+### Webhook Management APIs
+
+- User or partner callers MUST authenticate through approved account/session/public API mechanisms.
+- Admin/control callers MUST authenticate through privileged admin/control mechanisms.
+- Workspace-scoped endpoint operations MUST resolve workspace membership, role, permission, and effective scope.
+
+### Outbound Webhook Delivery
+
+- FUZE MUST sign outbound webhook requests.
+- Receivers authenticate FUZE by verifying the signature and timestamp against the endpoint secret.
+- Secret rotation MUST support explicit key-version metadata and configured overlap windows.
+
+---
+
+## Authorization / Scope / Permission Model
+
+Webhook-management permissions MUST distinguish:
+
+- endpoint create;
+- endpoint read;
+- endpoint update;
+- endpoint verify;
+- endpoint disable;
+- endpoint secret rotate;
+- delivery list/read;
+- delivery redeliver;
+- quarantine read;
+- quarantine override;
+- endpoint force-disable;
+- sensitive diagnostic view.
+
+Required scope dimensions include, where applicable:
+
+- `account_id`;
+- `workspace_id`;
+- `partner_id`;
+- `environment` (`sandbox`, `production`);
+- `event_family`;
+- `public_event_name`;
+- `sensitivity_class`;
+- `operation_class`;
+- `admin_control_tier`.
+
+Authorization MUST be evaluated before side effects occur. Delivery reads MUST redact sensitive headers, response bodies, secrets, provider internals, and unsupported internal diagnostics.
+
+---
+
+## Entitlement / Capability-Gating Model
+
+Entitlement MAY determine whether a workspace, account, product, or partner can register webhook endpoints or subscribe to specific webhook families. Entitlement does not redefine event meaning.
+
+- A caller without entitlement MUST receive a structured denial.
+- Loss of entitlement MAY disable future deliveries according to policy but MUST NOT rewrite historical event records.
+- Entitlement changes MUST be auditable when they affect webhook eligibility or delivery.
+
+---
+
+## API State Model
+
+### Event Lifecycle
+
+`candidate -> accepted_for_publication -> persisted -> available_for_consumption -> consumed | replayed | archived`
+
+### Publication Attempt Lifecycle
+
+`received -> validated -> durably_persisted -> acknowledged | rejected | conflicted | failed_retryable | failed_terminal`
+
+### Consumer Processing Lifecycle
+
+`available -> claimed | delivered -> processing -> checkpointed_success | checkpointed_failure | retry_pending | dead_lettered`
+
+### Webhook Endpoint Lifecycle
+
+`draft -> verification_pending -> verified -> active -> quarantined | disabled | retired`
+
+### Webhook Projection Lifecycle
+
+`not_eligible -> eligible -> projected -> scheduled -> dispatched -> delivered | retrying | suppressed | dead_lettered | expired`
+
+### Delivery Attempt Lifecycle
+
+`scheduled -> sent -> acknowledged | retryable_failure | terminal_failure | expired`
+
+### Redelivery Operation Lifecycle
+
+`requested -> authorized -> accepted -> scheduled -> attempted -> completed | rejected | expired`
+
+### Contract Version Lifecycle
+
+`draft -> active -> deprecated -> sunset_scheduled -> retired -> historical_readable_only`
+
+---
+
+## Lifecycle / Workflow Model
+
+1. Owner domain accepts or commits a meaningful fact or accepted intent.
+2. Owner domain calls internal event publication interface with envelope, payload, classification, version, and lineage.
+3. Eventing layer authenticates caller, validates publish authority, validates envelope, deduplicates where applicable, and persists `event_record` durably.
+4. Eventing layer acknowledges durable acceptance, not universal downstream completion.
+5. Internal consumers receive or pull the event under service identity and event-family grants.
+6. Consumers process idempotently, checkpoint result, and emit downstream events only within their own owner-domain authority.
+7. Projection layer evaluates exposure class, catalog eligibility, endpoint subscriptions, policy, and payload filter rules.
+8. Webhook projection is created for eligible events.
+9. Dispatcher signs and delivers payload to verified active endpoints.
+10. Delivery attempts are tracked with retry, failure, quarantine, and redelivery eligibility state.
+11. Audit and observability records preserve lineage across publication, projection, delivery, redelivery, replay, and admin/control actions.
+12. Migration/versioning rules govern changes to event versions, webhook versions, and deprecation/sunset posture.
+
+---
+
+## Architecture Diagram — Mermaid flowchart
+
+```mermaid
+flowchart LR
+  subgraph External[External / Partner Boundary]
+    ExtClient[Partner / External Developer]
+    Receiver[Webhook Receiver Endpoint]
+  end
+
+  subgraph Edge[Public / First-Party API Edge]
+    PublicAPI[Webhook Management APIs]
+    AdminAPI[Admin / Control-Plane APIs]
+  end
+
+  subgraph App[Application Plane - Owner Domains]
+    OwnerSvc[Owner-Domain Service]
+    DomainStore[(Owner-Domain Store)]
+  end
+
+  subgraph Eventing[Eventing and Integration Plane]
+    Publisher[Internal Event Publication Interface]
+    EventStore[(Immutable Event Store / Outbox)]
+    Broker[Broker / Subscription Layer]
+    Projection[Webhook Projection Service]
+    Dispatcher[Webhook Dispatcher]
+    DeliveryStore[(Delivery / Endpoint Store)]
+    Checkpoints[(Consumer Checkpoints)]
+  end
+
+  subgraph Execution[Execution Plane]
+    Workflow[Workflow Engine]
+    Worker[Workers / Retry Scheduler]
+  end
+
+  subgraph Consumers[Internal Consumers]
+    ProductSvc[Product Domain Service]
+    Reporting[Reporting / Public Registry Projection]
+    Audit[Audit / Activity Service]
+    Observability[Monitoring / Alerting]
+  end
+
+  subgraph Security[Security / Policy]
+    Authz[AuthN/AuthZ/Scope]
+    Policy[Exposure / Destination / Abuse Policy]
+    Secrets[Signing Secret Store]
+  end
+
+  ExtClient --> PublicAPI
+  ExtClient --> AdminAPI
+  PublicAPI --> Authz
+  AdminAPI --> Authz
+  PublicAPI --> DeliveryStore
+  AdminAPI --> DeliveryStore
+  AdminAPI --> Policy
+
+  OwnerSvc --> DomainStore
+  OwnerSvc --> Publisher
+  Publisher --> Authz
+  Publisher --> EventStore
+  EventStore --> Broker
+  Broker --> ProductSvc
+  Broker --> Workflow
+  Broker --> Reporting
+  Broker --> Audit
+  Broker --> Observability
+  ProductSvc --> Checkpoints
+  Workflow --> Worker
+  Worker --> Checkpoints
+
+  EventStore --> Projection
+  Projection --> Policy
+  Projection --> DeliveryStore
+  DeliveryStore --> Dispatcher
+  Dispatcher --> Secrets
+  Dispatcher --> Receiver
+  Dispatcher --> DeliveryStore
+  Dispatcher --> Observability
+  Projection --> Audit
+  PublicAPI --> Audit
+  AdminAPI --> Audit
+```
+
+---
+
+## Data Design — Mermaid Diagram
+
+```mermaid
+erDiagram
+  EVENT_RECORD ||--o{ WEBHOOK_EVENT_PROJECTION : may_project_to
+  EVENT_RECORD ||--o{ EVENT_CONSUMER_CHECKPOINT : consumed_by
+  EVENT_RECORD ||--o{ EVENT_REPLAY_OPERATION : may_be_replayed_by
+  WEBHOOK_ENDPOINT ||--o{ WEBHOOK_EVENT_PROJECTION : subscribed_scope_for
+  WEBHOOK_EVENT_PROJECTION ||--o{ WEBHOOK_DELIVERY_ATTEMPT : delivered_as
+  WEBHOOK_ENDPOINT ||--o{ WEBHOOK_SECRET_VERSION : signed_with
+  WEBHOOK_DELIVERY_ATTEMPT ||--o{ WEBHOOK_REDELIVERY_OPERATION : may_redeliver
+  EVENT_RECORD ||--o{ AUDIT_LINEAGE : correlated_with
+  WEBHOOK_ENDPOINT ||--o{ AUDIT_LINEAGE : managed_with
+  WEBHOOK_DELIVERY_ATTEMPT ||--o{ OBSERVABILITY_SIGNAL : emits
+
+  EVENT_RECORD {
+    string event_id PK
+    string event_name
+    string event_family
+    string event_version
+    string producer_domain
+    string producer_service
+    string entity_type
+    string entity_id
+    string scope_type
+    string scope_id
+    string correlation_id
+    string causation_id
+    string idempotency_key_ref
+    datetime occurred_at
+    datetime accepted_at
+    string sensitivity_class
+    string public_exposure_class
+    string retention_class
+    string audit_lineage_ref
+    json payload_json
+  }
+
+  EVENT_CONSUMER_CHECKPOINT {
+    string consumer_checkpoint_id PK
+    string consumer_name
+    string event_id FK
+    datetime processed_at
+    string processing_result
+    boolean replayed_flag
+    string dedupe_key
+  }
+
+  WEBHOOK_ENDPOINT {
+    string webhook_endpoint_id PK
+    string owner_scope_type
+    string owner_scope_id
+    string environment
+    string endpoint_url
+    string status
+    string secret_ref
+    string signing_algorithm
+    json event_filter_json
+    datetime verified_at
+    datetime quarantined_at
+    datetime disabled_at
+  }
+
+  WEBHOOK_EVENT_PROJECTION {
+    string webhook_event_projection_id PK
+    string event_id FK
+    string public_event_name
+    string public_event_version
+    string projection_schema_version
+    string resource_type
+    string resource_id
+    string status
+    string published_eligibility_class
+    json payload_json
+  }
+
+  WEBHOOK_DELIVERY_ATTEMPT {
+    string webhook_delivery_attempt_id PK
+    string webhook_endpoint_id FK
+    string event_id FK
+    string delivery_id
+    int attempt_number
+    datetime scheduled_at
+    datetime sent_at
+    int response_status_code
+    int response_latency_ms
+    string delivery_state
+    datetime next_retry_at
+    string last_error_code
+    string signature_key_version
+    string payload_hash
+  }
+```
+
+---
+
+## Flow View
+
+### A. Internal Event Publication Flow
+
+1. Owner-domain service completes or accepts a meaningful domain action.
+2. Service builds event envelope with `event_id`, `event_name`, `event_version`, `producer_domain`, lineage, timestamps, entity references, classification, and payload.
+3. Publication interface authenticates the service principal.
+4. Eventing layer verifies producer authority for the declared domain.
+5. Eventing layer validates envelope, payload class, version, retention, exposure, and idempotency reference.
+6. Eventing layer persists event record before acknowledgement.
+7. API returns durable publication acknowledgement.
+8. Broker/subscription layer makes event available to internal consumers.
+9. Audit and observability signals are emitted.
+
+### B. Internal Consumption Flow
+
+1. Consumer authenticates as service/worker principal.
+2. Consumer requests/pulls/subscribes to authorized event family.
+3. Eventing layer enforces event-family grants and sensitivity constraints.
+4. Consumer receives event under at-least-once semantics.
+5. Consumer dedupes by `event_id` and consumer-specific dedupe key.
+6. Consumer applies idempotent side effects only within its own domain authority.
+7. Consumer writes checkpoint and emits audit/observability signals where required.
+8. On retryable failure, event remains eligible for retry according to policy.
+9. On terminal failure, failure is recorded and escalated/dead-lettered according to implementation contract.
+
+### C. Webhook Endpoint Registration Flow
+
+1. Authenticated caller submits endpoint registration with idempotency key.
+2. Public/authenticated API resolves account/workspace/partner scope.
+3. Authorization, entitlement, destination policy, event subscription catalog, environment separation, and abuse controls are evaluated.
+4. Endpoint record is created in `verification_pending` or `active` state according to verification policy.
+5. Secret reference is created; raw secret is returned only when policy explicitly allows one-time reveal.
+6. Audit and activity records are written.
+7. Verification challenge MAY be queued.
+8. Response returns endpoint summary, status, secret metadata, and verification requirements.
+
+### D. Webhook Delivery Flow
+
+1. Event projection service determines event is externally eligible.
+2. Projection payload is generated using public webhook catalog version.
+3. Endpoint subscriptions and filters are matched.
+4. Dispatcher schedules delivery attempts.
+5. Dispatcher signs payload with active endpoint secret version.
+6. Receiver response is recorded.
+7. Success marks delivery attempt acknowledged; retryable failure schedules retry; terminal failure may suppress, dead-letter, or quarantine according to policy.
+8. Delivery failure does not roll back the event or underlying business fact.
+
+### E. Redelivery Flow
+
+1. Authorized caller requests redelivery for an eligible delivery/event projection.
+2. API checks scope, retention window, endpoint status, delivery state, idempotency key, and policy.
+3. API records redelivery operation and audit lineage.
+4. Dispatcher creates a new delivery attempt referencing the original event/projection.
+5. Response returns accepted redelivery operation reference.
+
+### F. Admin / Control Flow
+
+1. Operator authenticates through control-plane mechanism.
+2. Operator submits reason-coded request to quarantine, force-disable, suppress, redeliver, or replay within bounded scope.
+3. Policy evaluates sensitivity class, actor authority, risk state, and required approvals.
+4. Action is recorded with actor, reason code, policy version, correlation ID, and audit lineage.
+5. Operational state changes without rewriting underlying event meaning.
+
+---
+
+## Data Flows — Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Owner as Owner-Domain Service
+  participant Pub as Event Publication API
+  participant Auth as AuthZ / Policy
+  participant Store as Event Store / Outbox
+  participant Broker as Broker / Subscription
+  participant Consumer as Internal Consumer
+  participant Projection as Webhook Projection
+  participant Dispatch as Webhook Dispatcher
+  participant Receiver as External Receiver
+  participant Audit as Audit / Observability
+
+  Owner->>Pub: Publish event envelope + payload
+  Pub->>Auth: Authenticate service and verify producer_domain grant
+  Auth-->>Pub: Authorized / denied
+  Pub->>Store: Persist immutable event_record
+  Store-->>Pub: Durable acceptance
+  Pub-->>Owner: accepted_for_publication(event_id)
+  Pub->>Audit: Record publication lineage
+  Store->>Broker: Make event available
+  Broker->>Consumer: Deliver event at-least-once
+  Consumer->>Consumer: Dedupe by event_id and checkpoint
+  Consumer->>Audit: Record consumer outcome
+  Store->>Projection: Evaluate public_exposure_class
+  Projection->>Auth: Check catalog, endpoint scope, policy
+  Auth-->>Projection: Eligible / not eligible
+  Projection->>Dispatch: Schedule webhook delivery
+  Dispatch->>Dispatch: Sign payload with endpoint secret version
+  Dispatch->>Receiver: POST public webhook projection
+  Receiver-->>Dispatch: 2xx / retryable failure / terminal failure
+  Dispatch->>Audit: Record delivery attempt and outcome
+  Dispatch-->>Projection: delivered / retrying / dead_lettered
+```
+
+---
+
+## Request Model
+
+### Shared Request Requirements
+
+All mutation-capable event/webhook APIs MUST support:
+
+- authenticated caller identity;
+- scope context;
+- operation class;
+- idempotency key where required;
+- correlation ID;
+- trace ID where available;
+- contract version;
+- request timestamp;
+- reason code for admin/control actions;
+- policy version reference where policy affects result.
+
+### Event Publication Request
+
+Minimum contract fields:
+
 - `event_id`
 - `event_name`
 - `event_family`
@@ -185,702 +1020,975 @@ Durable facts:
 - `causation_id`
 - `idempotency_key_ref`
 - `occurred_at`
-- `accepted_at`
-- `partition_key`
-- `sequence_ref` nullable
-- `payload_json`
 - `sensitivity_class`
 - `public_exposure_class`
-- `audit_lineage_ref`
-- `replayable_until`
 - `retention_class`
+- `payload`
 
-#### `event_consumer_checkpoint`
-Tracks last-processed or deduplicated state for a consumer.
+Publication request MUST NOT include secrets or raw credentials.
 
-Owner:
-- eventing / consuming service domain
+### Webhook Endpoint Create / Update Request
 
-Durable facts:
-- `consumer_checkpoint_id`
-- `consumer_name`
+Minimum contract fields:
+
+- endpoint URL;
+- environment;
+- owner scope;
+- event subscription filters;
+- label or display name;
+- verification mode where applicable;
+- idempotency key for create/update/disable/rotation;
+- optional delivery policy class where allowed.
+
+Endpoint URL MUST be HTTPS in production. Localhost, loopback, RFC1918, link-local, metadata-service, and otherwise blocked destinations MUST be rejected unless explicitly allowed by non-production sandbox policy.
+
+### Webhook Redelivery Request
+
+Minimum contract fields:
+
+- `delivery_id` or `webhook_delivery_attempt_id`;
+- endpoint scope context;
+- reason code where required;
+- idempotency key;
+- optional operator notes for admin/control paths.
+
+Redelivery request MUST NOT create a new business event.
+
+---
+
+## Response Model
+
+### Event Publication Response
+
+MUST return publication acceptance state, not downstream-consumer completion.
+
+Minimum fields:
+
 - `event_id`
-- `event_name`
-- `entity_type`
-- `entity_id`
-- `processed_at`
-- `processing_result`
-- `replayed_flag`
-- `dedupe_key`
+- `status` (`accepted_for_publication`, `previously_accepted`, `rejected`, `conflicted`, `failed_retryable`, `failed_terminal`)
+- `event_version`
+- `producer_domain`
+- `accepted_at`
+- `correlation_id`
+- `audit_lineage_ref` where available
+- `idempotency_result` where applicable
 
-#### `webhook_endpoint`
-Represents a registered external delivery target.
+### Webhook Endpoint Response
 
-Owner:
-- integration / control-plane domain
+MUST return redacted endpoint representation.
 
-Durable facts:
+Minimum fields:
+
 - `webhook_endpoint_id`
 - `owner_scope_type`
 - `owner_scope_id`
 - `environment`
-- `endpoint_url`
+- `endpoint_url_redacted_or_normalized`
 - `status`
-- `secret_ref`
+- `event_filter_summary`
 - `signing_algorithm`
-- `event_subscription_mode`
-- `event_filter_json`
+- `secret_version_metadata`
 - `verified_at`
-- `disabled_at`
-- `quarantined_at`
 - `created_at`
 - `updated_at`
+- `correlation_id`
 
-#### `webhook_delivery_attempt`
-Represents one outbound delivery attempt to a webhook endpoint.
+Raw secrets MUST NOT be returned after initial creation/rotation confirmation unless explicitly allowed as one-time reveal by implementation policy.
 
-Owner:
-- webhook dispatcher infrastructure
+### Webhook Delivery Response / Delivery Read
 
-Durable facts:
-- `webhook_delivery_attempt_id`
-- `webhook_endpoint_id`
-- `event_id`
+Minimum fields:
+
 - `delivery_id`
+- `event_id`
+- `public_event_name`
+- `public_event_version`
+- `webhook_endpoint_id`
 - `attempt_number`
+- `delivery_state`
 - `scheduled_at`
 - `sent_at`
 - `response_status_code`
 - `response_latency_ms`
-- `delivery_state`
 - `next_retry_at`
 - `last_error_code`
 - `last_error_detail_redacted`
-- `signature_key_version`
 - `payload_hash`
-- `archived_headers_json`
 
-#### `webhook_event_projection`
-Represents the externally supported webhook representation of an internal event.
+Raw response bodies and sensitive headers MUST be redacted unless a narrower admin/control policy permits access.
 
-Owner:
-- integration / webhook publication layer
+### Outbound Webhook Payload Envelope
 
-Durable facts:
-- `webhook_event_projection_id`
-- `event_id`
-- `public_event_name`
-- `public_event_version`
-- `projection_schema_version`
-- `resource_type`
-- `resource_id`
-- `status`
-- `payload_json`
-- `published_eligibility_class`
+Outbound webhook delivery MUST include:
 
-### Ownership interpretation
-- `event_record` is durable eventing infrastructure, but the meaning of the fact still belongs to the producer domain.
-- `webhook_event_projection` is derived from canonical events and does not replace them.
-- `webhook_delivery_attempt` records delivery behavior, not business truth.
-- `event_consumer_checkpoint` is consumer-local durability for idempotent processing.
+- `id` / delivery identifier;
+- `event_id`;
+- public event name;
+- public event version;
+- event timestamp;
+- resource type;
+- resource ID;
+- scope context where public-safe;
+- payload data;
+- correlation reference where public-safe;
+- delivery attempt metadata where public-safe.
 
-## 10. State Model and Lifecycle
-### A. Canonical event lifecycle
-`pending_domain_commit -> committed -> emitted -> persisted -> available_for_consumption -> consumed | replayed | archived`
+Headers MUST include signed timestamp, signature, signature key version, event ID, delivery ID, public event name, and version.
 
-### B. Async accepted-work lifecycle
-`requested -> accepted -> queued -> running -> completed | failed | canceled`
+---
 
-### C. Webhook publication lifecycle
-`candidate -> projected -> scheduled -> delivered | retrying | dead_lettered | disabled`
+## Error / Result / Status Model
 
-### D. Endpoint lifecycle
-`draft -> verified -> active -> quarantined | disabled | retired`
+### HTTP Status Classes
 
-### Lifecycle rules
-- canonical domain events must be emitted only after the owning domain has accepted or committed the underlying mutation or accepted the async workflow request
-- webhook projection may occur only for event classes explicitly marked externally exposable
-- webhook delivery failure must not roll back the canonical event or the underlying business fact
-- replay must preserve original `event_id`, `occurred_at`, and producer lineage while marking replay context explicitly
+- `200 OK` for successful reads and idempotent replay returning prior state.
+- `201 Created` for new endpoint creation when synchronous creation completes.
+- `202 Accepted` for accepted verification, redelivery, replay, or async endpoint actions.
+- `400 Bad Request` for malformed requests.
+- `401 Unauthorized` for missing/invalid authentication.
+- `403 Forbidden` for authenticated but unauthorized or forbidden scope.
+- `404 Not Found` for resources not visible in caller scope.
+- `409 Conflict` for state conflicts or idempotency conflicts.
+- `410 Gone` for retired/sunset contract access where applicable.
+- `422 Unprocessable Entity` for structurally valid but policy-invalid content.
+- `429 Too Many Requests` for rate-limit or abuse throttling.
+- `500 Internal Server Error` for unexpected failures.
+- `503 Service Unavailable` for degraded or temporarily unavailable dependencies.
 
-## 11. API Surface Overview
-This specification governs five related but distinct interface surfaces:
+### Canonical Error Codes
 
-1. **Internal domain events** used for backend coordination across platform and product domains.
-2. **Integration events** used for stable downstream service reactions and derived materializations.
-3. **Operational lifecycle events** used for workflow, worker, retry, and report-build progress.
-4. **Webhook management APIs** used by privileged clients to register and manage external endpoints.
-5. **Webhook delivery contracts** used by FUZE to send approved event projections to third-party destinations.
-
-The canonical model is event-first internally, webhook-selective externally.
-
-## 12. Authentication and Authorization Model
-### Internal event production
-- only authenticated backend services or worker classes with domain-appropriate scopes may emit events
-- the emitting service must authenticate as a service principal
-- the eventing layer must verify that the emitting principal is authorized for the declared `producer_domain`
-
-### Internal event consumption
-- internal consumers authenticate with service identity
-- consumer scopes are least-privilege and may be limited by event family, domain, or topic class
-- sensitive governance, treasury, fraud, and payout topics require elevated internal trust tier and explicit grants
-
-### Webhook management
-- webhook endpoint registration and management are authenticated backend APIs exposed through user/admin edge surfaces
-- registration requires ownership of the target account / workspace / partner scope
-- admin-only override operations require stronger admin scopes and must be audited
-
-### Webhook delivery authentication
-- outbound webhooks must be signed
-- the receiver authenticates FUZE by verifying the signature against the current endpoint secret
-- secret rotation must support overlapping validation windows when configured
-
-## 13. API Endpoints / Interface Contracts
-The following contracts are canonical for webhook management and operational visibility. Internal event publication itself is not a public REST contract; it is an internal backend capability exposed to approved services.
-
-### Webhook management APIs
-#### `POST /v1/webhooks/endpoints`
-- Purpose: register a webhook endpoint for an account, workspace, or partner scope
-- Caller Type: authenticated first-party client or approved admin flow
-- Auth Expectation: owner-scoped auth or admin-scoped auth
-- Request Body Summary: endpoint URL, environment, subscription mode, event filters, optional label
-- Response Summary: created endpoint record with verification status and secret metadata reference only
-- Side Effects: creates `webhook_endpoint`, may initiate verification challenge
-- Idempotency Behavior: required via idempotency key for endpoint registration requests
-- Audit Requirements: create audit entry and activity entry where user-visible
-- Emitted Events: `integration.webhook_endpoint.created`, optionally `integration.webhook_endpoint.verification_requested`
-
-#### `POST /v1/webhooks/endpoints/{webhook_endpoint_id}/verify`
-- Purpose: verify endpoint ownership / reachability according to FUZE verification policy
-- Caller Type: authenticated owner or admin
-- Auth Expectation: same owner scope or admin override
-- Request Body Summary: verification confirmation parameters if applicable
-- Response Summary: verification result and resulting endpoint status
-- Side Effects: updates endpoint status, may enqueue probe delivery
-- Idempotency Behavior: required
-- Audit Requirements: required
-- Emitted Events: `integration.webhook_endpoint.verified` or `integration.webhook_endpoint.verification_failed`
-
-#### `GET /v1/webhooks/endpoints`
-- Purpose: list webhook endpoints for the caller scope
-- Caller Type: authenticated owner or admin
-- Auth Expectation: scope-limited read access
-- Response Summary: endpoint summaries, statuses, event filters, created / updated metadata
-- Side Effects: none
-- Idempotency Behavior: not applicable
-- Audit Requirements: optional access audit for sensitive admin use
-- Emitted Events: none
-
-#### `PATCH /v1/webhooks/endpoints/{webhook_endpoint_id}`
-- Purpose: update event subscriptions, label, active status, or retry policy class where allowed
-- Caller Type: authenticated owner or admin
-- Auth Expectation: scope owner or admin override
-- Request Body Summary: allowed mutable endpoint attributes only
-- Response Summary: updated endpoint record
-- Side Effects: may trigger re-verification if URL changes; may rotate delivery configuration version
-- Idempotency Behavior: required for mutation
-- Audit Requirements: required
-- Emitted Events: `integration.webhook_endpoint.updated`
-
-#### `POST /v1/webhooks/endpoints/{webhook_endpoint_id}/rotate-secret`
-- Purpose: rotate webhook signing secret
-- Caller Type: authenticated owner or admin
-- Auth Expectation: elevated scope
-- Request Body Summary: optional overlap policy and effective time
-- Response Summary: secret rotation acknowledgment and validation window metadata
-- Side Effects: creates new secret version reference
-- Idempotency Behavior: required
-- Audit Requirements: required and high sensitivity
-- Emitted Events: `integration.webhook_endpoint.secret_rotated`
-
-#### `POST /v1/webhooks/endpoints/{webhook_endpoint_id}/disable`
-- Purpose: disable delivery to an endpoint
-- Caller Type: authenticated owner or admin
-- Auth Expectation: scope owner or admin
-- Request Body Summary: reason code
-- Response Summary: disabled endpoint record
-- Side Effects: stops future deliveries
-- Idempotency Behavior: required
-- Audit Requirements: required
-- Emitted Events: `integration.webhook_endpoint.disabled`
-
-#### `GET /v1/webhooks/endpoints/{webhook_endpoint_id}/deliveries`
-- Purpose: view recent delivery attempts for support and debugging
-- Caller Type: authenticated owner or admin
-- Auth Expectation: scope-limited read access
-- Response Summary: delivery attempts, statuses, timestamps, response codes, redacted diagnostics
-- Side Effects: none
-- Idempotency Behavior: not applicable
-- Audit Requirements: access audit for admin and sensitive scopes
-- Emitted Events: none
-
-#### `POST /v1/webhooks/deliveries/{delivery_id}/redeliver`
-- Purpose: request redelivery of a prior eligible webhook delivery
-- Caller Type: authenticated owner or admin
-- Auth Expectation: scope owner or admin
-- Request Body Summary: optional reason code
-- Response Summary: redelivery accepted response with new delivery-attempt reference
-- Side Effects: queues redelivery attempt
-- Idempotency Behavior: required
-- Audit Requirements: required
-- Emitted Events: `integration.webhook_delivery.redelivery_requested`
-
-### Internal interface contracts
-#### Internal event publication interface
-- Surface Type: internal service capability
-- Allowed Callers: authenticated backend services and workers with publish permission for the producer domain
-- Required Inputs: canonical envelope metadata, payload, correlation lineage, sensitivity classification, public exposure class
-- Required Guarantees: event persists durably before being acknowledged as published
-
-#### Internal subscription / consumption interface
-- Surface Type: internal broker or pull-consumer contract
-- Allowed Callers: authenticated services / workers with read grants for the event family or topic
-- Required Guarantees: at-least-once delivery semantics, consumer-level dedupe responsibility, checkpointing support
-
-### Webhook delivery contract
-Each delivery must include:
-- stable delivery identifier
-- event identifier
-- public event name and version
-- event timestamp
-- resource type and resource id
-- status
-- signed request headers
-- payload body as the supported webhook contract projection
-
-## 14. Request Rules
-### Internal publication rules
-- the producer must not emit an event before the underlying domain action is accepted or committed
-- event names must follow `<domain>.<entity_or_scope>.<action_or_state>`
-- payloads must prefer stable identifiers over full mutable object snapshots
-- the publication request must include correlation and causation lineage where available
-
-### Webhook registration rules
-- endpoint URLs must be HTTPS and must pass destination-validation policy
-- local, loopback, RFC1918, link-local, or otherwise blocked destinations are rejected unless explicitly allowed in non-production sandbox policy
-- event filters must be validated against the supported public webhook catalog
-- environment separation is mandatory between sandbox and production where both exist
-
-### Redelivery rules
-- only eligible deliveries within retention window may be redelivered
-- redelivery creates a new delivery attempt but references the original `event_id`
-- redelivery does not mint a new business event
-
-## 15. Response Rules
-- mutation APIs return canonical endpoint state or accepted-redelivery state, never secret raw values after creation/rotation confirmation
-- failed requests use a structured problem-details style error model
-- list and detail APIs return redacted delivery diagnostics rather than raw sensitive internals
-- internal publication acknowledgment returns whether the event was durably accepted, not whether every downstream consumer has already completed work
-
-## 16. Error Model
-The webhook-management HTTP layer uses structured problem details with these canonical classes:
 - `invalid_request`
+- `authentication_required`
 - `authorization_failed`
 - `forbidden_scope`
+- `entitlement_required`
 - `unsupported_event_subscription`
-- `endpoint_verification_failed`
+- `event_family_not_public`
+- `event_version_unsupported`
 - `endpoint_destination_blocked`
+- `endpoint_verification_required`
+- `endpoint_verification_failed`
 - `endpoint_secret_rotation_conflict`
+- `endpoint_quarantined`
+- `endpoint_disabled`
 - `delivery_not_found`
 - `redelivery_not_allowed`
 - `replay_window_expired`
+- `idempotency_conflict`
 - `conflict_state`
 - `rate_limited`
+- `abuse_control_denied`
+- `migration_version_retired`
+- `contract_deprecated`
 - `internal_error`
+- `temporarily_unavailable`
 
-Problem objects should include:
+Problem responses MUST include:
+
 - `type`
 - `title`
 - `status`
 - `detail`
 - `instance`
-- FUZE extension members such as `error_code`, `correlation_id`, `field_errors`, and `retryable`
+- `error_code`
+- `correlation_id`
+- `retryable`
+- `field_errors` where applicable
+- `policy_reference` where policy drives denial and exposure is safe
 
-## 17. Idempotency and Mutation Safety
-- webhook endpoint creation, verification, update, disable, and secret rotation are mutation-capable and require idempotency protection
-- internal event publication must be deduplicable by `event_id` and, where relevant, by domain idempotency reference
-- consumer handling must tolerate duplicate delivery and must not duplicate economic or publication side effects
-- webhook redelivery is operationally idempotent with respect to business meaning: it produces new delivery attempts, not new business facts
-- at-least-once delivery is assumed across internal events and outbound webhook attempts
+---
 
-## 18. Versioning and Compatibility Rules
-- every event has an explicit `event_version`
-- every public webhook projection has an explicit `public_event_version`
-- breaking payload changes require a new event version
-- additive fields are preferred over destructive field mutation
-- internal consumers should ignore unknown additive fields unless their contract forbids it
-- public webhook deprecations require overlap periods and clear migration guidance
-- event names should remain stable unless the business meaning changes materially
+## Idempotency / Retry / Replay Model
 
-## 19. Event Emission and Webhook Behavior
-### Event families
-- **Domain events**: canonical business outcomes from the owning domain
-- **Integration events**: stable downstream coordination events derived from domain truth
-- **Operational events**: workflow, worker, and report-build progress
-- **Public webhook events**: intentionally exposed external contract projections
+### Idempotency Requirements
 
-### Canonical event timing
-- **Fact events** describe something that is now true
-- **Accepted events** describe that async work was accepted
-- **Operational state events** describe in-progress execution changes
+Idempotency protection is REQUIRED for:
 
-### Webhook exposure rules
-Webhook exposure is allowed only when:
-- the event is meaningful to an external consumer
-- the event does not leak restricted control-path internals
-- the payload can be supported as a stable contract
-- destination ownership and security can be reasonably enforced
+- webhook endpoint creation;
+- endpoint verification mutation;
+- endpoint update;
+- endpoint disablement;
+- secret rotation;
+- delivery redelivery requests;
+- admin/control quarantine and suppression mutations;
+- event publication where producer-domain idempotency risk exists;
+- accepted async eventing operations.
 
-### Example externally supportable webhook classes
-- `product.request.completed`
-- `credits.purchase.completed`
-- `billing.subscription.changed`
-- `transparency.report.published`
-- `public.registry.updated`
-- `payout.cycle.opened` only if explicitly approved as public contract surface
+### Publication Deduplication
 
-### Restricted default internal-only classes
-- treasury approval internals
-- governance review internals
-- fraud and abuse signals
-- internal support overrides
-- signer or secret-control internals
-- payout preparation internals before approved publication state
+Event publication MUST be deduplicable by `event_id` and, where applicable, owner-domain idempotency reference. A duplicate equivalent publication request MAY return `previously_accepted`. A materially different request reusing the same event ID or replay identity MUST return conflict.
 
-## 20. Audit and Activity Requirements
-- every mutation-capable webhook management action must create an audit record
-- secret rotation, disable, quarantine, and admin override actions are high-sensitivity audit events
-- every delivery attempt must preserve delivery timestamp, response status, and redacted failure detail
-- activity feeds may expose endpoint created / disabled / verified summaries to owners where product UX requires it, but activity feed entries remain derived from canonical audit and event records
-- audit lineage references should connect endpoint mutations, event projections, and delivery attempts to the underlying actor and request
+### Consumer Deduplication
 
-## 21. Data Model and Database Schema View
-### Core tables
-#### `event_records`
-- PK: `event_id`
-- Unique: `producer_domain + producer_service + correlation_id + event_name + entity_type + entity_id + event_version + occurred_at` may be indexed for reconciliation but should not replace `event_id`
-- Major indexes:
-  - `(producer_domain, occurred_at desc)`
-  - `(event_name, occurred_at desc)`
-  - `(entity_type, entity_id, occurred_at desc)`
-  - `(correlation_id)`
-  - `(public_exposure_class, occurred_at desc)`
-- State columns: none beyond immutable envelope metadata; logical availability is determined by persistence and retention policy
-- Audit columns: `accepted_at`, `audit_lineage_ref`
-- Reconciliation columns: `sequence_ref`, `replayable_until`, `retention_class`
+Consumers MUST handle duplicate event delivery. Consumers SHOULD checkpoint by `event_id`, `consumer_name`, and consumer-local dedupe key. Duplicate event delivery MUST NOT create duplicate economic, publication, governance, or external side effects.
 
-#### `event_consumer_checkpoints`
-- PK: `consumer_checkpoint_id`
-- Unique: `(consumer_name, event_id)`
-- Major indexes:
-  - `(consumer_name, processed_at desc)`
-  - `(dedupe_key)`
-- State columns: `processing_result`
-- Audit columns: `processed_at`
-- Reconciliation columns: `replayed_flag`
+### Webhook Delivery Retry
 
-#### `webhook_endpoints`
-- PK: `webhook_endpoint_id`
-- Unique: `(owner_scope_type, owner_scope_id, environment, endpoint_url)`
-- Major indexes:
-  - `(owner_scope_type, owner_scope_id, status)`
-  - `(environment, status)`
-- State columns: `status`
-- Audit columns: `created_at`, `updated_at`, `verified_at`, `disabled_at`, `quarantined_at`
-- Reconciliation columns: `event_subscription_mode`, `event_filter_json`
+Outbound webhook delivery MUST assume at-least-once semantics. Delivery retry policies MUST be bounded, observable, and policy-governed. Retryable response classes SHOULD include network timeout, temporary DNS failure, 408, 409 where documented, 425, 429 where retry-after applies, and 5xx. Terminal failure SHOULD include 400, 401, 403, 404, 410, unsupported content-type, signature rejection caused by endpoint misconfiguration, or policy-suppressed delivery.
 
-#### `webhook_delivery_attempts`
-- PK: `webhook_delivery_attempt_id`
-- Unique: `(delivery_id, attempt_number)`
-- FKs:
-  - `webhook_endpoint_id -> webhook_endpoints.webhook_endpoint_id`
-  - `event_id -> event_records.event_id`
-- Major indexes:
-  - `(webhook_endpoint_id, sent_at desc)`
-  - `(event_id)`
-  - `(delivery_state, next_retry_at)`
-- State columns: `delivery_state`
-- Audit columns: `scheduled_at`, `sent_at`
-- Reconciliation columns: `attempt_number`, `response_status_code`, `response_latency_ms`, `payload_hash`
+### Replay
 
-#### `webhook_event_projections`
-- PK: `webhook_event_projection_id`
-- Unique: `(event_id, public_event_version)`
-- FKs:
-  - `event_id -> event_records.event_id`
-- Major indexes:
-  - `(public_event_name, occurred_at desc)` if projected timestamp stored
-- State columns: `status`
-- Audit columns: publication timestamp if stored
-- Reconciliation columns: `projection_schema_version`, `published_eligibility_class`
+Replay of internal events MUST preserve original `event_id`, `occurred_at`, producer lineage, and payload meaning. Replay MUST mark replay context explicitly and MUST NOT rewrite the original event record.
 
-### Normalization and derived-data notes
-- `event_records` are immutable event envelopes, not mutable state rows
-- `webhook_event_projections` are derived from `event_records`
-- `webhook_delivery_attempts` are operational records and do not redefine event truth
-- cached UI summaries may exist, but canonical delivery truth remains in the delivery-attempt table
+### Redelivery
 
-## 22. Architecture Diagram — Mermaid flowchart
-```mermaid
-flowchart LR
-    subgraph FE[Frontend Surfaces]
-        WEB[fuze-frontend-webapp]
-        ADMIN[fuze-frontend-admin]
-    end
+Webhook redelivery creates a new delivery attempt referencing the same event/projection lineage. It MUST NOT create a new domain event, change `occurred_at`, or imply a new business fact.
 
-    subgraph BE[fuze-backend-api]
-        subgraph DOMAINS[Owning Domains]
-            D1[Platform and Product Domains]
-            D2[Chain-adjacent Services]
-        end
-        EVT[Event Store and Outbox]
-        CONS[Internal Consumers and Workers]
-        PROJ[Webhook Projection Layer]
-        DISP[Webhook Dispatcher]
-        CTRL[Webhook Management API]
-        AUD[Audit and Activity]
-    end
+---
 
-    subgraph EXT[External Consumers]
-        PARTNER[Partner or Customer Endpoint]
-    end
+## Rate Limit / Abuse-Control Model
 
-    WEB --> CTRL
-    ADMIN --> CTRL
-    D1 --> EVT
-    D2 --> EVT
-    EVT --> CONS
-    EVT --> PROJ
-    PROJ --> DISP
-    DISP --> PARTNER
-    CTRL --> AUD
-    EVT --> AUD
-    DISP --> AUD
-```
+Webhook-management APIs MUST enforce rate limits by caller, owner scope, endpoint, operation class, event family, and environment where applicable.
 
-## 23. Data Design — Mermaid Diagram
-```mermaid
-erDiagram
-    EVENT_RECORDS ||--o{ WEBHOOK_EVENT_PROJECTIONS : projects_to
-    EVENT_RECORDS ||--o{ WEBHOOK_DELIVERY_ATTEMPTS : delivered_as
-    EVENT_RECORDS ||--o{ EVENT_CONSUMER_CHECKPOINTS : processed_by
-    WEBHOOK_ENDPOINTS ||--o{ WEBHOOK_DELIVERY_ATTEMPTS : receives
+Abuse controls MUST include:
 
-    EVENT_RECORDS {
-        uuid event_id PK
-        string event_name
-        string event_family
-        string event_version
-        string producer_domain
-        string entity_type
-        string entity_id
-        string correlation_id
-        datetime occurred_at
-        json payload_json
-    }
+- endpoint creation throttles;
+- URL destination validation;
+- verification attempt limits;
+- redelivery request throttles;
+- secret rotation throttles;
+- delivery list pagination and access controls;
+- quarantine on repeated terminal delivery failures or suspicious behavior;
+- suppression of deliveries to blocked destinations;
+- protection against SSRF, credential exfiltration, internal network targeting, and metadata-service targeting.
 
-    EVENT_CONSUMER_CHECKPOINTS {
-        uuid consumer_checkpoint_id PK
-        uuid event_id FK
-        string consumer_name
-        string processing_result
-        string dedupe_key
-        datetime processed_at
-        boolean replayed_flag
-    }
+Rate-limit denials MUST be structured and SHOULD include retry-after guidance where safe.
 
-    WEBHOOK_ENDPOINTS {
-        uuid webhook_endpoint_id PK
-        string owner_scope_type
-        string owner_scope_id
-        string environment
-        string endpoint_url
-        string status
-        string signing_algorithm
-        datetime verified_at
-    }
+---
 
-    WEBHOOK_DELIVERY_ATTEMPTS {
-        uuid webhook_delivery_attempt_id PK
-        uuid webhook_endpoint_id FK
-        uuid event_id FK
-        string delivery_id
-        int attempt_number
-        string delivery_state
-        int response_status_code
-        datetime sent_at
-        datetime next_retry_at
-    }
+## Endpoint / Route Family Model
 
-    WEBHOOK_EVENT_PROJECTIONS {
-        uuid webhook_event_projection_id PK
-        uuid event_id FK
-        string public_event_name
-        string public_event_version
-        string resource_type
-        string resource_id
-        string status
-    }
-```
+This document defines route-family posture, not final exhaustive endpoint schemas.
 
-## 24. Flow View
-### Happy path flow
-1. An owning domain commits or accepts a business outcome.
-2. The domain emits a canonical event into the event store / outbox.
-3. Internal consumers process the event idempotently for downstream coordination, reporting, or async work.
-4. If the event class is approved for external exposure, the webhook projection layer maps it to a stable webhook payload.
-5. The dispatcher signs and sends the webhook to subscribed verified endpoints.
-6. Delivery attempts are recorded and surfaced for support and owner visibility.
+### Webhook Management Route Families
 
-### Alternate path flow
-1. An async workflow request is accepted.
-2. The producer emits an accepted-state event rather than a completion event.
-3. Workers execute the long-running work.
-4. Completion or failure emits a later fact or operational event.
-5. Only the externally approved completion-state event may be projected to webhooks.
+#### `POST /v1/webhooks/endpoints`
 
-### Failure and recovery flow
-1. Event delivery to an internal consumer fails.
-2. Consumer retries using dedupe keys and checkpoints.
-3. Webhook dispatch fails due to timeout or non-2xx response.
-4. Dispatcher schedules bounded retries with backoff.
-5. Persistently failing endpoints are quarantined or disabled according to policy.
-6. Business truth remains committed even if delivery fails.
+- **Purpose:** Register webhook endpoint for account, workspace, or partner scope.
+- **Surface:** authenticated public / partner / first-party.
+- **Authorization:** owner-scoped or approved admin scope.
+- **Idempotency:** required.
+- **Audit:** required.
+- **Side Effects:** creates endpoint record and secret metadata; may initiate verification.
 
-### Retry behavior
-- internal events: at-least-once delivery, consumer-side dedupe
-- webhook deliveries: bounded retries, attempt tracking, redelivery API
-- replay: explicit operator or system action, marked as replay without changing original event meaning
+#### `POST /v1/webhooks/endpoints/{webhook_endpoint_id}/verify`
 
-### Admin override / review flow
-- admin may disable, quarantine, or redeliver a webhook endpoint through privileged backend APIs
-- admin actions never rewrite the underlying business event
-- all such actions create high-sensitivity audit records
+- **Purpose:** Verify endpoint ownership/reachability.
+- **Authorization:** endpoint owner or admin override.
+- **Idempotency:** required for mutation.
+- **Audit:** required.
+- **Side Effects:** updates verification status; may enqueue probe delivery.
 
-## 25. Data Flows — Mermaid sequenceDiagram
-```mermaid
-sequenceDiagram
-    participant Domain as Owning Domain
-    participant EventStore as Event Store
-    participant Consumer as Internal Consumer
-    participant Projection as Webhook Projection
-    participant Dispatcher as Webhook Dispatcher
-    participant Endpoint as External Endpoint
-    participant Audit as Audit Layer
+#### `GET /v1/webhooks/endpoints`
 
-    Domain->>EventStore: publish canonical event
-    EventStore-->>Domain: durable acceptance
-    EventStore->>Consumer: deliver event
-    Consumer->>Consumer: dedupe and process
-    Consumer->>Audit: write processing audit if required
-    EventStore->>Projection: forward exposable event
-    Projection->>Dispatcher: create webhook projection and schedule delivery
-    Dispatcher->>Endpoint: POST signed webhook
-    Endpoint-->>Dispatcher: 2xx or failure response
-    Dispatcher->>Audit: record delivery attempt
-    alt delivery failure
-        Dispatcher->>Dispatcher: schedule retry with backoff
-    end
-```
+- **Purpose:** List caller-visible endpoints.
+- **Authorization:** scope-limited read.
+- **Side Effects:** none.
+- **Audit:** optional for ordinary self-scope; required for sensitive admin access.
 
-## 26. Security and Risk Controls
-- webhook endpoints must use HTTPS
-- endpoint destination validation must mitigate SSRF and unsafe target classes
-- webhook signing must use strong keyed signatures and constant-time verification guidance for receivers
-- secrets must be stored as secret references, not returned in raw read APIs after creation or rotation
-- secret rotation must be auditable and support overlap only under explicit policy
-- event payloads must exclude internal-only sensitive fields and secrets
-- governance-, treasury-, fraud-, and payout-sensitive topics default to internal-only exposure
-- rate limiting and anomaly detection apply to webhook management APIs
-- delivery logs exposed to customers must be redacted to avoid leaking secrets or internal infrastructure detail
+#### `GET /v1/webhooks/endpoints/{webhook_endpoint_id}`
 
-## 27. Operational Considerations
-- event retention must distinguish replayable operational windows from long-term audit retention
-- dead-letter handling must exist for repeated webhook-delivery failure and, where required, for internal consumer failure
-- support tooling must allow search by `event_id`, `delivery_id`, `correlation_id`, `entity_id`, and endpoint id
-- observability should cover publish latency, consumer lag, retry rates, endpoint failure rates, and quarantine rates
-- environment separation between sandbox and production is mandatory for endpoint registration and delivery
-- incident response must preserve ability to pause outbound delivery without losing canonical event records
+- **Purpose:** Retrieve endpoint detail.
+- **Authorization:** endpoint owner/admin.
+- **Response:** redacted endpoint metadata; never raw secret.
 
-## 28. Acceptance Criteria
-1. FUZE emits canonical domain events only from the domain that owns the underlying fact.
-2. No public webhook exists unless its event class is explicitly approved for external exposure.
-3. Every emitted event carries a stable event identifier, version, producer domain, correlation lineage, and entity reference.
-4. Internal consumers can process at-least-once delivery safely without duplicating economic or publication side effects.
-5. Webhook endpoints can be created, verified, updated, disabled, and redelivered through authenticated backend APIs with audit coverage.
-6. Webhook deliveries are signed, tracked, retryable with bounded backoff, and visible in delivery history.
-7. Secret rotation is supported without exposing raw stored secrets through read APIs.
-8. Governance-, treasury-, fraud-, and payout-sensitive internals are not exposed externally by default.
-9. Replay and redelivery preserve original business meaning and do not mint duplicate domain facts.
-10. The architecture, schema, and diagrams remain consistent with backend ownership and FUZE economic-layer separation.
+#### `PATCH /v1/webhooks/endpoints/{webhook_endpoint_id}`
 
-## 29. Test Cases
-### Positive cases
-1. A credits issuance mutation emits exactly one canonical `credits.issued` event record after ledger commit.
-2. A supported completion event is projected and delivered successfully to an active verified endpoint.
-3. Endpoint secret rotation issues a new secret version and subsequent deliveries validate against the new secret.
-4. Redelivery of a recent webhook creates a new delivery attempt while keeping the original `event_id`.
+- **Purpose:** Update label, filters, active status, retry policy class where allowed, or URL.
+- **Authorization:** owner/admin; URL changes may require re-verification.
+- **Idempotency:** required.
+- **Audit:** required.
 
-### Negative cases
-5. A frontend-originated local UI transition cannot publish a canonical platform event directly.
-6. An attempt to register an HTTP or blocked destination endpoint is rejected.
-7. A request to subscribe to an unsupported or restricted event class is rejected.
-8. A duplicate delivery attempt without idempotent consumer protection does not create duplicate economic side effects because the consumer dedupes by event identity.
+#### `POST /v1/webhooks/endpoints/{webhook_endpoint_id}/rotate-secret`
 
-### Authorization cases
-9. A workspace owner can manage only endpoints belonging to that workspace scope.
-10. An admin can quarantine an endpoint, and the action is separately audited.
-11. A service principal without publish permission for the credits domain cannot emit `credits.*` events.
+- **Purpose:** Rotate signing secret.
+- **Authorization:** elevated owner/admin scope.
+- **Idempotency:** required.
+- **Audit:** required with high sensitivity.
+- **Response:** secret metadata and one-time secret reveal only if policy allows.
 
-### Idempotency and concurrency cases
-12. Retrying `POST /v1/webhooks/endpoints` with the same idempotency key does not create duplicate endpoint rows.
-13. Two concurrent secret-rotation requests do not leave ambiguous active-secret state.
-14. A consumer receiving the same event twice records only one successful processing checkpoint.
+#### `POST /v1/webhooks/endpoints/{webhook_endpoint_id}/disable`
 
-### Replay / reconciliation cases
-15. Replaying an event does not create a second business mutation in credits, billing, payout, or registry publication domains.
-16. A delivery history query shows both failed and successful attempts for the same delivery lineage.
-17. A quarantined endpoint receives no new deliveries until reactivated.
+- **Purpose:** Disable endpoint delivery.
+- **Authorization:** owner/admin.
+- **Idempotency:** required.
+- **Audit:** required.
+- **Request:** reason code required for admin/control disablement.
 
-### Webhook-signature cases
-18. A receiver can validate the signature using the active shared secret and reject tampered payloads.
-19. Payloads altered in transit fail signature verification.
-20. Redelivery uses the correct active key version according to the effective rotation policy.
+#### `GET /v1/webhooks/endpoints/{webhook_endpoint_id}/deliveries`
 
-## 30. Open Questions or Explicit Deferred Decisions
-- exact broker technology and topic / partition implementation remain implementation choices provided the contract rules here are preserved
-- exact external webhook event catalog should be finalized per product and public integration policy
-- whether CloudEvents wire format is adopted directly or only used as metadata-shape inspiration remains a contract-derivation decision
-- exact replay retention window by event family should be finalized with operational and compliance input
-- whether public payout-cycle webhook exposure should exist in v1 remains subject to trust and policy review
+- **Purpose:** List recent delivery attempts.
+- **Authorization:** endpoint owner/admin.
+- **Side Effects:** none.
+- **Audit:** required for admin/sensitive scopes.
+- **Response:** redacted diagnostics.
 
-## 31. Implementation Notes for `fuze-backend-api`
-- implement event publication through an ownership-respecting outbox or equivalent durable publication pattern
-- keep event envelope types shared across domains but producer authorization domain-specific
-- separate canonical event records from webhook projection objects and delivery attempts
-- centralize webhook signature generation, delivery retry policy, destination validation, and redelivery tooling
-- ensure credits-, billing-, payout-, and governance-sensitive consumers have explicit dedupe and audit logic
-- provide searchable operator tooling by event and delivery identifiers
+#### `GET /v1/webhooks/deliveries/{delivery_id}`
 
-## 32. Frontend Consumption Notes for:
-### `fuze-frontend-webapp`
-- consumes webhook-management APIs and event-driven status read models only
-- must not construct canonical platform events locally
-- may display endpoint status, recent deliveries, and async job progress derived from backend truth
+- **Purpose:** Retrieve one delivery attempt.
+- **Authorization:** scope-limited.
+- **Response:** redacted diagnostics, event/projection metadata, status.
 
-### `fuze-frontend-admin`
-- consumes privileged management and observability APIs for endpoint quarantine, redelivery, and delivery diagnostics
-- may trigger control-plane actions but does not own event truth or delivery truth by itself
-- should expose high-sensitivity action confirmation flows and audit visibility
+#### `POST /v1/webhooks/deliveries/{delivery_id}/redeliver`
 
-## 33. Contract Derivation Notes for:
-### OpenAPI / AsyncAPI
-- derive webhook-management HTTP contracts into OpenAPI groups under an integration / webhooks tag family
-- derive internal event and public webhook payload catalogs into AsyncAPI or equivalent machine-readable event contracts
-- preserve stable names for `event_name`, `event_version`, `public_event_name`, and error families
-- use structured problem-details-compatible error schemas for webhook-management HTTP endpoints
+- **Purpose:** Request bounded redelivery.
+- **Authorization:** owner/admin.
+- **Idempotency:** required.
+- **Audit:** required.
+- **Response:** `202 Accepted` with operation/delivery-attempt reference.
 
-### future `fuze-sdk`
-- future SDK packages should derive webhook registration, delivery-history, and redelivery clients from the approved HTTP contracts
-- event payload types for public webhooks should derive from the approved projected webhook event schemas, not from internal event payloads
-- SDK generation must not invent or broaden externally supported event classes beyond the approved webhook catalog in this specification and subsequent derived contracts
+### Internal Event Publication Route / Capability Family
+
+Internal publication MAY be implemented as HTTP, gRPC, SDK, broker outbox call, or service capability. Regardless of transport, it MUST express:
+
+- authenticated service principal;
+- producer-domain authorization;
+- durable persistence before acknowledgement;
+- immutable envelope;
+- event version;
+- sensitivity and exposure classification;
+- idempotency/dedupe rules;
+- audit/trace references.
+
+### Internal Event Subscription Family
+
+Internal subscriptions MUST express:
+
+- service identity;
+- authorized event families/topics;
+- event version compatibility;
+- checkpoint/dedupe expectations;
+- failure/dead-letter semantics;
+- replay eligibility;
+- sensitive topic restrictions.
+
+### Admin / Control Route Families
+
+Admin/control APIs MAY include:
+
+- force-disable endpoint;
+- quarantine endpoint;
+- release quarantine;
+- suppress event projection;
+- bounded replay request;
+- bounded redelivery batch;
+- delivery policy override;
+- event-family exposure hold;
+- contract version emergency sunset.
+
+All such routes MUST be reason-coded, policy-constrained, strongly authorized, audited, and operationally observable.
+
+---
+
+## Public API Considerations
+
+Public webhook delivery is an outbound external contract. It MUST be narrower than internal event families.
+
+Public-facing webhook management APIs MUST:
+
+- treat authenticated external callers as public/external consumers, not internal services;
+- require explicit scope resolution;
+- expose only supported public event catalog families;
+- avoid raw internal event envelopes;
+- avoid raw delivery internals;
+- preserve public compatibility and deprecation posture;
+- return accepted-state responses for async redelivery or verification;
+- support rate limiting and abuse controls.
+
+---
+
+## First-Party Application API Considerations
+
+First-party applications MAY use webhook management APIs for user or workspace administration, but frontend convenience does not justify broader exposure.
+
+First-party clients MUST NOT:
+
+- access internal event stores directly;
+- bypass scope checks;
+- access raw secrets after initial reveal;
+- reinterpret endpoint status labels as canonical event truth;
+- use frontend-local state as canonical event state.
+
+---
+
+## Internal Service API Considerations
+
+Internal services MAY publish and consume event contracts only with explicit identity and grants.
+
+Internal service APIs and events MUST remain distinct:
+
+- internal APIs request or query owner-domain behavior;
+- events notify accepted facts/intents or operational states;
+- neither grants foreign mutation authority by implication.
+
+Internal services MUST prefer owner-domain APIs for cross-domain mutations and use events for asynchronous reaction, projection, reporting, and coordination.
+
+---
+
+## Admin / Control-Plane API Considerations
+
+Admin/control eventing APIs are exceptional and sensitive.
+
+They MUST:
+
+- use separate route families or operation classes;
+- require stronger authentication and authorization;
+- include reason codes;
+- include actor attribution;
+- include policy version reference;
+- include correlation ID and audit linkage;
+- support approval workflow where sensitivity requires;
+- never rewrite event meaning destructively;
+- never bypass owner-domain validation for business truth.
+
+---
+
+## Event / Webhook / Async API Considerations
+
+AsyncAPI derivation MUST preserve:
+
+- event class;
+- event name;
+- event version;
+- public vs internal exposure distinction;
+- envelope metadata;
+- timing semantics;
+- payload compatibility rules;
+- replay/redelivery semantics;
+- consumer checkpoint obligations;
+- at-least-once delivery posture;
+- correlation/causation references;
+- sensitivity and retention classification.
+
+Webhook contracts MUST include delivery headers, payload envelope, signature verification rules, event version, retry expectations, and duplicate-handling guidance.
+
+---
+
+## Chain-Adjacent API Considerations
+
+Chain-adjacent event and webhook contracts MUST distinguish:
+
+- chain-native fact;
+- FUZE off-chain interpretation;
+- indexer observation;
+- provider callback;
+- owner-domain accepted event;
+- public projection.
+
+A chain observation MUST NOT become an owner-domain event until normalized and accepted. Public chain-reference webhooks MUST NOT imply off-chain policy ownership over chain-native state.
+
+---
+
+## Data Model / Storage Support Implications
+
+### Canonical Storage Records
+
+Implementation storage MUST support, at minimum:
+
+- immutable `event_record`;
+- consumer checkpoint records;
+- endpoint records;
+- secret version metadata references;
+- webhook event projection records;
+- delivery attempt records;
+- replay/redelivery operation records;
+- quarantine/suppression records;
+- audit lineage references;
+- contract version references.
+
+### Storage Rules
+
+- Event records are immutable event history, not mutable domain state rows.
+- Webhook projections are derived records, not owner-domain truth.
+- Delivery attempts are operational records, not business facts.
+- Consumer checkpoints are consumer-local processing truth, not event semantic truth.
+- Redelivery records are operational lineage, not new events.
+- Caches and dashboards are derived and MUST NOT drive canonical redelivery/replay decisions without durable source records.
+
+---
+
+## Read Model / Projection / Reporting Rules
+
+- Delivery dashboards MAY aggregate success rate, backlog, latency, retries, and failure codes.
+- Activity feeds MAY summarize endpoint creation, verification, disablement, quarantine, and secret rotation.
+- Reporting views MAY summarize event throughput, failure rates, and consumer lag.
+- Public registry/transparency surfaces MAY consume approved publication events.
+- Derived views MUST identify their source records and MUST NOT become hidden owners.
+- Reporting APIs MUST be read-only unless a narrower approved control-plane spec grants mutation.
+
+---
+
+## Security / Risk / Privacy Controls
+
+Security controls MUST include:
+
+- strict destination validation;
+- HTTPS requirement for production endpoints;
+- signing secret storage through secrets management;
+- signing key versioning and rotation;
+- replay-attack protection through timestamps and signature verification windows;
+- payload minimization;
+- sensitive field redaction;
+- endpoint quarantine on abuse or repeated terminal failure;
+- scoped access to delivery logs;
+- SSRF prevention;
+- PII minimization and classification;
+- rate limiting and abuse throttling;
+- restricted exposure for fraud, treasury, governance, payout, and unpublished economic events.
+
+Webhook payloads MUST NOT include raw credentials, session tokens, private keys, signing secrets, unredacted provider credentials, unsupported fraud indicators, or unrelated owner-domain data.
+
+---
+
+## Audit / Traceability / Observability Requirements
+
+### Required Correlation Fields
+
+- `correlation_id`
+- `causation_id`
+- `trace_id` where available
+- `event_id`
+- `delivery_id`
+- `webhook_endpoint_id`
+- `idempotency_key_ref` where applicable
+- `audit_lineage_ref`
+- `policy_version_ref` where policy affects result
+- `contract_version_ref`
+
+### Required Audit Events
+
+Audit is required for:
+
+- endpoint creation;
+- endpoint verification mutation;
+- endpoint update;
+- endpoint disablement;
+- secret rotation;
+- redelivery request;
+- admin/control replay;
+- quarantine and quarantine release;
+- forced suppression;
+- exposure policy override;
+- privileged delivery-log access;
+- sensitive event publication failures.
+
+### Observability
+
+Implementations MUST emit metrics for:
+
+- event publication count/failure;
+- event persistence latency;
+- consumer lag;
+- consumer failure rate;
+- projection eligibility count;
+- delivery success/failure rate;
+- retry queue size;
+- dead-letter volume;
+- endpoint quarantine count;
+- redelivery volume;
+- signature verification failures reported by receivers where known;
+- version adoption and deprecated-version usage.
+
+---
+
+## Failure Handling / Edge Cases
+
+### Publication Failure
+
+If event persistence fails before durable acceptance, the publication MUST NOT be acknowledged as accepted. The caller MAY retry under idempotency rules.
+
+### Consumer Failure
+
+Consumer failure MUST NOT mutate the original event record. Retry, checkpoint failure, dead-letter, and escalation behavior MUST be explicit.
+
+### Projection Failure
+
+Projection failure MUST NOT roll back the underlying event or business fact. It MUST be observable and eligible for remediation where policy permits.
+
+### Webhook Delivery Failure
+
+Delivery failure MUST NOT roll back the underlying event or business fact. Retryable failures MAY schedule retries. Terminal failures MAY suppress future deliveries, dead-letter, or quarantine endpoint according to policy.
+
+### Duplicate Delivery
+
+Duplicate internal event delivery and duplicate webhook delivery are expected. Consumers and receivers MUST dedupe.
+
+### Out-of-Order Delivery
+
+Unless a specific event contract defines ordering, consumers MUST NOT rely on global ordering. Where order matters, the event contract MUST define partition key, sequence reference, and consumer expectations.
+
+### Endpoint Secret Rotation Race
+
+Delivery signature validation during rotation MUST include key-version metadata and overlap-window rules. Rotation conflict MUST return structured conflict or accepted rotation state, not silent failure.
+
+### Endpoint URL Change
+
+URL change MAY require re-verification and MAY pause delivery until verification succeeds.
+
+### Replay Window Expired
+
+Replay or redelivery outside retention window MUST be denied with `replay_window_expired` or `redelivery_not_allowed`. Historical audit records remain preserved.
+
+### Contract Version Retired
+
+Requests or subscriptions to retired versions MUST return version-specific errors or historical-read-only behavior according to migration policy.
+
+---
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+1. Every event MUST have explicit `event_version`.
+2. Every public webhook projection MUST have explicit `public_event_version`.
+3. Breaking changes require new versions.
+4. Additive compatible fields are preferred.
+5. Consumers SHOULD ignore unknown additive fields unless a narrower contract forbids it.
+6. Public webhook changes require stronger compatibility, notice, and deprecation posture than internal-only events.
+7. Deprecated event/webhook versions MUST preserve historical interpretability.
+8. Migration between event versions MUST define coexistence, cutover, replay, projection, and consumer-compatibility behavior.
+9. Event/webhook migration MUST be replay-safe and version-explicit.
+10. Public webhook sunset MUST not occur without required notice unless emergency security/correctness policy explicitly authorizes it.
+
+---
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+### OpenAPI Derivation
+
+OpenAPI artifacts for webhook management APIs MUST preserve:
+
+- route-family classification;
+- auth and scope requirements;
+- idempotency requirements;
+- structured error model;
+- response redaction rules;
+- accepted-state responses;
+- pagination and filtering rules;
+- rate-limit errors;
+- audit/correlation fields;
+- deprecated/sunset version annotations.
+
+### AsyncAPI Derivation
+
+AsyncAPI artifacts MUST preserve:
+
+- internal vs public event distinction;
+- event envelope schema;
+- payload schema references;
+- event version;
+- sensitivity/exposure classes;
+- topic/channel authorization expectations;
+- at-least-once delivery posture;
+- replay/redelivery semantics;
+- ordering and partition statements;
+- consumer checkpoint obligations;
+- migration/deprecation metadata.
+
+### SDK Derivation
+
+SDKs MUST:
+
+- expose webhook-management operations as scoped, idempotent operations;
+- surface accepted-state vs final-state distinction;
+- help verify signatures but not hide security semantics;
+- document duplicate delivery expectations;
+- expose stable error codes;
+- avoid exposing internal-only event families as public SDK subscriptions.
+
+---
+
+## Implementation-Contract Guardrails
+
+Downstream implementations MUST NOT:
+
+- publish events without owner-domain authority;
+- mirror internal events as public webhooks by default;
+- mutate foreign domain truth from event handlers without owner-domain APIs;
+- treat event delivery as exactly-once;
+- treat webhook delivery success as business success;
+- expose raw event envelopes publicly;
+- return raw secrets after creation/rotation except one-time reveal under policy;
+- allow endpoint URLs targeting internal networks in production;
+- let delivery dashboards make canonical replay decisions without durable records;
+- let workflow/queue states redefine accepted/final business meaning;
+- silently change event or webhook meaning without version change;
+- bypass audit for admin/control actions;
+- use frontend, SDK, or gateway convenience as a reason to weaken boundaries.
+
+---
+
+## Downstream Execution Staging
+
+Implementation SHOULD stage delivery as:
+
+1. event catalog and envelope schema registration;
+2. internal publication contract implementation;
+3. event store/outbox durability;
+4. internal consumer checkpoint contract;
+5. projection eligibility engine;
+6. webhook endpoint management APIs;
+7. signing-secret and destination-policy controls;
+8. dispatcher and retry scheduler;
+9. delivery observability and support tooling;
+10. redelivery/replay tooling;
+11. AsyncAPI/OpenAPI/SDK derivation;
+12. contract validation and production readiness testing;
+13. migration/deprecation runbooks for version evolution.
+
+---
+
+## Required Downstream Specs / Contract Layers
+
+The following downstream artifacts SHOULD exist or be produced:
+
+- event envelope schema contract;
+- domain event catalog;
+- public webhook catalog;
+- webhook-management OpenAPI specification;
+- outbound webhook AsyncAPI specification;
+- internal event AsyncAPI specification;
+- event consumer checkpoint implementation contract;
+- dispatcher retry and dead-letter runbook;
+- endpoint verification implementation contract;
+- signing secret rotation contract;
+- replay/redelivery operator runbook;
+- event/webhook migration and deprecation runbook;
+- contract validation suite.
+
+---
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+The following patterns are non-canonical and forbidden unless a narrower approved spec creates an explicit exception:
+
+1. Publicly exposing all internal event topics.
+2. Treating an event handler as a broad-write shortcut into another domain.
+3. Using broker authorization as a substitute for producer-domain authority.
+4. Rewriting accepted event envelopes to correct history.
+5. Emitting final-success events for work that is only accepted or queued.
+6. Treating webhook projection payloads as canonical owner-domain records.
+7. Retrying webhook delivery by minting new business events.
+8. Allowing public clients to submit arbitrary event payloads.
+9. Returning raw webhook signing secrets after initial reveal/rotation confirmation.
+10. Exposing raw delivery response bodies with sensitive data to ordinary users.
+11. Allowing loopback/internal-network webhook destinations in production.
+12. Using audit logs or activity feeds as event-contract substitutes.
+13. Letting migration coexistence create two canonical event meanings.
+14. Silently breaking public webhook payloads without new version and notice.
+15. Claiming exactly-once delivery.
+
+---
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example: Accepted Async Workflow
+
+A product request is accepted for later processing. The owner domain emits `product.request.accepted.v1`. The event payload includes request ID, scope, accepted timestamp, and operation reference. A later event `product.request.completed.v1` represents final completion. Public webhook projection MAY expose both if catalog-approved. Accepted is not completion.
+
+### Canonical Example: Redelivery
+
+A webhook delivery failed with a timeout. The endpoint owner requests redelivery. FUZE creates a new delivery attempt referencing the original `event_id` and projection. No new business event is created.
+
+### Canonical Example: Internal Consumer Side Effect
+
+Billing consumes a product-completed event. Billing may create a billing-side record only under its own domain rules and idempotency guards. It may not mutate product truth directly.
+
+### Anti-Example: Public Mirror
+
+An engineer exposes the internal event topic `treasury.vault.policy_override.requested` as a public webhook because a partner wants visibility. This is forbidden unless a narrower approved public trust or governance disclosure spec explicitly creates a redacted projection.
+
+### Anti-Example: Queue Completion as Business Completion
+
+A worker emits `payout.completed` when a queue task finishes sending a provider request, before payout owner-domain validation confirms final payout state. This is forbidden because operational completion is not business completion.
+
+### Anti-Example: Duplicate Side Effect
+
+A consumer receives the same event twice and issues credits twice because it does not checkpoint `event_id`. This violates replay-safe consumer obligations.
+
+---
+
+## Acceptance Criteria
+
+1. Every event publication contract requires authenticated service identity and producer-domain authorization.
+2. Event publication acknowledgement occurs only after durable event persistence.
+3. Event envelopes include event ID, name, family, version, producer domain, lineage, entity/scope references, timestamps, sensitivity, exposure class, and retention class.
+4. Public webhook payloads are generated only from catalog-approved event families and versions.
+5. Public webhooks never expose raw internal event envelopes by default.
+6. Webhook endpoint creation, update, verification mutation, disablement, secret rotation, and redelivery require idempotency protection.
+7. Endpoint registration rejects blocked production destinations such as loopback, link-local, RFC1918, metadata-service, or otherwise forbidden internal network targets.
+8. Delivery failure does not roll back the underlying event or business fact.
+9. Redelivery creates a new delivery attempt for the same event/projection lineage and does not mint a new business event.
+10. Replay preserves original event identity, occurrence time, and producer lineage while marking replay context.
+11. Internal event consumers are required to tolerate at-least-once delivery and duplicate events.
+12. Sensitive event families are inaccessible unless the consumer has explicit trust-tier and event-family grants.
+13. Webhook delivery requests are signed and include key-version/timestamp metadata sufficient for receiver verification.
+14. Secret rotation supports explicit key-version metadata and overlap-window behavior where configured.
+15. Delivery-list APIs redact sensitive headers, secrets, payload internals, and response bodies according to policy.
+16. Admin/control actions require reason code, actor attribution, policy reference, correlation ID, and audit lineage.
+17. Public webhook versions and event versions are explicit in payloads and contract artifacts.
+18. Deprecated or retired versions preserve historical interpretability according to migration rules.
+19. OpenAPI derivation for webhook management routes preserves idempotency, scope, error, accepted-state, and redaction requirements.
+20. AsyncAPI derivation preserves internal/public distinction, envelope metadata, delivery semantics, replay posture, and version information.
+21. Observability exposes publication failure, consumer lag, delivery success/failure, retry, dead-letter, quarantine, and deprecated-version metrics.
+22. Contract tests fail any implementation that mirrors internal event families publicly without explicit exposure approval.
+23. Contract tests fail any implementation that conflates accepted intent with final business success.
+24. Contract tests fail any implementation that applies duplicate consumer side effects for duplicate event delivery.
+
+---
+
+## Test Cases
+
+### Positive Path Tests
+
+1. **Owner-domain publication accepted:** Authenticated owner-domain service publishes valid event; event persists; response returns `accepted_for_publication` with event ID and correlation ID.
+2. **Internal consumer receives event:** Authorized consumer receives event, processes it once, writes checkpoint, and records success.
+3. **Webhook endpoint created:** Workspace owner creates HTTPS endpoint with approved filters and idempotency key; endpoint enters verification state and audit record exists.
+4. **Webhook delivery succeeds:** Approved event projects to public payload; dispatcher signs request; receiver returns 2xx; delivery attempt is acknowledged.
+5. **Redelivery accepted:** Owner requests redelivery within retention window; API returns `202 Accepted` and creates new delivery attempt referencing original event.
+6. **Secret rotation overlap:** Endpoint owner rotates secret; deliveries include key version; both old and new keys verify during overlap according to policy.
+
+### Negative Path Tests
+
+7. **Non-owner publication denied:** Service without producer-domain grant attempts to publish event; API returns authorization failure and no event persists.
+8. **Premature final event rejected:** Worker attempts to publish final-completion event for accepted-only work; validation rejects based on event class/timing policy.
+9. **Blocked destination rejected:** Endpoint registration targets `127.0.0.1`, RFC1918, link-local, or metadata service; API returns `endpoint_destination_blocked`.
+10. **Unsupported public event subscription denied:** Caller subscribes to internal-only event; API returns `unsupported_event_subscription` or `event_family_not_public`.
+11. **Raw secret not returned:** Endpoint detail request after creation does not return raw secret.
+12. **Unauthorized delivery read hidden:** Caller outside owner scope requests delivery detail; API returns not found or forbidden according to visibility policy.
+
+### Authorization / Scope Tests
+
+13. **Workspace-scoped permissions:** Workspace member without webhook-management permission cannot create endpoint.
+14. **Admin read audit:** Admin reads sensitive delivery diagnostics; audit record includes actor, reason, correlation, and scope.
+15. **Sensitive topic grant:** Consumer lacking sensitive topic trust tier cannot subscribe to treasury/governance/payout-sensitive internal events.
+
+### Idempotency / Retry / Replay Tests
+
+16. **Create endpoint replay:** Same idempotency key and equivalent payload returns prior endpoint result, not duplicate endpoint.
+17. **Create endpoint conflict:** Same idempotency key with different URL returns `idempotency_conflict`.
+18. **Duplicate event delivery:** Consumer receives same event twice and applies side effect only once.
+19. **Publication duplicate:** Equivalent publish using same event ID returns `previously_accepted`; materially different payload returns conflict.
+20. **Webhook retry:** Receiver returns 503; dispatcher schedules retry and does not create new event.
+21. **Replay lineage:** Replay operation preserves original event ID and occurrence time and marks replay context.
+
+### Conflict / Concurrency Tests
+
+22. **Secret rotation conflict:** Concurrent rotations produce deterministic winner or conflict state with no ambiguous active secret.
+23. **Endpoint disable vs delivery:** Endpoint is disabled while delivery scheduled; dispatcher suppresses future deliveries according to policy and records lineage.
+24. **Version conflict:** Consumer requests retired public webhook version; API returns version-retired behavior or historical-readable response according to migration policy.
+
+### Rate-Limit / Abuse-Control Tests
+
+25. **Verification throttling:** Repeated failed verification attempts trigger rate limit or quarantine.
+26. **Redelivery throttling:** Excess redelivery requests return `rate_limited` and no duplicate business events.
+27. **Suspicious endpoint quarantine:** Repeated terminal failures or abuse signals move endpoint to quarantined state under policy.
+
+### Degraded-Mode / Failure Tests
+
+28. **Event store unavailable:** Publication cannot persist event; API does not acknowledge durable acceptance.
+29. **Projection failure:** Event remains persisted; projection failure is observable and eligible for remediation.
+30. **Dispatcher outage:** Projection remains scheduled/retryable; delivery status reflects degraded runtime state.
+31. **Audit write failure for admin action:** Sensitive admin/control mutation fails closed or enters safe pending state if audit lineage cannot be guaranteed.
+
+### Migration / Compatibility Tests
+
+32. **Additive webhook field:** Receiver contract tolerates unknown additive field; version remains compatible.
+33. **Breaking payload change:** Contract generator requires new public event version.
+34. **Deprecated version delivery:** Deprecated version carries deprecation metadata and remains historically interpretable.
+35. **Sunset enforcement:** Retired public event version no longer accepts new subscription but historical delivery reads remain interpretable.
+
+### Boundary-Violation Tests
+
+36. **Public mirror prevention:** Attempt to expose all internal events as public webhooks fails governance validation.
+37. **Event-as-write-authority prevention:** Consumer attempts foreign-domain mutation without owner-domain API; contract validation rejects design.
+38. **Audit-as-event prevention:** Implementation tries to use activity-feed record as event source; validation fails.
+39. **Queue-as-business-truth prevention:** Queue-completed operational event cannot substitute for owner-domain business-completed event.
+40. **Public projection as canonical truth prevention:** Webhook payload cannot be used as canonical storage update source in owner domain.
+
+---
+
+## Dependencies / Cross-Spec Links
+
+This API spec depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
+- `SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `API_ARCHITECTURE_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `WORKFLOW_AND_AUTOMATION_SPEC.md`
+- `JOB_QUEUE_AND_WORKER_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
+- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`
+- `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- domain-specific event catalogs and future webhook catalogs.
+
+---
+
+## Explicitly Deferred Items
+
+The following are intentionally deferred to downstream implementation contracts:
+
+1. exact broker and topic naming;
+2. exact outbox schema DDL;
+3. exact retry intervals and maximum retry counts;
+4. exact retention windows by event family;
+5. full domain event catalogs;
+6. full public webhook catalog;
+7. exact endpoint verification challenge mechanism;
+8. exact signature algorithm parameters;
+9. exact SDK method names;
+10. exact OpenAPI and AsyncAPI file structure;
+11. detailed support runbooks;
+12. exact alert thresholds;
+13. exact pricing/entitlement packaging for webhook access;
+14. exact public documentation examples for every event family.
+
+Deferred items MUST remain consistent with this specification.
+
+---
+
+## Final Normative Summary
+
+FUZE event and webhook APIs MUST preserve owner-domain truth, API surface separation, and event/webhook contract discipline. Domain events originate from owner domains. Internal consumers receive at-least-once event contracts and must process idempotently. Public webhooks are curated, versioned, signed, externally supported projections, not raw internal event mirrors. Webhook management APIs are scoped, authenticated, authorized, idempotent, audited, rate-limited, and abuse-resistant. Replay and redelivery preserve lineage and do not create new business facts. Admin/control eventing actions are exceptional, reason-coded, policy-constrained, and audited. Downstream OpenAPI, AsyncAPI, SDK, broker, dispatcher, and support implementations MUST preserve these rules and MUST NOT reinterpret event meaning, public exposure posture, mutation authority, or delivery guarantees.
+
+---
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read and projection boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit where relevant.
+- [x] Accepted-state vs final-success semantics are explicit.
+- [x] Idempotency, retry, replay, and redelivery requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit enough for implementation.
+- [x] Failure and degraded-mode behavior are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI, AsyncAPI, and SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design diagram uses Mermaid syntax and distinguishes canonical vs derived records.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax and distinguish accepted publication from downstream outcomes.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

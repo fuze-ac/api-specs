@@ -1,107 +1,1380 @@
-# PROFIT_PARTICIPATION_API_SPEC
+# PROFIT_PARTICIPATION_API_SPEC.md
 
-## 1. Title
+## Document Metadata
 
-**PROFIT_PARTICIPATION_API_SPEC.md**
-
----
-
-## 2. Document Metadata
-
-- **Document Name:** PROFIT_PARTICIPATION_API_SPEC.md
-- **API Classification:** internal, admin, public-read, event-driven, chain-adjacent
-- **Owning Domain:** Profit Participation Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** profit participation periods, eligibility runs, allocation records, payout intents, payout executions, claim and distribution references, and correction-safe profit participation lineage in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE stablecoin profit participation preparation, allocation, payout intent creation, execution coordination, public-read status disclosure, and controlled correction-safe lifecycle management across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 2.1 API Classification Header
-
-- **API Classification:** internal | admin | public-read | event-driven | chain-adjacent
-- **Owning Domain:** Profit Participation Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** profit participation allocation and payout-preparation domain
-
----
-
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE profit participation operations. It translates the governing FUZE platform architecture, transparency model, profit participation system rules, snapshot and eligibility rules, payout ledger rules, Base payout execution rules, chain architecture, treasury-control expectations, and API architecture rules into an implementation-ready API contract.
-
-This API exists because FUZE separates:
-- the FUZE token on Ethereum,
-- Platform Credits as internal consumption accounting,
-- stablecoin profit participation on Base or other approved execution rails,
-- and public transparency around eligibility and payout outcomes.
-
-Profit participation therefore cannot be treated as a casual dividend note, a wallet spreadsheet, or an admin-triggered one-off transfer list. It must be governed by explicit reporting periods, eligibility inputs, allocation calculations, payout intent records, execution coordination, correction-safe lineage, and public-read trust surfaces. The domain must preserve strict separation between token holdings, eligibility snapshots, payout preparation, treasury release authority, and executed distributions.
-
-Accordingly, this specification defines how profit participation periods, eligibility outputs, allocation records, payout intents, execution coordination, public-read status, and corrections are represented, and how profit participation remains auditable, idempotent, and architecture-consistent across FUZE.
+- **Document Name:** `PROFIT_PARTICIPATION_API_SPEC.md`
+- **Document Type:** API SPEC v2 — production-grade interface-contract specification
+- **Status:** Draft refined API specification pending FUZE approval workflow
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Profit Participation API Domain; named individual owner not yet specified
+- **Approval Authority:** FUZE constitutional / platform architecture approval workflow; named authority not yet specified
+- **Review Cadence:** Quarterly and whenever profit-participation policy, payout architecture, eligibility policy, treasury-control posture, Base payout execution, public reporting, registry publication, audit posture, or implementation-contract posture materially changes
+- **Governing Layer:** API contract layer derived from refined profit-participation system semantics
+- **Parent Registry:** FUZE API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Backend engineering, platform architecture, contracts engineering, treasury/governance operators, finance/accounting, security engineering, audit/compliance, runtime operations, public-trust/reporting teams, implementation-contract authors, OpenAPI/AsyncAPI/SDK authors
+- **Primary Purpose:** Define the production-grade API contract architecture for FUZE profit-participation cycles, eligibility-consumption, allocation preparation, payout-intent creation, execution linkage, public-safe status exposure, correction/supersession lineage, and cross-domain coordination without redefining refined system semantics
+- **Primary Upstream References:** `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`; `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`; `PAYOUT_LEDGER_SPEC.md`; `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`; `TREASURY_CONTROL_POLICY_SPEC.md`; `VAULT_ACTION_POLICY_SPEC.md`; `MULTISIG_AND_TIMELOCK_SPEC.md`; `FOUNDATION_GOVERNANCE_SPEC.md`; `GOVERNANCE_MODEL_SPEC.md`; `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`; `TRANSPARENCY_MODEL_SPEC.md`; `TRANSPARENCY_REPORTING_SPEC.md`; `CHAIN_ARCHITECTURE_SPEC.md`; `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`; `API_ARCHITECTURE_SPEC.md`; `PUBLIC_API_SPEC.md`; `INTERNAL_SERVICE_API_SPEC.md`; `EVENT_MODEL_AND_WEBHOOK_SPEC.md`; `IDEMPOTENCY_AND_VERSIONING_SPEC.md`; `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`; `AUDIT_LOG_AND_ACTIVITY_SPEC.md`; `SECURITY_AND_RISK_CONTROL_SPEC.md`; `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`; `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`; `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`; `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- **Primary Downstream Dependents:** Profit-participation implementation contracts; payout-cycle administration APIs; payout-cycle worker contracts; payout-ledger linkage APIs; Base payout execution APIs; transparency-reporting publication APIs; public/holder-facing payout-status surfaces; admin/control-plane tooling; audit/reconciliation runbooks; OpenAPI/AsyncAPI/SDK artifacts
+- **API Surface Families Covered:** Public-read; first-party authenticated read; internal service; admin/control-plane; event/async; reporting/export; chain-adjacent coordination
+- **API Surface Families Excluded:** Direct contract ABI definitions; raw treasury accounting books; raw chain-indexing APIs; end-user wallet-linking proof APIs; private investor-room APIs; tax-document generation APIs; unrelated product-local entitlement APIs
+- **Canonical System Owner(s):** FUZE Profit Participation System Domain for semantic cycle meaning; adjacent owners retain their respective truth domains
+- **Canonical API Owner:** FUZE Profit Participation API Domain
+- **Supersedes:** Existing v1 `PROFIT_PARTICIPATION_API_SPEC.md` to the extent this v2 document is approved; any weaker interpretation that treats the API as a route dump, spreadsheet adapter, one-off admin payout surface, or contract-execution proxy
+- **Superseded By:** Not yet specified
+- **Related Decision Records:** Not explicitly specified in the retrieved governing materials
+- **Canonical Status Note:** This API spec expresses interface contracts derived from refined profit-participation semantics. It does not own semantic truth. Refined system specs remain authoritative for domain meaning and ownership boundaries.
+- **Implementation Status:** Normative target for downstream API and implementation-contract work; exact route paths and schemas may be refined only if they preserve the contract rules herein
+- **Approval Status:** Draft pending approval
+- **Change Summary:** Upgraded the prior profit-participation API material into API SPEC v2 format; added explicit semantic/API truth separation, surface-family boundaries, request/response/error/status/idempotency rules, admin override constraints, read-model and public-exposure rules, chain-adjacent coordination rules, diagrams, flow views, acceptance criteria, and test cases.
 
 ---
 
-## 4. Scope
+## Purpose
 
-This specification covers:
+This specification defines the FUZE Profit Participation API contract. The API expresses the refined profit-participation system semantics at the interface layer: cycle creation, policy and eligibility linkage, allocation preparation, payout-intent creation, execution-reference linkage, correction/supersession, discrepancy handling, and bounded public/holder-facing visibility.
 
-- internal APIs for profit participation period creation and lifecycle management
-- internal APIs for allocation preparation from approved snapshot and eligibility inputs
-- internal APIs for payout intent creation and execution coordination
-- internal read APIs for canonical allocation, intent, and execution status
-- admin/control-plane APIs for approve, lock, release, reprocess, correct, or close discrepancy actions
-- public-read APIs for published profit participation status and period summaries
-- event emission requirements for profit participation lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+The API exists because FUZE profit participation is a trust-sensitive economic rail. It MUST NOT be implemented as a casual dividend note, wallet spreadsheet, contract-only interpretation, product-local reward table, or unbounded admin transfer list. The API MUST preserve the refined system rule that policy-finalized distributable platform profit becomes bounded, cycle-based stablecoin payout rights only through explicit lifecycle state, approved eligibility basis, approved funding basis, payout-ledger linkage, execution linkage, public-trust reporting, audit lineage, and correction-safe history.
 
-This specification does **not** redefine:
-
-- token contract behavior in full detail
-- snapshot generation logic in full detail
-- payout execution contract internals in full detail
-- treasury multisig execution procedures in full detail
-- tax treatment or legal classification text
-- public transparency-report composition in full detail
-- wallet registry semantics in full detail
-
-Those remain governed by their own source-of-truth specifications.
+This API specification owns interface-contract expression. It does not redefine distributable-profit methodology, Ethereum token truth, eligible-dataset construction semantics, Base claim mechanics, payout-ledger truth, treasury-control policy, or transparency-reporting meaning.
 
 ---
 
-## 5. Source-of-Truth Inputs
+## Scope
 
-### Primary FUZE docs and specs used
+This API spec governs:
 
-#### Highest-priority platform and ownership sources
+1. API surface families for profit-participation cycle operations.
+2. Resource families exposed by profit-participation APIs.
+3. Allowed public, first-party, internal, admin/control, event, reporting/export, and chain-adjacent posture.
+4. Request, response, error, status, result, idempotency, retry, and replay rules.
+5. Authorization, scope, permission, entitlement, and policy checks at the API layer.
+6. Accepted-state versus final-outcome behavior for async operations.
+7. Canonical mutation boundaries and read boundaries.
+8. Public-safe and first-party-safe derived read models.
+9. Audit, traceability, observability, correlation, and operation-reference requirements.
+10. Migration, versioning, compatibility, and OpenAPI/AsyncAPI/SDK derivation guardrails.
+11. Non-canonical API patterns that downstream teams MUST NOT implement.
+
+---
+
+## Out of Scope
+
+This API spec does not define:
+
+- raw accounting formulas for distributable profit;
+- the full treasury approval matrix, reserve accounting method, or multisig signing procedure;
+- snapshot extraction algorithms, address-classification policy internals, or proof-generation details;
+- Base payout contract ABI, Merkle proof format, claim UX, or low-level transaction-submission implementation;
+- payout-ledger publication schema in full detail;
+- transparency-report templates in full detail;
+- public registry metadata schema in full detail;
+- wallet-link proof, account recovery, session security, or workspace authorization semantics except as API dependencies;
+- tax, securities, legal, investor-room, or jurisdiction-specific disclosure obligations.
+
+Those concerns remain governed by adjacent refined specs and downstream implementation-contract documents.
+
+---
+
+## Design Goals
+
+1. Preserve explicit separation between profit-participation semantic truth and API contract truth.
+2. Prevent route, schema, ownership, public-exposure, and error-semantics drift.
+3. Make every trust-sensitive mutation idempotent, auditable, reason-coded, state-checked, and replay-safe.
+4. Ensure public and first-party reads are derived from canonical owner-domain truth and never become hidden semantic owners.
+5. Support backend implementation, frontend consumption, public-trust surfaces, internal service contracts, admin tooling, OpenAPI/AsyncAPI/SDK generation, and QA validation.
+6. Preserve separation among token participation, eligible datasets, allocation truth, payout intent truth, treasury funding, Base execution, payout ledger, reporting, registry, and audit truth.
+7. Make failure, correction, supersession, and discrepancy handling explicit.
+8. Provide deterministic default rules for contested ownership, incomplete lineage, stale projections, dependency failure, replay attempts, and post-publication correction.
+
+---
+
+## Non-Goals
+
+This API spec is not intended to:
+
+- make sold Platform Credits, gross revenue, product usage, or token balances automatically equivalent to distributable profit;
+- make raw Ethereum balances automatically equivalent to claimable payout entitlement;
+- let Base payout execution decide eligibility or economic cycle meaning;
+- let public reporting or registry entries become canonical economic owners;
+- allow hidden spreadsheet, local job, admin-screen, or product-local payout truth;
+- expose private treasury, wallet, claimant, or operational detail through public convenience routes;
+- replace implementation-specific OpenAPI, AsyncAPI, database migration, worker topology, runbook, or contract ABI documents.
+
+---
+
+## Core Principles
+
+1. **Refined Semantics Own Meaning.** The refined profit-participation system spec owns what a cycle, entitlement, funding reference, and correction mean. This API spec expresses that meaning through interfaces.
+2. **Cycle-Based Rights Only.** Profit participation is bounded by explicit cycles. There is no continuous implicit accrual API.
+3. **Eligibility Is Consumed, Not Invented.** APIs MUST consume approved snapshot/eligibility outputs and MUST NOT accept frontend-authored or admin-authored wallet lists as eligibility truth.
+4. **Execution Is Linked, Not Collapsed.** Base payout execution is execution truth. Profit Participation APIs link to execution references but do not make contract state the sole owner of cycle meaning.
+5. **Public Views Are Derived.** Public and first-party read models are subordinate to canonical owner-domain records and MAY lag if they preserve safety and lineage.
+6. **Traceability Beats Convenience.** Every sensitive API mutation MUST preserve correlation IDs, idempotency records, audit lineage, reason codes, actor/service identity, and resulting resource references.
+7. **Correction Must Preserve History.** The API MUST support correction/supersession lineage instead of silent overwrite.
+8. **Conservative Defaults Win.** If required lineage, policy, authorization, eligibility, funding, or execution references are missing, the API MUST reject advancement rather than infer trust-sensitive meaning.
+
+---
+
+## Canonical Definitions
+
+- **Profit Participation Cycle:** A formal distribution cycle with explicit lifecycle state, policy basis, funding basis, eligibility basis, entitlement/allocation basis, execution linkage, reporting linkage, and correction lineage.
+- **Distributable Profit Reference:** The approved treasury/accounting reference that establishes the amount eligible for cycle allocation. The API consumes this reference; it does not compute accounting truth.
+- **Eligibility Reference:** The approved output from the Snapshot and Eligibility Pipeline used as the cycle's eligibility basis.
+- **Allocation Set:** The deterministic profit-participation allocation output derived from an approved eligibility basis and approved distributable amount for a cycle.
+- **Payout Intent:** The API-owned execution-preparation object that groups one or more allocation records for downstream payout execution.
+- **Execution Reference:** A link to downstream Base payout execution, chain transaction, execution batch, receipt, or reconciliation record. It is not itself allocation truth.
+- **Public Status View:** A derived, public-safe view of cycle and payout posture.
+- **First-Party Claimant View:** A bounded authenticated view for a user/account/wallet relationship where policy allows claimant-level visibility.
+- **Discrepancy Case:** A review/remediation object for detected mismatch, duplicate, stale, failed, partial, or contested profit-participation state.
+- **Supersession:** A lineage-preserving replacement of a prior record, dataset, allocation, intent, or public view.
+
+---
+
+## Truth Class Taxonomy
+
+The API MUST distinguish these truth classes:
+
+1. **Semantic Truth:** Refined profit-participation meaning owned by `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`.
+2. **API Contract Truth:** Resource, route, request, response, error, idempotency, audit, and versioning contracts governed by this spec.
+3. **Policy Truth:** Profit-participation policy, eligibility-treatment policy, and treasury/funding policy references owned by their policy domains.
+4. **Accounting / Treasury Truth:** Finalized distributable-profit and funding authorization records owned by treasury/accounting/control domains.
+5. **Participation Truth:** Ethereum token-holder state owned by the token/chain layer.
+6. **Eligibility Truth:** Approved policy-treated eligible dataset owned by the Snapshot and Eligibility Pipeline.
+7. **Allocation Truth:** Profit-participation allocation records owned by this API domain after approved eligibility and funding basis are consumed.
+8. **Execution Truth:** Base payout execution and claim/receipt state owned by the Base Payout Execution Domain.
+9. **Ledger Truth:** Cycle-level payout ledger record owned by the Payout Ledger Domain.
+10. **Registry Truth:** Public official contract/wallet publication truth owned by the Public Contract and Wallet Registry Domain.
+11. **Reporting Truth:** Public recurring transparency report publication truth owned by Transparency Reporting.
+12. **Audit Truth:** Durable internal action and decision lineage owned by audit/activity systems.
+13. **Projection Truth:** Public, first-party, admin dashboard, search, reporting, and export views derived from canonical sources.
+14. **Presentation Truth:** Frontend text, layout, status labels, and convenience summaries derived from API responses.
+
+No implementation MAY collapse these truth classes into a single table, endpoint, cache, dashboard, or contract event stream.
+
+---
+
+## Architectural Position in the Spec Hierarchy
+
+This API sits below refined system semantics and above implementation contracts. It depends on:
+
+- constitutional platform and ownership specs for boundary interpretation;
+- account/session/workspace/access-control foundation specs for identity and authorization posture;
+- on-chain/off-chain responsibility specs for chain-adjacent separation;
+- profit-participation refined semantics for cycle meaning;
+- snapshot/eligibility refined semantics for eligibility inputs;
+- treasury, vault, governance, and multisig/timelock specs for funding and control actions;
+- payout ledger and Base execution specs for downstream trust records and execution state;
+- transparency and registry specs for public-safe exposure;
+- API architecture, public API, internal service API, event/webhook, idempotency/versioning, migration, audit, security, and operations specs for interface-governance posture.
+
+---
+
+## Upstream Semantic Owners
+
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md` owns profit-participation semantic truth.
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` owns snapshot, treatment, eligible dataset, and entitlement-preparation lineage truth.
+- `TREASURY_CONTROL_POLICY_SPEC.md` owns treasury-sensitive funding-control interpretation.
+- `VAULT_ACTION_POLICY_SPEC.md`, `FOUNDATION_GOVERNANCE_SPEC.md`, and `GOVERNANCE_MODEL_SPEC.md` own their relevant stewardship/control meanings.
+- `MULTISIG_AND_TIMELOCK_SPEC.md` owns shared authorization and delayed-execution control semantics.
+- `PAYOUT_LEDGER_SPEC.md` owns structured cycle-ledger truth.
+- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md` owns Base-side execution-run, claim, batch, receipt, and reconciliation truth.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` owns public registry publication truth.
+- `TRANSPARENCY_MODEL_SPEC.md` and `TRANSPARENCY_REPORTING_SPEC.md` own transparency interpretation and report publication truth.
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md` owns audit lineage truth.
+
+---
+
+## API Surface Families
+
+### Public-Read Surface
+Public-read APIs MAY expose published cycle summaries, public-safe cycle status, payout asset references, public reporting links, registry links, correction/supersession notices, and aggregate execution posture. Public APIs MUST NOT expose private claimant detail, internal eligibility rows, treasury internals, admin notes, unreleased funding details, raw discrepancy notes, or security-sensitive execution metadata.
+
+### First-Party Authenticated Surface
+First-party authenticated APIs MAY expose claimant-linked, account/wallet-aware payout status only when the caller is authenticated, authorized, and policy allows the view. These APIs MUST distinguish account identity, wallet-link context, token participation, eligible dataset output, allocation status, and execution status.
+
+### Internal Service Surface
+Internal service APIs coordinate period creation, eligibility attachment, allocation generation, payout-intent creation, execution-reference linkage, canonical reads, worker progression, and reconciliation linkage. Service routes require service identity, least privilege, version-aware contracts, idempotency, correlation IDs, and audit lineage for mutations.
+
+### Admin / Control-Plane Surface
+Admin/control routes MAY approve, lock, release, pause, resume, correct, reprocess, restrict, supersede, resolve discrepancies, and publish status only under explicit permission, policy, reason-code, idempotency, audit, and state-transition constraints. Admin APIs MUST NOT bypass owner-domain validation.
+
+### Event / Webhook / Async Surface
+Events represent durable lifecycle changes. Internal domain events are not the same as public webhooks. Public webhooks, if later exposed, MUST be derived from approved event families and MUST preserve public-safety filtering and replay protection.
+
+### Reporting / Export Surface
+Reporting/export APIs MAY expose public-safe or internal-governed exports. Exports are derived views and MUST include source references, generated-at timestamps, version identifiers, and visibility class. Exports MUST NOT become canonical allocation, eligibility, or execution owners.
+
+### Chain-Adjacent Surface
+Chain-adjacent APIs coordinate with Base payout execution and registry/contract references. They MUST distinguish preparation, submission, confirmation, reconciliation, reporting, and public display. Chain events are normalized signals until owner-domain validation adopts them.
+
+---
+
+## System / API Boundaries
+
+This API governs:
+
+- profit-participation cycle API resources;
+- approved eligibility-reference consumption;
+- allocation-generation contracts;
+- payout-intent contracts;
+- execution-reference linkage;
+- discrepancy and correction contracts;
+- bounded public and authenticated status views;
+- events, audit, observability, and migration guardrails.
+
+This API does not own:
+
+- raw token balances;
+- snapshot extraction and eligibility policy;
+- distributable-profit accounting calculation;
+- treasury action approval truth;
+- multisig/timelock execution mechanics;
+- payout contract ABI and claim validation mechanics;
+- payout-ledger source of record;
+- transparency-report source of record;
+- public contract/wallet registry source of record;
+- user identity, session, workspace, or wallet-link truth.
+
+---
+
+## Adjacent API Boundaries
+
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_API_SPEC.md` owns snapshot/reference/dataset construction APIs. Profit Participation APIs consume approved eligibility outputs only.
+- `PAYOUT_LEDGER_API_SPEC.md` owns cycle-ledger publication, reconciliation, correction lineage, and ledger visibility APIs. Profit Participation APIs provide source references and lifecycle events.
+- `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md` owns execution-run, batch, claim, receipt, and reconciliation APIs. Profit Participation APIs create/link payout intents and execution references.
+- `TREASURY_CONTROL_POLICY_API_SPEC.md` owns treasury funding approval and treasury-sensitive action APIs. Profit Participation APIs require those references for advancement.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` owns public official contract/wallet lookup APIs. Profit Participation APIs may link to registry references.
+- `TRANSPARENCY_REPORTING_API_SPEC.md` owns public reports. Profit Participation APIs may publish report references and source data for downstream reports.
+- `WALLET_AWARE_USER_API_SPEC.md` owns account-to-wallet linkage APIs. Profit Participation APIs may consume bounded linkage context for first-party claimant views but MUST NOT redefine wallet-link truth.
+
+---
+
+## Conflict Resolution Rules
+
+1. Higher-order FUZE constitutional, boundary, ownership, and data-governance specs override this API spec on platform ownership questions.
+2. Refined system specs override API v1 material and route convenience.
+3. `PROFIT_PARTICIPATION_SYSTEM_SPEC.md` controls profit-participation semantic meaning.
+4. `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` controls eligibility derivation and dataset lineage.
+5. Treasury, vault, Foundation, governance, and multisig/timelock specs control sensitive funding and control action interpretation.
+6. Base payout execution specs control execution-state meaning.
+7. Payout ledger specs control structured cycle-ledger truth.
+8. Public registry and transparency specs control public registry/reporting publication truth.
+9. If route convenience conflicts with traceability, traceability wins.
+10. If public exposure conflicts with privacy/security, exposure is narrowed while preserving canonical internal truth.
+11. If ambiguity remains, the API MUST choose the most conservative architecture-consistent interpretation and require explicit review before mutation or publication.
+
+---
+
+## Default Decision Rules
+
+1. No approved distributable-profit reference means no allocation generation.
+2. No approved eligibility reference means no canonical allocation set.
+3. No explicit policy version means no cycle advancement beyond draft/preparation.
+4. No treasury funding/control reference means no release for execution.
+5. No payout-intent approval means no execution linkage may be treated as authorized.
+6. No execution confirmation means public status MUST NOT say execution completed.
+7. If eligibility and allocation totals do not reconcile, advancement stops pending discrepancy review.
+8. If duplicate idempotency keys carry different mutation payloads, the API MUST return an idempotency conflict.
+9. If an address/category is contested without explicit policy treatment, the API MUST exclude or hold it pending policy decision rather than infer inclusion.
+10. If public and internal views diverge, canonical internal owner-domain truth wins; public views must be refreshed, corrected, superseded, or retracted as appropriate.
+11. If a post-publication issue cannot be safely corrected in place, supersession is required.
+12. If async acceptance occurs, accepted state MUST NOT be described as final business success.
+
+---
+
+## Roles / Actors / API Consumers
+
+- **Public Observer:** Reads published public-safe cycle and status summaries.
+- **Eligible Holder / Claimant:** Reads bounded first-party status where authenticated and authorized.
+- **First-Party Web App:** Consumes public and authenticated status views; does not author canonical truth.
+- **Admin Console:** Initiates privileged actions through backend control-plane APIs; does not own truth.
+- **Profit Participation Service:** Owns canonical cycle, allocation, payout-intent, discrepancy, and correction API resources.
+- **Snapshot / Eligibility Service:** Provides approved eligibility references.
+- **Treasury / Governance Service:** Provides funding and control references.
+- **Base Payout Execution Service:** Consumes payout intents and returns execution references.
+- **Payout Ledger Service:** Records structured cycle ledger and public-safe ledger posture.
+- **Transparency / Registry Services:** Publish derived trust artifacts.
+- **Audit / Observability Systems:** Record lineage, metrics, traces, logs, alerts, and investigation context.
+- **Workers / Async Jobs:** Perform allocation generation, projection refresh, execution-link reconciliation, and export generation under owner-domain control.
+
+---
+
+## Resource / Entity Families
+
+### Canonical API Resources Owned Here
+
+- `profit_participation_cycle`
+- `cycle_policy_reference`
+- `cycle_distributable_profit_reference`
+- `cycle_eligibility_reference`
+- `allocation_set`
+- `allocation_record`
+- `allocation_summary`
+- `payout_intent`
+- `payout_intent_allocation_link`
+- `execution_reference_link`
+- `profit_participation_action`
+- `profit_participation_discrepancy_case`
+- `profit_participation_correction`
+- `profit_participation_supersession`
+- `profit_participation_operation`
+- `profit_participation_public_status_projection`
+- `profit_participation_claimant_status_projection`
+
+### Referenced External Resources
+
+- snapshot reference;
+- eligible dataset reference;
+- entitlement-input reference;
+- treasury action reference;
+- vault policy reference;
+- governance action reference;
+- multisig/timelock reference;
+- execution-run/batch/receipt reference;
+- payout-ledger cycle reference;
+- transparency report reference;
+- public registry entry reference;
+- audit record reference;
+- account/session/wallet-link reference where applicable.
+
+---
+
+## Ownership Model
+
+The Profit Participation API Domain owns API resources for cycles, allocation sets, payout intents, execution linkage, discrepancy cases, corrections, and public/claimant projections derived from those resources. It does not own the upstream source truth used to create them.
+
+Mutation ownership is bounded:
+
+- Cycle creation and lifecycle mutation belong to the Profit Participation API Domain.
+- Eligibility attachment consumes Snapshot/Eligibility outputs and cannot redefine them.
+- Allocation generation belongs to this API domain only after approved eligibility and distributable-profit references exist.
+- Payout intent creation belongs to this API domain as execution preparation.
+- Execution confirmation belongs to Base Payout Execution and is linked back as execution reference.
+- Public reporting and payout ledger publication are adjacent derived/publication domains.
+
+---
+
+## Authority / Decision Model
+
+### Required Authority for Mutations
+
+- Draft cycle creation: internal service authority.
+- Policy lock: internal service authority plus policy reference validation.
+- Eligibility attachment: internal service authority plus approved eligibility reference validation.
+- Allocation generation: internal service authority plus approved distributable amount and eligibility references.
+- Allocation approval: admin/control-plane authority or governed workflow authority.
+- Payout intent creation: internal service authority after allocation approval.
+- Release for execution: admin/control-plane authority plus treasury/control reference validation.
+- Execution linkage: internal service authority from Base payout execution or authorized orchestration service.
+- Correction/supersession: admin/control-plane authority with reason code, case reference where material, and audit linkage.
+- Public projection publication: internal/publication authority derived from approved status and visibility class.
+
+### Operator Override Rules
+
+Operator/admin override APIs MAY exist only when they are:
+
+- explicit route families;
+- separated from ordinary application APIs;
+- permissioned by role/scope/policy;
+- reason-coded;
+- idempotency-protected;
+- audit-linked;
+- state-machine constrained;
+- limited to bounded correction, pause, resume, restriction, supersession, or remediation actions;
+- unable to rewrite approved eligibility, allocation, funding, or execution history silently.
+
+---
+
+## Authentication Model
+
+- Public-read routes MAY be unauthenticated.
+- First-party claimant routes MUST require valid FUZE account/session authentication and, where wallet-linked visibility is needed, canonical wallet-aware linkage checks.
+- Internal service routes MUST require authenticated service principal identity, service trust tier, contract version, and route-specific least privilege.
+- Admin/control routes MUST require authenticated human/operator identity, elevated role, scoped permission, session freshness where required, and policy/control checks.
+- Chain-adjacent callbacks or ingestion routes MUST authenticate source systems or pass through a normalized ingestion boundary before owner-domain adoption.
+
+Wallet possession alone MUST NOT replace account-rooted authentication, operator authorization, or service identity.
+
+---
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+1. caller class and route family;
+2. route action class;
+3. target resource state;
+4. visibility class;
+5. actor account/session/workspace context where applicable;
+6. service principal and contract version for internal APIs;
+7. admin/operator permission and reason-code requirement;
+8. treasury/governance/control reference requirement for sensitive actions;
+9. entitlement or claimant-visibility policy for first-party reads;
+10. rate-limit, risk, and abuse-control posture.
+
+Forbidden authorization shortcuts:
+
+- using wallet address ownership alone to read private claimant details;
+- allowing frontend/admin UI to bypass backend policy checks;
+- allowing execution service callbacks to mutate allocation truth directly;
+- allowing public route parameters to infer private allocation existence;
+- allowing product-local roles to approve payout-cycle state transitions.
+
+---
+
+## Entitlement / Capability-Gating Model
+
+Profit participation is not a generic product entitlement. The API MAY expose claimant-linked status only when:
+
+- the caller is authenticated;
+- wallet/account linkage is canonical and active where wallet context is required;
+- visibility policy allows the specific status class;
+- public or first-party view has been generated from canonical sources;
+- no security, correction, or discrepancy restriction blocks exposure.
+
+Product capability gating MAY consume published profit-participation status only where approved by entitlement specs. Product teams MUST NOT infer entitlement from raw profit-participation allocations unless a formal entitlement mapping exists.
+
+---
+
+## API State Model
+
+### Cycle States
+
+- `draft`
+- `pending_policy_lock`
+- `pending_distributable_profit_reference`
+- `pending_eligibility_reference`
+- `allocation_ready`
+- `allocation_generated`
+- `allocation_approved`
+- `pending_treasury_authorization`
+- `released_for_execution`
+- `execution_in_progress`
+- `open_for_claims`
+- `paused`
+- `partially_executed`
+- `closed`
+- `finalized`
+- `discrepancy_under_review`
+- `superseded`
+- `cancelled_pre_funding`
+- `restricted`
+
+### Allocation States
+
+- `draft`
+- `generated`
+- `validated`
+- `approved`
+- `included_in_intent`
+- `released`
+- `executed`
+- `partially_executed`
+- `corrected`
+- `superseded`
+- `restricted`
+
+### Payout Intent States
+
+- `draft`
+- `ready`
+- `approved`
+- `released`
+- `submitted`
+- `accepted_by_execution_layer`
+- `execution_pending`
+- `partially_executed`
+- `executed`
+- `failed`
+- `cancelled`
+- `superseded`
+- `restricted`
+
+### Discrepancy States
+
+- `opened`
+- `triaged`
+- `under_review`
+- `remediation_pending`
+- `remediated`
+- `closed`
+- `superseded`
+
+State transitions MUST be explicit. Implementations MUST NOT advance lifecycle by hidden side effect from public reads, report generation, frontend display, chain event observation, or unmanaged worker retry.
+
+---
+
+## Lifecycle / Workflow Model
+
+1. **Cycle Initialization:** An internal service creates a draft cycle with period metadata and correlation context.
+2. **Policy Lock:** The cycle is linked to an explicit policy version and lifecycle rules.
+3. **Distributable-Profit Reference Attachment:** Treasury/accounting-approved distributable-profit and funding-basis references are attached.
+4. **Eligibility Reference Attachment:** Approved Snapshot/Eligibility output is attached and validated for purpose/cycle compatibility.
+5. **Allocation Generation:** The API creates allocation set and allocation records from approved inputs.
+6. **Allocation Validation:** Totals, dataset lineage, policy references, duplicates, excluded/special-treatment classes, and reconciliation checks are validated.
+7. **Allocation Approval:** Governed/admin approval locks allocation truth for downstream execution.
+8. **Payout Intent Creation:** One or more payout intents are created from approved allocations.
+9. **Treasury/Control Release:** Release for execution requires approved treasury/control references.
+10. **Execution Submission/Linkage:** Base payout execution receives intents and returns execution references.
+11. **Execution Confirmation/Reconciliation:** Execution outcomes are linked and reconciled without overwriting allocation truth.
+12. **Public / First-Party Projection Refresh:** Public and claimant views are refreshed according to visibility policy.
+13. **Payout Ledger / Reporting Linkage:** Ledger and transparency/reporting references are linked as derived publication outputs.
+14. **Closure / Finalization:** Cycle closure records claim/end posture, residual handling references, and final reporting references.
+15. **Correction / Supersession:** Discrepancies trigger bounded correction or supersession with immutable lineage.
+
+---
+
+## Architecture Diagram — Mermaid flowchart
+
+```mermaid
+flowchart TD
+  Public[Public Observers] --> PublicAPI[Public-Read Profit Participation API]
+  Holder[Authenticated Holder / Account] --> FirstPartyAPI[First-Party Claimant Status API]
+  Admin[Admin / Operator] --> AdminAPI[Admin Control-Plane API]
+  Services[Internal Services / Workers] --> InternalAPI[Internal Profit Participation API]
+
+  PublicAPI --> PublicProjection[(Public Status Projection - Derived)]
+  FirstPartyAPI --> ClaimantProjection[(Claimant Status Projection - Derived)]
+  AdminAPI --> PPDomain[Profit Participation API Domain]
+  InternalAPI --> PPDomain
+
+  PPDomain --> CycleStore[(Cycle / Allocation / Payout Intent Store - Canonical API Truth)]
+  PPDomain --> IdemStore[(Idempotency / Operation Store)]
+  PPDomain --> Audit[(Audit / Activity Log)]
+  PPDomain --> Events[[Event Bus]]
+
+  Eligibility[Snapshot & Eligibility Domain] -->|approved eligibility reference| PPDomain
+  Treasury[Treasury / Governance / Control Domains] -->|funding and control references| PPDomain
+  BaseExec[Base Payout Execution Domain] <-->|payout intents / execution references| PPDomain
+  Ledger[Payout Ledger Domain] <-->|cycle ledger references| PPDomain
+  Reporting[Transparency Reporting Domain] <-->|reporting references| PPDomain
+  Registry[Public Contract & Wallet Registry] <-->|contract/wallet references| PPDomain
+
+  Chain[Ethereum / Base Chain Systems] --> BaseExec
+  Chain --> Eligibility
+  BaseExec --> Events
+  Events --> ProjectionWorkers[Projection / Export Workers]
+  ProjectionWorkers --> PublicProjection
+  ProjectionWorkers --> ClaimantProjection
+  ProjectionWorkers --> Reporting
+  ProjectionWorkers --> Ledger
+```
+
+---
+
+## Data Design — Mermaid Diagram
+
+```mermaid
+erDiagram
+  PROFIT_PARTICIPATION_CYCLE ||--o{ ALLOCATION_SET : owns
+  PROFIT_PARTICIPATION_CYCLE ||--o{ PAYOUT_INTENT : owns
+  PROFIT_PARTICIPATION_CYCLE ||--o{ DISCREPANCY_CASE : may_have
+  PROFIT_PARTICIPATION_CYCLE ||--o{ CYCLE_REFERENCE_LINK : links
+  ALLOCATION_SET ||--o{ ALLOCATION_RECORD : contains
+  PAYOUT_INTENT ||--o{ PAYOUT_INTENT_ALLOCATION_LINK : includes
+  ALLOCATION_RECORD ||--o{ PAYOUT_INTENT_ALLOCATION_LINK : linked_by
+  PAYOUT_INTENT ||--o{ EXECUTION_REFERENCE_LINK : has
+  DISCREPANCY_CASE ||--o{ CORRECTION_RECORD : resolved_by
+  PROFIT_PARTICIPATION_OPERATION ||--o{ AUDIT_REFERENCE : records
+  PROFIT_PARTICIPATION_OPERATION ||--|| IDEMPOTENCY_RECORD : protected_by
+  PROFIT_PARTICIPATION_CYCLE ||--o{ PUBLIC_STATUS_PROJECTION : derives
+  PROFIT_PARTICIPATION_CYCLE ||--o{ CLAIMANT_STATUS_PROJECTION : derives
+
+  PROFIT_PARTICIPATION_CYCLE {
+    string cycle_id PK
+    string lifecycle_state
+    string policy_reference
+    string distributable_profit_reference
+    string visibility_class
+    datetime created_at
+    datetime updated_at
+  }
+  ALLOCATION_SET {
+    string allocation_set_id PK
+    string cycle_id FK
+    string eligibility_reference
+    string status
+    decimal total_amount
+    string payout_asset_reference
+  }
+  ALLOCATION_RECORD {
+    string allocation_id PK
+    string allocation_set_id FK
+    string claimant_scope_reference
+    decimal amount
+    string status
+  }
+  PAYOUT_INTENT {
+    string payout_intent_id PK
+    string cycle_id FK
+    string status
+    string treasury_control_reference
+    string execution_profile
+  }
+  EXECUTION_REFERENCE_LINK {
+    string execution_reference_id PK
+    string payout_intent_id FK
+    string execution_domain
+    string execution_status
+    string chain_reference
+  }
+  PUBLIC_STATUS_PROJECTION {
+    string projection_id PK
+    string cycle_id FK
+    string projection_version
+    string visibility_class
+    datetime generated_at
+  }
+```
+
+Derived projections, reports, exports, and public pages MUST reference canonical resources. They MUST NOT mutate cycle, allocation, or payout-intent truth.
+
+---
+
+## Flow View
+
+### Synchronous Request Path
+
+1. Caller authenticates or proceeds as public if route is public-read.
+2. API gateway applies route-family, rate-limit, and abuse controls.
+3. Backend resolves caller class, route version, contract version, and correlation ID.
+4. Authorization evaluates service/admin/user/public permission and visibility class.
+5. Mutation requests require idempotency keys and payload fingerprints.
+6. Domain validator checks state machine, required upstream references, policy versions, and target resource ownership.
+7. Mutation is accepted or rejected with structured result.
+8. Accepted mutation persists canonical state and operation record transactionally.
+9. Audit record is created for all sensitive mutations.
+10. Domain event is emitted after durable acceptance or durable mutation.
+11. Response returns resource summary, status, operation reference, and correlation ID.
+
+### Async Accepted Path
+
+1. Long-running allocation generation, projection refresh, release, reprocessing, export, or discrepancy remediation returns `202 Accepted`.
+2. Response includes operation ID, status endpoint, retry guidance, and correlation ID.
+3. Worker resumes from operation state and idempotency record.
+4. Final domain state is recorded separately from accepted state.
+5. Projections, ledger links, reports, and public views refresh asynchronously and remain derived.
+
+### Failure / Retry Path
+
+1. Failed dependency, validation, authorization, idempotency, or state transition returns structured problem details.
+2. Retriable failures preserve operation state and do not duplicate allocations, payout intents, or execution links.
+3. Non-retriable errors require correction, supersession, or discrepancy handling.
+4. Repeated duplicate requests with identical idempotency key and payload return the original safe outcome.
+5. Repeated duplicate requests with changed payload return idempotency conflict.
+
+### Admin / Operator Remediation Path
+
+1. Admin opens or selects discrepancy case.
+2. Admin submits reason-coded action with idempotency key and supporting references.
+3. API verifies role, policy, state, and control-path authority.
+4. API creates correction or supersession lineage rather than overwriting historical truth.
+5. Audit, event, projection refresh, and public/reporting updates occur according to visibility class.
+
+---
+
+## Data Flows — Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+  participant Caller as Internal Service / Admin
+  participant API as Profit Participation API
+  participant Auth as AuthZ / Policy Engine
+  participant Idem as Idempotency Store
+  participant PP as Profit Participation Domain Store
+  participant Elig as Snapshot & Eligibility Domain
+  participant Treas as Treasury / Control Domain
+  participant Exec as Base Payout Execution Domain
+  participant Bus as Event Bus
+  participant Audit as Audit Log
+  participant Proj as Projection Workers
+
+  Caller->>API: Mutation request with correlation_id + idempotency_key
+  API->>Auth: Authenticate and authorize route/action/resource
+  Auth-->>API: Decision + policy version
+  API->>Idem: Resolve idempotency key + payload fingerprint
+  Idem-->>API: New or replay-safe existing operation
+  API->>Elig: Validate approved eligibility reference when required
+  Elig-->>API: Valid eligibility lineage / rejection
+  API->>Treas: Validate funding/control reference when required
+  Treas-->>API: Valid control lineage / rejection
+  API->>PP: Persist cycle/allocation/intent/correction state
+  PP-->>API: Canonical resource + lifecycle status
+  API->>Audit: Record action, actor, reason, lineage, correlation
+  API->>Bus: Emit domain event after durable mutation
+  API-->>Caller: 200/201/202 with resource or operation reference
+
+  Bus->>Proj: Refresh public/claimant/reporting projections
+  Proj->>PP: Read canonical state
+  Proj-->>Bus: Projection refreshed event
+
+  API->>Exec: Submit or link payout intent when released
+  Exec-->>API: Execution reference / accepted state
+  API->>PP: Link execution reference without rewriting allocation truth
+  API->>Audit: Record execution linkage
+  API->>Bus: Emit execution_linked / execution_reconciled
+```
+
+---
+
+## Request Model
+
+All mutation requests MUST include:
+
+- `correlation_id` or platform-generated equivalent;
+- `idempotency_key` for mutation, release, correction, reprocess, and async routes;
+- API version / contract version where required;
+- target resource identifier;
+- explicit action type;
+- reason code for admin/control actions;
+- actor/service identity from authentication context, not self-asserted payload;
+- policy/reference identifiers required for the action;
+- request payload fingerprint for idempotency enforcement.
+
+Mutation requests MUST NOT accept:
+
+- raw wallet lists as canonical eligibility;
+- frontend-authored payout amounts;
+- unvalidated execution references;
+- unauthenticated chain event data as owner-domain truth;
+- hidden admin notes as policy basis;
+- route parameters that imply public/private visibility without authorization evaluation.
+
+---
+
+## Response Model
+
+Success responses MUST include:
+
+- stable resource identifier;
+- lifecycle state;
+- action result or operation state;
+- canonical reference links relevant to the route;
+- visibility class;
+- timestamps;
+- correlation ID;
+- operation ID for async operations;
+- warning/restriction/supersession indicators where relevant.
+
+Responses MUST distinguish:
+
+- `accepted` from `completed`;
+- allocation approval from payout execution;
+- execution submission from execution confirmation;
+- public-safe status from internal canonical status;
+- claimant-visible status from raw allocation detail;
+- current record from superseded/corrected historical records.
+
+---
+
+## Error / Result / Status Model
+
+Errors MUST use structured problem-details style responses with:
+
+- `type`;
+- `title`;
+- `status`;
+- `code`;
+- `detail`;
+- `instance`;
+- `correlation_id`;
+- `operation_id` where applicable;
+- safe remediation hint where allowed.
+
+### Required Error Classes
+
+- `PROFIT_PARTICIPATION_AUTHENTICATION_REQUIRED`
+- `PROFIT_PARTICIPATION_PERMISSION_DENIED`
+- `PROFIT_PARTICIPATION_SCOPE_DENIED`
+- `PROFIT_PARTICIPATION_VISIBILITY_DENIED`
+- `PROFIT_PARTICIPATION_IDEMPOTENCY_KEY_REQUIRED`
+- `PROFIT_PARTICIPATION_IDEMPOTENCY_CONFLICT`
+- `PROFIT_PARTICIPATION_REQUEST_INVALID`
+- `PROFIT_PARTICIPATION_STATE_CONFLICT`
+- `PROFIT_PARTICIPATION_POLICY_REFERENCE_REQUIRED`
+- `PROFIT_PARTICIPATION_DISTRIBUTABLE_PROFIT_REFERENCE_REQUIRED`
+- `PROFIT_PARTICIPATION_ELIGIBILITY_REFERENCE_REQUIRED`
+- `PROFIT_PARTICIPATION_ELIGIBILITY_REFERENCE_INVALID`
+- `PROFIT_PARTICIPATION_ALLOCATION_RECONCILIATION_FAILED`
+- `PROFIT_PARTICIPATION_TREASURY_CONTROL_REQUIRED`
+- `PROFIT_PARTICIPATION_RELEASE_FORBIDDEN`
+- `PROFIT_PARTICIPATION_EXECUTION_REFERENCE_INVALID`
+- `PROFIT_PARTICIPATION_PUBLICATION_RESTRICTED`
+- `PROFIT_PARTICIPATION_CORRECTION_REQUIRED`
+- `PROFIT_PARTICIPATION_CORRECTION_NOT_ALLOWED`
+- `PROFIT_PARTICIPATION_DEPENDENCY_UNAVAILABLE`
+- `PROFIT_PARTICIPATION_RATE_LIMITED`
+- `PROFIT_PARTICIPATION_DEGRADED_MODE`
+
+Error responses MUST NOT leak private claimant, treasury, security, eligibility-row, or execution internals through public or unauthorized surfaces.
+
+---
+
+## Idempotency / Retry / Replay Model
+
+Idempotency is mandatory for:
+
+- cycle creation;
+- policy lock;
+- distributable-profit reference attachment;
+- eligibility reference attachment;
+- allocation generation;
+- allocation approval;
+- payout-intent creation;
+- release for execution;
+- execution-reference linkage;
+- correction/supersession;
+- discrepancy resolution;
+- projection publication;
+- export generation.
+
+Idempotency records MUST store:
+
+- key;
+- caller identity / service principal;
+- route/action family;
+- target resource;
+- payload fingerprint;
+- accepted/completed state;
+- result reference;
+- created/expired timestamps;
+- conflict marker where applicable.
+
+Retries MUST be safe under at-least-once delivery. Workers MUST resume from operation state and MUST NOT duplicate allocation records, payout intents, execution references, public publications, or correction records.
+
+Replay attempts with stale credentials, changed payloads, wrong target resources, or expired policy references MUST be rejected.
+
+---
+
+## Rate Limit / Abuse-Control Model
+
+- Public-read routes MUST have rate limits, cache controls, and scraping protections appropriate to public trust surfaces.
+- First-party claimant routes MUST protect against enumeration of wallet/account/claimant status.
+- Internal service routes MUST use service-level quotas and circuit breakers.
+- Admin/control routes MUST have stricter throttles, session freshness, risk checks, and alerting for unusual activity.
+- Chain-adjacent callback/ingestion routes MUST be protected against duplicate, spoofed, stale, or reordered events.
+
+Rate limiting MUST return safe, structured errors and MUST NOT reveal whether a private claimant or allocation exists.
+
+---
+
+## Endpoint / Route Family Model
+
+Exact route paths MAY be refined by downstream OpenAPI, but route families MUST preserve these contracts.
+
+### Public-Read Routes
+
+- `GET /v2/profit-participation/cycles`
+- `GET /v2/profit-participation/cycles/{cycle_id}`
+- `GET /v2/profit-participation/cycles/{cycle_id}/public-status`
+- `GET /v2/profit-participation/cycles/{cycle_id}/corrections`
+
+### First-Party Authenticated Routes
+
+- `GET /v2/profit-participation/me/cycles`
+- `GET /v2/profit-participation/me/cycles/{cycle_id}`
+- `GET /v2/profit-participation/me/claim-status/{cycle_id}`
+
+### Internal Service Routes
+
+- `POST /internal/v2/profit-participation/cycles`
+- `POST /internal/v2/profit-participation/cycles/{cycle_id}/policy-lock`
+- `POST /internal/v2/profit-participation/cycles/{cycle_id}/distributable-profit-reference`
+- `POST /internal/v2/profit-participation/cycles/{cycle_id}/eligibility-reference`
+- `POST /internal/v2/profit-participation/cycles/{cycle_id}/allocation-sets/generate`
+- `POST /internal/v2/profit-participation/cycles/{cycle_id}/payout-intents`
+- `POST /internal/v2/profit-participation/payout-intents/{payout_intent_id}/execution-references`
+- `GET /internal/v2/profit-participation/cycles/{cycle_id}`
+- `GET /internal/v2/profit-participation/operations/{operation_id}`
+
+### Admin / Control-Plane Routes
+
+- `POST /admin/v2/profit-participation/cycles/{cycle_id}/approve-allocation`
+- `POST /admin/v2/profit-participation/cycles/{cycle_id}/release-for-execution`
+- `POST /admin/v2/profit-participation/cycles/{cycle_id}/pause`
+- `POST /admin/v2/profit-participation/cycles/{cycle_id}/resume`
+- `POST /admin/v2/profit-participation/cycles/{cycle_id}/close`
+- `POST /admin/v2/profit-participation/cycles/{cycle_id}/finalize`
+- `POST /admin/v2/profit-participation/discrepancies`
+- `POST /admin/v2/profit-participation/corrections`
+- `POST /admin/v2/profit-participation/supersessions`
+
+### Reporting / Export Routes
+
+- `POST /internal/v2/profit-participation/cycles/{cycle_id}/exports`
+- `GET /internal/v2/profit-participation/exports/{export_id}`
+- `GET /admin/v2/profit-participation/cycles/{cycle_id}/lineage`
+
+---
+
+## Public API Considerations
+
+Public APIs MUST default to narrow, stable, public-safe contracts. They MAY expose:
+
+- cycle ID;
+- public lifecycle state;
+- payout asset class where public;
+- aggregate funded/executed/claim posture where approved;
+- public ledger/report/registry references;
+- correction/supersession notice;
+- generated-at and version metadata.
+
+Public APIs MUST NOT expose:
+
+- private claimant rows;
+- internal eligibility datasets;
+- undisclosed funding preparations;
+- treasury signing details;
+- admin notes;
+- security-sensitive execution metadata;
+- internal discrepancy investigation details;
+- raw audit logs;
+- wallet-link ownership or account-specific status.
+
+---
+
+## First-Party Application API Considerations
+
+First-party apps MAY show claimant-linked status only when canonical account/session and wallet-aware rules permit. Responses MUST use bounded status classes and MUST avoid claiming final payout success until execution confirmation and reconciliation support it.
+
+Frontend labels MUST NOT reinterpret lifecycle state. If presentation needs simplified labels, mapping must be derived from approved API status semantics.
+
+---
+
+## Internal Service API Considerations
+
+Internal service APIs MUST:
+
+- require service identity and least privilege;
+- be versioned when contract changes affect callers;
+- record idempotency and operation state;
+- enforce owner-domain state machines;
+- emit events after durable acceptance/mutation;
+- never expose hidden broad-write shortcuts;
+- reject requests that try to mutate adjacent domain truth.
+
+---
+
+## Admin / Control-Plane API Considerations
+
+Admin APIs MUST be separated from public and first-party APIs. They MUST require:
+
+- human operator identity;
+- elevated permission;
+- reason code;
+- operator note where sensitive;
+- idempotency key;
+- correlation ID;
+- policy/control reference where required;
+- audit record;
+- state-machine validation;
+- post-action event emission.
+
+Admin APIs MUST NOT perform silent historical overwrite. Corrections MUST create lineage.
+
+---
+
+## Event / Webhook / Async API Considerations
+
+Canonical domain events SHOULD include:
+
+- `profit_participation.cycle_created`
+- `profit_participation.policy_locked`
+- `profit_participation.distributable_profit_reference_attached`
+- `profit_participation.eligibility_reference_attached`
+- `profit_participation.allocation_generation_accepted`
+- `profit_participation.allocations_generated`
+- `profit_participation.allocations_approved`
+- `profit_participation.payout_intents_created`
+- `profit_participation.released_for_execution`
+- `profit_participation.execution_reference_linked`
+- `profit_participation.execution_reconciled`
+- `profit_participation.cycle_paused`
+- `profit_participation.cycle_resumed`
+- `profit_participation.discrepancy_opened`
+- `profit_participation.corrected`
+- `profit_participation.superseded`
+- `profit_participation.public_status_refreshed`
+- `profit_participation.cycle_finalized`
+
+Events MUST carry correlation IDs, entity references, operation IDs, actor/service class, visibility class, and schema version. Events are at-least-once; consumers MUST be idempotent.
+
+External webhooks, if added later, MUST be governed by `EVENT_MODEL_AND_WEBHOOK_SPEC.md` and MUST NOT expose internal-only event payloads.
+
+---
+
+## Chain-Adjacent API Considerations
+
+The API MUST distinguish:
+
+- eligibility input from Ethereum participation truth;
+- payout-intent preparation from Base execution submission;
+- execution submission from execution confirmation;
+- transaction observation from owner-domain adoption;
+- claim execution truth from allocation truth;
+- contract registry publication from private operational wallet inventory.
+
+Chain events and transaction receipts are normalized inputs until validated and linked by the owning API domain. The API MUST preserve chain ID, contract reference, transaction reference, execution batch/run reference, policy/cycle reference, and reconciliation state where relevant.
+
+---
+
+## Data Model / Storage Support Implications
+
+Storage must support:
+
+- immutable or append-only lineage for sensitive state changes;
+- canonical cycle, allocation, payout-intent, discrepancy, correction, and operation records;
+- idempotency records with payload fingerprints;
+- audit/action references;
+- external owner-domain references;
+- projection versioning;
+- supersession relationships;
+- visibility classes;
+- generated-at and source-version metadata for projections/exports.
+
+Implementations MUST NOT use derived public views as canonical mutation sources.
+
+---
+
+## Read Model / Projection / Reporting Rules
+
+Read models MAY exist for:
+
+- public cycle status;
+- first-party claimant status;
+- admin dashboards;
+- reconciliation views;
+- reporting exports;
+- search/discovery;
+- historical correction views.
+
+Read models MUST:
+
+- declare source references;
+- carry projection version and generated-at timestamp;
+- distinguish stale, partial, restricted, superseded, corrected, and final states;
+- avoid exposing internal-only data through public projections;
+- be rebuildable from canonical owner-domain state;
+- never become write sources.
+
+---
+
+## Security / Risk / Privacy Controls
+
+Required controls:
+
+- least-privilege service access;
+- strict admin/control separation;
+- session freshness for privileged actions;
+- no claimant enumeration through public or first-party APIs;
+- sensitive payload redaction in logs;
+- privacy-safe public responses;
+- anti-replay for idempotent mutations;
+- dependency timeout and circuit-breaker handling;
+- alerting for unusual approval/release/correction activity;
+- chain-event spoofing protection;
+- secure handling of treasury, contract, and wallet references.
+
+---
+
+## Audit / Traceability / Observability Requirements
+
+Every sensitive mutation MUST record:
+
+- authenticated actor or service principal;
+- impersonated human actor where applicable;
+- route/action family;
+- target resource;
+- prior state and resulting state where safe;
+- reason code;
+- policy/control references;
+- idempotency key;
+- correlation ID and trace ID;
+- operation ID;
+- emitted event IDs;
+- external references created or consumed;
+- public projection/report refresh impact where applicable.
+
+Observability MUST include metrics for request volume, validation failures, idempotency conflicts, dependency failures, projection lag, allocation generation duration, release/execute lag, discrepancy cases, and public-status freshness.
+
+---
+
+## Failure Handling / Edge Cases
+
+- Missing policy reference: reject advancement.
+- Missing approved eligibility reference: reject allocation generation.
+- Eligibility dataset superseded before allocation approval: block approval and require regeneration or explicit review.
+- Distributable amount mismatch: open discrepancy and block release.
+- Duplicate allocation detected: reject or open discrepancy before approval.
+- Payout intent partially executed: preserve partial state and require reconciliation or reprocess path.
+- Execution layer unavailable: keep intent in accepted/released state; do not mark executed.
+- Public projection lag: expose stale marker or temporarily narrow public status.
+- Post-publication material error: create correction/supersession; do not silently rewrite history.
+- Chain reorg or receipt ambiguity: keep execution reference pending reconciliation.
+- Admin action without reason code: reject.
+- Replay with changed payload: idempotency conflict.
+- Degraded mode: allow safe reads where possible; block trust-sensitive mutations if dependencies cannot validate required references.
+
+---
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+- Route families MUST be versioned when breaking response, request, state, or error semantics change.
+- Public API changes require stricter compatibility windows than internal service changes.
+- Internal service APIs that affect financial/trust-sensitive state require migration plans and contract-version registration.
+- Deprecated v1 route shapes MAY be maintained temporarily as compatibility wrappers only if they call v2-compatible domain logic.
+- Legacy spreadsheet/import mechanisms MUST be normalized into approved eligibility/allocation references before use.
+- Historical cycles MUST retain lineage and not be silently recast under new semantics.
+- Public responses MUST expose correction/supersession where historical meaning changed.
+
+---
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI artifacts MUST preserve:
+
+- route-family separation;
+- public versus first-party versus internal versus admin boundaries;
+- required idempotency and correlation headers;
+- structured error codes;
+- accepted-state versus terminal-state response classes;
+- visibility class fields;
+- stable resource identifiers;
+- deprecation and compatibility metadata.
+
+AsyncAPI artifacts MUST preserve:
+
+- event names;
+- schema versions;
+- correlation IDs;
+- operation IDs;
+- source domain;
+- visibility class;
+- at-least-once delivery semantics;
+- idempotent consumer requirements.
+
+SDKs MUST NOT collapse admin routes into ordinary client methods or expose internal service routes to public clients.
+
+---
+
+## Implementation-Contract Guardrails
+
+1. Downstream implementations MUST preserve owner-domain mutation boundaries.
+2. Public and claimant projections MUST remain derived.
+3. Allocation generation MUST be deterministic and reference-approved inputs.
+4. Payout intents MUST remain distinct from execution outcomes.
+5. Execution references MUST not rewrite allocation truth.
+6. Corrections MUST preserve supersession lineage.
+7. Admin overrides MUST be explicit, reason-coded, audited, and policy-constrained.
+8. Idempotency MUST protect all sensitive mutations.
+9. Public outputs MUST narrow exposure rather than leak private truth.
+10. Chain observations MUST pass through normalization and validation before adoption.
+11. Workers MUST be resumable without duplicate business outcomes.
+12. Downstream docs MUST NOT redefine profit-participation semantics.
+
+---
+
+## Downstream Execution Staging
+
+1. Stabilize canonical cycle, allocation, payout-intent, and discrepancy resources.
+2. Stabilize route-family separation and authz policy.
+3. Implement idempotency, operation records, correlation IDs, and audit lineage.
+4. Integrate approved eligibility references and validation.
+5. Integrate treasury/control references for release.
+6. Integrate Base payout execution references.
+7. Integrate payout-ledger and transparency/reporting references.
+8. Build public and claimant projections.
+9. Add correction/supersession and discrepancy tooling.
+10. Generate OpenAPI/AsyncAPI and QA contract suites.
+
+---
+
+## Required Downstream Specs / Contract Layers
+
+- Profit Participation OpenAPI contract
+- Profit Participation AsyncAPI event contract
+- allocation-generation implementation contract
+- payout-intent worker contract
+- execution-reference reconciliation contract
+- public/claimant projection contract
+- admin/control-plane implementation contract
+- correction/supersession runbook
+- discrepancy/remediation runbook
+- migration compatibility plan from v1 API
+- contract test suite and regression suite
+
+---
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns:
+
+1. Public route exposes internal allocation rows.
+2. Admin route accepts arbitrary wallet list as canonical eligibility.
+3. Worker creates payout intents without approved allocation state.
+4. Execution receipt marks allocation truth executed without domain reconciliation.
+5. Public report modifies payout-cycle state.
+6. Registry entry implies payout eligibility.
+7. Wallet-link status replaces token-holder/eligibility truth.
+8. Product-local entitlement table creates payout rights.
+9. Spreadsheet import overwrites approved allocations.
+10. Retry creates duplicate payout intents.
+11. Correction mutates prior record without supersession lineage.
+12. Public status reports accepted async operation as final payout success.
+13. Internal service route acts as hidden broad-write shortcut.
+14. API ignores treasury/control reference for release.
+
+Detection SHOULD use contract tests, schema linting, state-transition tests, audit review, projection lineage checks, and production monitoring.
+
+---
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example — Cycle Allocation
+
+An internal service creates a cycle, attaches a policy version, attaches an approved distributable-profit reference, attaches an approved eligibility reference, generates allocations, records audit lineage, emits events, and waits for governed approval before release.
+
+### Canonical Example — Execution Linkage
+
+A payout intent is released after treasury/control approval. Base execution returns an execution-run reference and later receipts. The API links those references and updates execution status without rewriting allocation amounts.
+
+### Canonical Example — Public Status
+
+A public endpoint returns that a cycle is finalized, links to the payout ledger and transparency report, shows bounded aggregate status, and includes a correction notice where a supersession occurred.
+
+### Anti-Example — Spreadsheet Payout
+
+An operator uploads a wallet spreadsheet and triggers stablecoin payouts without approved eligibility reference, policy version, allocation generation, treasury control reference, or audit lineage. This is forbidden.
+
+### Anti-Example — Contract-Only Meaning
+
+A frontend reads a Base contract event and declares a FUZE profit participation cycle complete without reconciliation, payout-ledger linkage, or reporting update. This is forbidden.
+
+### Anti-Example — Public Overexposure
+
+A public endpoint exposes per-holder allocation rows, admin notes, discrepancy investigations, or private treasury details. This is forbidden.
+
+---
+
+## Acceptance Criteria
+
+1. All mutation routes require idempotency keys and reject missing keys with a structured error.
+2. Duplicate mutation requests with the same idempotency key and identical payload return the original safe result.
+3. Duplicate mutation requests with the same key and different payload return `PROFIT_PARTICIPATION_IDEMPOTENCY_CONFLICT`.
+4. Allocation generation fails unless approved policy, distributable-profit, and eligibility references are present.
+5. Release for execution fails unless allocation approval and treasury/control references are present.
+6. Execution-reference linkage cannot mutate allocation amount or eligibility reference.
+7. Public-read responses never include private claimant rows, admin notes, raw eligibility datasets, or treasury internals.
+8. First-party claimant reads require authenticated account/session context and visibility authorization.
+9. Admin corrections require reason code, permission, idempotency key, audit record, and lineage-preserving correction/supersession record.
+10. Accepted async responses include operation ID and do not claim final business success.
+11. Domain events are emitted after durable mutation and include correlation ID, schema version, entity references, and operation references.
+12. Projection records include generated-at, source reference, projection version, visibility class, and stale/superseded markers where applicable.
+13. Payout-ledger and transparency/reporting integrations consume canonical references; they cannot write back hidden semantic truth.
+14. Chain-adjacent callbacks are normalized and validated before owner-domain adoption.
+15. API errors use the required structured error fields and safe error messages.
+16. Rate limits prevent public/first-party enumeration of private claimant or allocation existence.
+17. Migration wrappers for v1 routes preserve v2 semantics and do not bypass validation.
+18. Audit records exist for create, approve, release, pause, resume, correct, supersede, execution-link, and public-status publication actions.
+19. Contract tests verify state-machine transition rules for all canonical lifecycle states.
+20. OpenAPI/AsyncAPI artifacts preserve route-family separation and required headers/fields.
+
+---
+
+## Test Cases
+
+### Positive Tests
+
+1. Create draft cycle with valid internal service identity and idempotency key; expect `201` and `cycle_id`.
+2. Attach approved eligibility reference to prepared cycle; expect state advancement and audit event.
+3. Generate allocation set from approved eligibility and distributable-profit references; expect deterministic totals and operation reference.
+4. Approve allocations with admin permission and reason code; expect approved state and audit lineage.
+5. Create payout intent from approved allocations; expect intent linked to allocation records.
+6. Release payout intent with valid treasury/control reference; expect released state and event.
+7. Link execution reference from Base payout execution; expect execution link without allocation rewrite.
+8. Read public finalized cycle; expect public-safe aggregate status and reporting links.
+9. Read claimant status as authorized authenticated user; expect bounded claimant-safe status.
+10. Supersede a cycle after approved correction; expect prior record preserved and public correction marker.
+
+### Negative / Authorization Tests
+
+1. Public caller attempts internal cycle read; expect permission denied.
+2. Authenticated user attempts to enumerate another claimant; expect visibility denied without existence leak.
+3. Admin correction without reason code; expect request invalid.
+4. Service without allocation privilege attempts allocation generation; expect service permission denied.
+5. Wallet signature without FUZE session attempts private claimant read; expect authentication required.
+
+### Idempotency / Retry Tests
+
+1. Retry cycle creation with same key and same payload; expect original cycle response.
+2. Retry cycle creation with same key and modified payload; expect idempotency conflict.
+3. Worker retry after partial allocation-generation failure; expect no duplicate allocation records.
+4. Duplicate execution-reference callback; expect replay-safe existing link.
+5. Retry correction after network timeout; expect one correction record only.
+
+### Conflict / Boundary Tests
+
+1. Generate allocation without eligibility reference; expect eligibility-required error.
+2. Release for execution without treasury-control reference; expect release forbidden.
+3. Attach superseded eligibility reference; expect state conflict.
+4. Execution receipt references unknown payout intent; expect execution-reference invalid.
+5. Public projection tries to write cycle state; expect forbidden boundary violation.
+
+### Rate-Limit / Abuse Tests
+
+1. Burst public cycle lookup; expect rate-limited response after threshold.
+2. Enumerate claimant status by wallet IDs; expect visibility denial and abuse signal.
+3. Repeated failed admin release attempts; expect throttling/alerting.
+
+### Degraded-Mode / Dependency Tests
+
+1. Eligibility service unavailable during allocation generation; expect dependency unavailable and no mutation.
+2. Base execution unavailable after release; expect intent remains released/execution_pending, not executed.
+3. Projection worker delayed; public status shows stale marker or prior safe version.
+4. Chain receipt ambiguous; execution state remains pending reconciliation.
+
+### Audit / Observability Tests
+
+1. Verify audit record for each sensitive mutation includes actor, reason, idempotency key, correlation ID, prior/result state, and resource references.
+2. Verify metrics record allocation-generation duration and projection lag.
+3. Verify trace spans connect API request, worker job, event emission, and projection refresh.
+
+### Migration / Compatibility Tests
+
+1. v1 compatibility route calls v2 validation and produces equivalent canonical state.
+2. Deprecated response field remains additive during compatibility window.
+3. Breaking schema change is blocked without versioned route and migration plan.
+4. Historical cycle remains visible with legacy lineage and not silently rewritten.
+
+---
+
+## Dependencies / Cross-Spec Links
+
+This spec depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
 - `SYSTEM_SPEC_INDEX.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
-
-#### Primary profit participation / payout / chain sources
 - `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
 - `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
 - `PAYOUT_LEDGER_SPEC.md`
 - `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
 - `TREASURY_CONTROL_POLICY_SPEC.md`
 - `VAULT_ACTION_POLICY_SPEC.md`
 - `MULTISIG_AND_TIMELOCK_SPEC.md`
 - `FOUNDATION_GOVERNANCE_SPEC.md`
 - `GOVERNANCE_MODEL_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
 - `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-
-#### API and runtime sources
+- `TRANSPARENCY_MODEL_SPEC.md`
+- `TRANSPARENCY_REPORTING_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
 - `API_ARCHITECTURE_SPEC.md`
 - `PUBLIC_API_SPEC.md`
 - `INTERNAL_SERVICE_API_SPEC.md`
@@ -109,1355 +1382,72 @@ Those remain governed by their own source-of-truth specifications.
 - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
 - `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
 - `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-
-#### Core docs inputs
-- `DOCS_SPEC.md`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
-- `TOKEN_CONTRACT_ARCHITECTURE_.md`
-- `ALLOCATION_WALLET_MAP.md`
-- tokenomics vault docs in `fuze.ac > docs/tokenomics/`
-
-#### Security and operations sources
 - `SECURITY_AND_RISK_CONTROL_SPEC.md`
 - `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
-
-### Highest-priority interpretation applied
-
-For this file, the most important governing interpretation is:
-
-1. profit participation is a distinct stablecoin distribution layer and must remain separate from FUZE token balances, Platform Credits, treasury inventory, and raw profitability analysis
-2. backend owns canonical profit participation period, allocation, and payout-intent truth
-3. eligibility comes from approved snapshot and eligibility outputs, not ad hoc wallet lists
-4. execution may be chain-adjacent or contract-mediated, but execution coordination does not collapse off-chain preparation and on-chain settlement into one ambiguous layer
-5. admin/control-plane may approve, release, reprocess, or correct under controlled policy, but must preserve immutable lineage and treasury controls
-6. public-read status must remain bounded and trust-oriented without exposing private payout preparation internals
-
-### Supporting external standards used only as guidance
-
-- HTTP semantics for internal mutation and public-read status APIs
-- structured problem-details error design
-- general allocation-ledger, distribution-intent, and correction-lineage patterns as supporting guidance
-
-External guidance does not override FUZE source-of-truth documents.
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`
+- `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
 
 ---
 
-## 6. Governing Architecture and Ownership Interpretation
+## Explicitly Deferred Items
 
-This API belongs to the **Profit Participation Domain** because it owns the canonical lifecycle of:
-- profit participation periods,
-- eligibility-linked allocation records,
-- payout intents,
-- execution coordination,
-- and publication-safe status summaries.
+- Exact final OpenAPI route schemas and enum sets.
+- Exact AsyncAPI event schemas and topic names.
+- Exact allocation formula implementation details.
+- Exact snapshot proof and entitlement proof format.
+- Exact Base payout contract ABI and execution batch schema.
+- Exact public report template content.
+- Exact tax/legal classification handling.
+- Exact retention windows for all historical projection variants.
+- Exact admin UI workflow design.
+- Exact worker topology and queue retry configuration.
 
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable allocation and payout-preparation truth
-- eligibility, allocation, treasury release, execution coordination, and correction logic must be centralized
-- multiple adjacent domains must remain separated through explicit interfaces
-- public trust surfaces require stable off-chain state even when execution occurs on-chain
-- audit generation and discrepancy handling must be backend-governed
-
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend only reads public or bounded first-party status
-- `fuze-frontend-admin`, because admin may approve or release but must not own canonical allocation truth
-- `fuze-contracts`, because contracts may execute or hold payout-related state, but off-chain preparation and publication truth remain in `fuze-backend-api`
-- wallet-aware user domain, because user-linked wallets do not define canonical eligibility lists or payout allocations
-- treasury domain, because treasury release authority is adjacent and gating, but does not own profit participation allocation truth
-- transparency domain, because public transparency consumes approved outputs but does not own profit participation lifecycle semantics
-
-### Architectural implications
-
-- one profit participation period may correspond to one approved economic window
-- one approved period may have one or more eligibility runs, but only one current canonical approved eligibility result per finalized period
-- one eligible address or claimant scope may have one allocation record per finalized run
-- one allocation may map to zero or more payout intents depending on batching, retries, or correction flows
-- execution completion does not rewrite source allocation truth; it creates explicit execution lineage
-- reversals or corrections must preserve old-to-new lineage rather than silently mutating historical records
+Deferred items MUST preserve this API spec and upstream refined semantics.
 
 ---
 
-## 7. Domain Responsibilities
+## Final Normative Summary
 
-The Profit Participation API domain is responsible for:
+The Profit Participation API is the interface-contract layer for FUZE's trust-sensitive cycle-based stablecoin profit-participation system. It MUST preserve refined semantic ownership, consume approved eligibility and treasury/control references, own allocation and payout-intent API truth, link rather than absorb execution truth, publish only derived public/claimant-safe views, and maintain strict idempotency, auditability, correction lineage, and versioning discipline.
 
-1. maintaining canonical profit participation periods
-2. linking approved eligibility outputs into allocation preparation
-3. recording allocation units and stablecoin payout amounts
-4. creating payout intents for execution preparation
-5. coordinating execution status with payout-execution and payout-ledger domains
-6. exposing public-read and trusted internal status views
-7. supporting admin approve, lock, release, correction, and reprocess flows
-8. emitting profit participation lifecycle events
-9. generating audit lineage for sensitive allocation and release actions
-10. preserving separation between eligibility, allocation, treasury release, and execution settlement
-
-The domain is not responsible for:
-
-- owning token-holder snapshot generation logic
-- owning treasury multisig execution mechanics
-- owning raw profit computation models outside approved inbound values
-- owning Platform Credits balances or payout-ledger final execution truth
-- silently rewriting historical allocations after publication
-- serving as the wallet registry or identity authority
+No public convenience route, admin tool, worker, execution integration, report, registry entry, spreadsheet, cache, or SDK may redefine profit-participation meaning or bypass owner-domain validation. Accepted state is not final business success. Derived views are not canonical truth. Corrections preserve history. Conservative interpretation wins whenever trust-sensitive ambiguity remains.
 
 ---
 
-## 8. Out of Scope
-
-The following are out of scope for this API specification:
-
-- direct wallet-signing flows
-- tax document generation
-- legal document workflows
-- investor-private reconciliation workpapers
-- cross-chain bridge internals
-- raw accounting export formats
-- final claimant UI design for all surfaces
-- contract ABI details
-
-Where later detailed specs are needed, they must remain compatible with this API.
-
----
-
-## 9. Canonical Entities and Data Ownership
-
-### Durable entities
-
-#### 9.1 profit_participation_periods
-- **Owner:** Profit Participation Domain
-- **Purpose:** canonical economic periods for profit participation processing
-- **Nature:** source-of-truth durable entity
-
-#### 9.2 profit_participation_eligibility_runs
-- **Owner:** Profit Participation Domain
-- **Purpose:** approved references to eligibility results for one period
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.3 profit_participation_allocations
-- **Owner:** Profit Participation Domain
-- **Purpose:** canonical per-recipient or per-claimant allocation records for one finalized run
-- **Nature:** source-of-truth durable entity
-
-#### 9.4 profit_participation_allocation_summaries
-- **Owner:** Profit Participation Domain
-- **Purpose:** aggregate totals for one eligibility run or period
-- **Nature:** source-of-truth durable aggregate entity
-
-#### 9.5 payout_intents
-- **Owner:** Profit Participation Domain
-- **Purpose:** execution-preparation records for one or more allocations
-- **Nature:** source-of-truth durable entity
-
-#### 9.6 payout_intent_allocations
-- **Owner:** Profit Participation Domain
-- **Purpose:** linkage between payout intents and covered allocations
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.7 payout_execution_references
-- **Owner:** Profit Participation Domain
-- **Purpose:** explicit references to downstream payout execution records or contract executions
-- **Nature:** durable execution lineage entity
-
-#### 9.8 participation_attestations
-- **Owner:** Profit Participation Domain
-- **Purpose:** preparation, review, approval, or release metadata linked to periods, runs, or intents
-- **Nature:** durable attestation lineage entity
-
-#### 9.9 participation_discrepancy_cases
-- **Owner:** Profit Participation Domain
-- **Purpose:** review and remediation records for missing, duplicate, failed, conflicting, or stale allocations/intents/executions
-- **Nature:** durable review/remediation entity
-
-#### 9.10 participation_mutation_actions
-- **Owner:** Profit Participation Domain
-- **Purpose:** high-level action records for create, approve, lock, release, reprocess, correct, publish-status, and close discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.11 participation_audit_events
-- **Owner:** Audit / Activity domain, sourced by Profit Participation Domain
-- **Purpose:** immutable trail for sensitive profit participation actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.12 participation_public_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe period and payout-status summaries
-- **Nature:** derived
-
-#### 9.13 participation_internal_balance_views
-- **Owner:** derived read-model layer
-- **Purpose:** trusted aggregate summaries for internal review
-- **Nature:** derived
-
-#### 9.14 participation_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into failed, inconsistent, or stale participation lifecycle conditions
-- **Nature:** derived
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 period lifecycle
-
-Possible states:
-
-- `draft`
-- `collecting_inputs`
-- `allocation_ready`
-- `approved`
-- `released_for_execution`
-- `partially_executed`
-- `completed`
-- `closed`
-- `restricted`
-
-### 10.2 eligibility run lifecycle
-
-Possible states:
-
-- `received`
-- `validated`
-- `approved`
-- `rejected`
-- `superseded`
-
-### 10.3 allocation lifecycle
-
-Possible states:
-
-- `draft`
-- `locked`
-- `approved`
-- `included_in_intent`
-- `executed`
-- `partially_executed`
-- `corrected`
-- `superseded`
-
-### 10.4 payout intent lifecycle
-
-Possible states:
-
-- `draft`
-- `ready`
-- `approved`
-- `submitted`
-- `partially_executed`
-- `executed`
-- `failed`
-- `cancelled`
-- `superseded`
-
-### 10.5 discrepancy lifecycle
-
-Possible states:
-
-- `opened`
-- `under_review`
-- `resolved`
-- `failed`
-- `closed`
-
-Lifecycle notes:
-- allocations become economically binding only after approved/locked period state according to policy
-- payout intents are execution-preparation records and remain distinct from executed payouts
-- partial execution must remain explicit
-- corrections and supersession must preserve immutable lineage
-
----
-
-## 11. API Surface Overview
-
-The API surface is divided into four families:
-
-### 11.1 Public-read APIs
-Used by public users, holders, and community observers for:
-- reading bounded profit participation period summaries
-- reading current published payout-status summaries
-- reading historical public-safe status views for completed or active periods
-
-### 11.2 First-party authenticated read APIs
-Used by `fuze-frontend-webapp` and approved first-party clients for:
-- reading bounded status views for linked claimant scopes where policy allows
-- reading allocation or payout-status summaries without exposing internal-only preparation details
-
-### 11.3 Internal service APIs
-Used by trusted internal services for:
-- creating periods
-- attaching eligibility runs
-- generating allocations
-- creating payout intents
-- linking execution references
-- reading canonical truth
-
-### 11.4 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- approve, lock, release, correct, reprocess, and restrict actions
-- discrepancy resolution
-- publication-safe status updates where applicable
-
----
-
-## 12. Authentication and Authorization Model
-
-### 12.1 Authentication posture by route family
-
-#### Public-read routes
-No authentication required:
-- list public-safe period summaries
-- read public-safe detail for published participation periods and statuses
-
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded claimant-linked status where actor has authorized visibility
-- read first-party status surfaces derived from canonical profit participation truth
-
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create periods
-- attach eligibility runs
-- generate allocations
-- create payout intents
-- link execution references
-- read canonical truth
-
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- approve and release periods or intents
-- correct allocations or intents
-- reprocess failed execution-preparation flows
-- restrict or close discrepancy cases
-
-### 12.2 Authorization checkpoints
-
-Authorization must evaluate:
-- caller identity and route family
-- whether target period, run, allocation, or intent is public-safe or privileged internal state
-- actor entitlement for first-party claimant-linked reads
-- whether internal service has write privilege for lifecycle mutations
-- whether admin/operator role is present for release or correction actions
-- whether current state allows requested mutation
-
-### 12.3 Sensitive action rules
-
-The following require heightened checks:
-- approval of eligibility-linked allocations
-- release of payout intents for execution
-- manual correction of allocations or intent contents
-- reprocessing failed or partial executions
-- publication of public status for incomplete periods if policy restricts it
-- discrepancy-resolution actions
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-## 13.1 Public-Read APIs
-
-### 13.1.1 `GET /v1/profit-participation/periods`
-**Purpose:** list published public-safe profit participation periods  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `state`
-- optional `year`
-- pagination
-**Response Summary:**
-- period summaries
-- public status
-- release/execution posture
-- public-safe aggregate amount summary where allowed
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
-
-### 13.1.2 `GET /v1/profit-participation/periods/{period_id}`
-**Purpose:** retrieve one public-safe profit participation period detail  
-**Caller Type:** public  
-**Response Summary:**
-- period detail
-- public execution status
-- bounded aggregate allocation/payout summary
-- transparency/trust references where relevant
-- correction or supersession guidance where relevant
-**Side Effects:** none
-
-## 13.2 Authenticated Read APIs
-
-### 13.2.1 `GET /v1/profit-participation/me`
-**Purpose:** retrieve bounded claimant-linked profit participation status for current actor where policy allows  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `period_id`
-- pagination
-**Response Summary:**
-- bounded claimant-linked period summaries
-- payout status summaries
-- claim/reference guidance if applicable
-**Side Effects:** none
-
-### 13.2.2 `GET /v1/profit-participation/me/periods/{period_id}`
-**Purpose:** retrieve one bounded claimant-linked period detail  
-**Caller Type:** authenticated user with authorized linkage  
-**Response Summary:**
-- bounded allocation status
-- payout-intent or execution status summary
-- public-safe and first-party-safe guidance
-**Side Effects:** none
-
-## 13.3 Internal Service APIs
-
-### 13.3.1 `POST /internal/v1/profit-participation/periods`
-**Purpose:** create draft profit participation period  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
-- `period_label`
-- `period_start_at`
-- `period_end_at`
-- optional `economic_summary`
-- `idempotency_key`
-**Response Summary:** period summary
-**Side Effects:** creates draft period
-**Idempotency Behavior:** required
-**Audit Requirements:** sensitive period-creation audit
-**Emitted Events:** `profit_participation.period_created`
-
-### 13.3.2 `POST /internal/v1/profit-participation/periods/{period_id}/eligibility-runs`
-**Purpose:** attach approved eligibility output reference to one period  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `eligibility_reference`
-- `eligibility_snapshot_reference`
-- `eligibility_summary`
-- `idempotency_key`
-**Response Summary:** eligibility-run summary and period-state summary
-**Side Effects:** creates eligibility-run lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** eligibility-link audit
-**Emitted Events:** `profit_participation.eligibility_attached`
-
-### 13.3.3 `POST /internal/v1/profit-participation/periods/{period_id}/allocations/generate`
-**Purpose:** generate allocation set from approved eligibility run and approved amount inputs  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `eligibility_run_id`
-- `allocation_amount_summary`
-- optional `generation_profile`
-- `idempotency_key`
-**Response Summary:** allocation-generation summary and aggregate totals
-**Side Effects:** creates allocation records and allocation summary
-**Idempotency Behavior:** required
-**Audit Requirements:** critical allocation-generation audit
-**Emitted Events:** `profit_participation.allocations_generated`
-
-### 13.3.4 `POST /internal/v1/profit-participation/periods/{period_id}/payout-intents`
-**Purpose:** create payout intent set from approved allocations  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `allocation_selection_criteria` or `allocation_ids[]`
-- optional `batching_profile`
-- `idempotency_key`
-**Response Summary:** payout-intent summary and linked allocation summary
-**Side Effects:** creates payout intents and linkage records
-**Idempotency Behavior:** required
-**Audit Requirements:** payout-intent audit
-**Emitted Events:** `profit_participation.payout_intents_created`
-
-### 13.3.5 `POST /internal/v1/profit-participation/payout-intents/{payout_intent_id}/execution-references`
-**Purpose:** link downstream payout execution reference to one payout intent  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `execution_reference_type`
-- `execution_reference_id`
-- optional `execution_summary`
-- `idempotency_key`
-**Response Summary:** execution-reference summary and updated payout-intent state
-**Side Effects:** creates execution lineage and may advance payout-intent state
-**Idempotency Behavior:** required
-**Audit Requirements:** execution-link audit
-**Emitted Events:** `profit_participation.execution_linked`
-
-### 13.3.6 `GET /internal/v1/profit-participation/periods/{period_id}`
-**Purpose:** retrieve canonical period truth for trusted services  
-**Caller Type:** internal trusted service  
-**Response Summary:** full period, eligibility, allocation, payout-intent, and execution lineage
-**Side Effects:** none
-
-## 13.4 Admin / Control-Plane APIs
-
-### 13.4.1 `POST /admin/v1/profit-participation/periods/{period_id}/approve`
-**Purpose:** approve allocation-ready period under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** approved period summary
-**Side Effects:** period transitions to approved if policy checks pass
-**Audit Requirements:** critical audit
-**Emitted Events:** `profit_participation.period_approved`
-
-### 13.4.2 `POST /admin/v1/profit-participation/periods/{period_id}/release`
-**Purpose:** release approved payout intents for execution coordination  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- optional `release_profile`
-- `idempotency_key`
-**Response Summary:** released period summary and affected payout-intent summary
-**Side Effects:** period moves to released_for_execution; intents may move to approved/submitted state
-**Audit Requirements:** critical audit
-**Emitted Events:** `profit_participation.period_released`
-
-### 13.4.3 `POST /admin/v1/profit-participation/allocations/corrections`
-**Purpose:** apply controlled allocation or payout-intent correction under policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `correction_type`
-- `correction_summary`
-- `reason_code`
-- `operator_note`
-- optional `related_case_id`
-- `idempotency_key`
-**Response Summary:** correction summary
-**Side Effects:** creates corrected or superseding allocation/intent lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `profit_participation.corrected`
-
-### 13.4.4 `POST /admin/v1/profit-participation/payout-intents/{payout_intent_id}/reprocess`
-**Purpose:** reprocess failed or partial payout-intent execution-preparation flow  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reprocess_profile`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** reprocess summary and updated payout-intent state
-**Side Effects:** may create superseding payout-intent lineage or refresh execution coordination status
-**Audit Requirements:** critical audit
-**Emitted Events:** `profit_participation.reprocessed`
-
-### 13.4.5 `POST /admin/v1/profit-participation/discrepancies`
-**Purpose:** resolve profit participation discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, reprocess, restrict, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `profit_participation.discrepancy_resolved`
-
----
-
-## 14. Request Rules
-
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive profit-participation mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored allocation or payout truth as authoritative input
-
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- eligibility-run attachment for a finalized period
-- allocation generation
-- payout-intent creation
-- release for execution
-- allocation or intent correction
-- discrepancy-resolution and reprocess actions
-
-Heightened validation may include:
-- period-state checks
-- eligibility integrity checks
-- aggregate amount and allocation-total checks
-- duplicate-allocation or duplicate-intent checks
-- operator role confirmation
-- governance/finance/security case linkage for sensitive actions
-
-### 14.3 Scope integrity rule
-Profit-participation mutations must target valid and authorized periods, allocations, payout intents, and execution references. Services and operators must not mutate unrelated or unauthorized participation state.
-
-### 14.4 Layer-separation rule
-Profit participation period, allocation, intent, and execution-reference state must remain explicitly separated. Release for execution must not be conflated with actual executed payout settlement.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- period, allocation, or payout-intent summaries where relevant
-- bounded aggregate totals where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If allocation generation, release, reprocessing, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target period, allocation, payout intent, or discrepancy
-- mutation type
-- resulting state
-- correction, release, or reprocess effects where relevant
-- whether public or first-party status views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal allocation/intention truth
-- public-safe period status
-- bounded first-party claimant-linked status
-- execution reference versus completed payout settlement
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
-- `type`
-- `title`
-- `status`
-- `code`
-- `detail`
-- `instance`
-- `correlation_id`
-
-### 16.2 Common error codes
-
-#### Authorization / permission errors
-- `PROFIT_PARTICIPATION_PERMISSION_DENIED`
-- `PROFIT_PARTICIPATION_OPERATOR_PERMISSION_DENIED`
-- `PROFIT_PARTICIPATION_SERVICE_PERMISSION_DENIED`
-- `PROFIT_PARTICIPATION_AUDIENCE_PERMISSION_DENIED`
-
-#### State conflict errors
-- `PROFIT_PARTICIPATION_PERIOD_STATE_INVALID`
-- `PROFIT_PARTICIPATION_ELIGIBILITY_STATE_INVALID`
-- `PROFIT_PARTICIPATION_ALLOCATION_STATE_INVALID`
-- `PROFIT_PARTICIPATION_PAYOUT_INTENT_STATE_INVALID`
-- `PROFIT_PARTICIPATION_REPROCESS_CONFLICT`
-
-#### Policy / safety errors
-- `PROFIT_PARTICIPATION_ELIGIBILITY_REQUIRED`
-- `PROFIT_PARTICIPATION_APPROVAL_REQUIRED`
-- `PROFIT_PARTICIPATION_RELEASE_FORBIDDEN`
-- `PROFIT_PARTICIPATION_DUPLICATE_INTENT`
-- `PROFIT_PARTICIPATION_CORRECTION_NOT_ALLOWED`
-
-#### Request integrity errors
-- `PROFIT_PARTICIPATION_IDEMPOTENCY_KEY_REQUIRED`
-- `PROFIT_PARTICIPATION_REQUEST_INVALID`
-- `PROFIT_PARTICIPATION_REQUEST_UNPROCESSABLE`
-
-#### Dependency or provider errors
-- `PROFIT_PARTICIPATION_EXECUTION_UNAVAILABLE`
-- `PROFIT_PARTICIPATION_STORAGE_UNAVAILABLE`
-- `PROFIT_PARTICIPATION_RECONCILIATION_UNAVAILABLE`
-
-### 16.3 Error handling rules
-- do not expose hidden internal treasury/security detail in public or low-privilege responses
-- do not imply completed payout execution from released intent state alone
-- distinguish no public status from forbidden first-party audience access
-- distinguish eligibility-required from generic invalid state
-- include retry guidance only where safe
-
----
-
-## 17. Idempotency and Mutation Safety
-
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- period creation
-- eligibility-run attachment
-- allocation generation
-- payout-intent creation
-- execution-reference linking
-- approval
-- release
-- correction
-- reprocess
-- discrepancy resolution
-
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
-
-### 17.3 Mutation safety rules
-- one canonical approved eligibility outcome per finalized period unless explicit supersession lineage exists
-- allocation totals and payout-intent coverage must remain reconciled to approved economic inputs
-- execution-reference linking must not duplicate effective payout-intent settlement lineage
-- corrections must be additive or superseding, not in-place destructive rewrites
-- reprocessing must preserve prior failed or partial lineage
-
----
-
-## 18. Versioning and Compatibility Rules
-
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
-
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to approved, released_for_execution, partially_executed, completed, corrected, or superseded states
-- new period types, source types, or execution-reference types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
-
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of released intent versus completed execution
-- changing claimant-linked status semantics incompatibly
-- removing critical allocation or execution-reference fields
-- changing correction or supersession semantics incompatibly
-
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
-
----
-
-## 19. Event Emission and Webhook Behavior
-
-This domain is event-capable.
-
-### 19.1 Internal events
-The Profit Participation domain must emit canonical internal events such as:
-- `profit_participation.period_created`
-- `profit_participation.eligibility_attached`
-- `profit_participation.allocations_generated`
-- `profit_participation.payout_intents_created`
-- `profit_participation.execution_linked`
-- `profit_participation.period_approved`
-- `profit_participation.period_released`
-- `profit_participation.corrected`
-- `profit_participation.reprocessed`
-- `profit_participation.discrepancy_resolved`
-
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- period ID
-- allocation or payout-intent reference where relevant
-- execution reference where relevant
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound profit-participation webhooks by default. Any future outbound status webhook surface must be narrow, security-reviewed, and governed by a separate contract.
-
----
-
-## 20. Audit and Activity Requirements
-
-The following actions must generate durable audit events:
-
-- period creation
-- eligibility attachment
-- allocation generation
-- payout-intent creation
-- approval and release actions
-- correction and reprocess actions
-- discrepancy resolution
-- other sensitive profit-participation mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target period / allocation / payout intent / execution reference / discrepancy reference as applicable
-- action type
-- before/after summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
-Public-facing activity may show selected period publication events through other bounded surfaces, but canonical internal audit truth remains durable and immutable.
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `profit_participation_periods`
-- `id` PK
-- `period_label`
-- `period_start_at`
-- `period_end_at`
-- `state`
-- `approved_amount_summary_json` nullable
-- `created_at`
-- `updated_at`
-- `released_at` nullable
-- `completed_at` nullable
-
-**Constraints:**
-- unique (`period_start_at`, `period_end_at`)
-- index on `state`
-
-### 21.2 `profit_participation_eligibility_runs`
-- `id` PK
-- `profit_participation_period_id` FK -> `profit_participation_periods.id`
-- `eligibility_reference`
-- `eligibility_snapshot_reference`
-- `state`
-- `eligibility_summary_json`
-- `created_at`
-- `approved_at` nullable
-
-**Constraints:**
-- index on `profit_participation_period_id`
-- index on `state`
-
-### 21.3 `profit_participation_allocations`
-- `id` PK
-- `profit_participation_period_id` FK -> `profit_participation_periods.id`
-- `eligibility_run_id` FK -> `profit_participation_eligibility_runs.id`
-- `claimant_reference_type`
-- `claimant_reference_id`
-- `allocation_units`
-- `stablecoin_amount`
-- `state`
-- `created_at`
-- `updated_at`
-- `executed_at` nullable
-- `corrected_at` nullable
-
-**Constraints:**
-- unique (`eligibility_run_id`, `claimant_reference_type`, `claimant_reference_id`)
-- index on `profit_participation_period_id`
-- index on `state`
-
-### 21.4 `profit_participation_allocation_summaries`
-- `id` PK
-- `profit_participation_period_id` FK -> `profit_participation_periods.id`
-- `eligibility_run_id` FK -> `profit_participation_eligibility_runs.id`
-- `total_allocations_count`
-- `total_stablecoin_amount`
-- `created_at`
-- `updated_at`
-
-### 21.5 `payout_intents`
-- `id` PK
-- `profit_participation_period_id` FK -> `profit_participation_periods.id`
-- `state`
-- `intent_amount_total`
-- `batch_reference` nullable
-- `created_at`
-- `updated_at`
-- `submitted_at` nullable
-- `executed_at` nullable
-- `failed_at` nullable
-
-**Constraints:**
-- index on `profit_participation_period_id`
-- index on `state`
-
-### 21.6 `payout_intent_allocations`
-- `id` PK
-- `payout_intent_id` FK -> `payout_intents.id`
-- `profit_participation_allocation_id` FK -> `profit_participation_allocations.id`
-- `created_at`
-
-**Constraints:**
-- unique (`payout_intent_id`, `profit_participation_allocation_id`)
-- index on `payout_intent_id`
-
-### 21.7 `payout_execution_references`
-- `id` PK
-- `payout_intent_id` FK -> `payout_intents.id`
-- `execution_reference_type`
-- `execution_reference_id`
-- `execution_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `payout_intent_id`
-- index on (`execution_reference_type`, `execution_reference_id`)
-
-### 21.8 `participation_attestations`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `attestation_type`
-- `attestation_summary_json`
-- `created_at`
-
-### 21.9 `participation_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.10 `participation_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.11 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.12 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical participation truth stays in periods, eligibility runs, allocations, payout intents, and execution references
-- public and first-party status views must derive from canonical truth filtered by disclosure policy
-- raw source snapshots and treasury notes remain outside public response shapes
-- completed payout execution truth remains referenced, not duplicated as uncontrolled mutation
-
-### Reconciliation notes
-- one approved period should reconcile to one current approved eligibility output and one aggregate allocation summary under current lineage
-- payout-intent totals must reconcile to linked allocation totals
-- execution references must reconcile to payout-intent state changes
-- discrepancy cases must preserve visible review lineage for failed or conflicting participation conditions
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    PPAPI[Profit Participation API<br/>fuze-backend-api]
-    PeriodStore[(profit_participation_periods)]
-    EligStore[(profit_participation_eligibility_runs)]
-    AllocationStore[(profit_participation_allocations)]
-    IntentStore[(payout_intents)]
-    ExecStore[(payout_execution_references)]
-    SummaryStore[(profit_participation_allocation_summaries)]
-    InternalSvc[Internal FUZE Services]
-
-    PublicUser --> PPAPI
-    AuthUser --> WebApp
-    WebApp --> PPAPI
-    AdminUI --> PPAPI
-    InternalSvc --> PPAPI
-
-    PPAPI --> PeriodStore
-    PPAPI --> EligStore
-    PPAPI --> AllocationStore
-    PPAPI --> IntentStore
-    PPAPI --> ExecStore
-    PPAPI --> SummaryStore
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    profit_participation_periods ||--o{ profit_participation_eligibility_runs : evaluates
-    profit_participation_periods ||--o{ profit_participation_allocations : allocates
-    profit_participation_eligibility_runs ||--o{ profit_participation_allocations : determines
-    profit_participation_periods ||--o{ payout_intents : prepares
-    payout_intents ||--o{ payout_intent_allocations : covers
-    profit_participation_allocations ||--o{ payout_intent_allocations : included_in
-    payout_intents ||--o{ payout_execution_references : executes
-    profit_participation_periods ||--o{ participation_mutation_actions : tracks
-
-    profit_participation_periods {
-        uuid id PK
-        string period_label
-        datetime period_start_at
-        datetime period_end_at
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime released_at
-        datetime completed_at
-    }
-
-    profit_participation_eligibility_runs {
-        uuid id PK
-        uuid profit_participation_period_id FK
-        string eligibility_reference
-        string eligibility_snapshot_reference
-        string state
-        datetime created_at
-        datetime approved_at
-    }
-
-    profit_participation_allocations {
-        uuid id PK
-        uuid profit_participation_period_id FK
-        uuid eligibility_run_id FK
-        string claimant_reference_type
-        string claimant_reference_id
-        decimal allocation_units
-        decimal stablecoin_amount
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime executed_at
-    }
-
-    payout_intents {
-        uuid id PK
-        uuid profit_participation_period_id FK
-        string state
-        decimal intent_amount_total
-        datetime created_at
-        datetime updated_at
-        datetime submitted_at
-        datetime executed_at
-    }
-
-    payout_intent_allocations {
-        uuid id PK
-        uuid payout_intent_id FK
-        uuid profit_participation_allocation_id FK
-        datetime created_at
-    }
-
-    payout_execution_references {
-        uuid id PK
-        uuid payout_intent_id FK
-        string execution_reference_type
-        string execution_reference_id
-        datetime created_at
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path — period to release
-1. internal service creates draft profit participation period
-2. approved eligibility output is attached
-3. allocation generation creates recipient allocations and aggregate totals
-4. payout intents are created from approved allocations
-5. admin approves period
-6. admin releases period/intents for execution coordination
-7. downstream execution references are linked as payouts progress
-8. public and first-party-safe status views refresh
-
-### 24.2 Happy path — public and first-party status
-1. public actor lists published profit participation periods
-2. authenticated actor checks bounded claimant-linked status
-3. backend filters canonical truth into public or claimant-safe read models
-4. actor sees current status, not raw internal preparation records
-
-### 24.3 Alternate path — partial execution
-1. released payout intents execute in batches
-2. some execution references succeed while others remain pending or fail
-3. period and intent states move to partially_executed
-4. status views expose bounded partial-execution posture
-5. remediation or reprocess may follow
-
-### 24.4 Failure path — invalid eligibility or duplicate intent
-1. allocation or intent-generation request is attempted
-2. backend detects missing approved eligibility, invalid period state, or duplicate coverage conflict
-3. request is rejected
-4. no effective duplicate allocation or intent is created
-
-### 24.5 Failure and remediation path — correction or reprocess
-1. allocation, intent, or execution linkage is found incorrect or stale
-2. admin opens correction or reprocess flow
-3. backend preserves prior lineage
-4. corrected allocation/intents or superseding execution coordination is created
-5. discrepancy closes with preserved history
-
-### 24.6 Restrict/close path
-1. period becomes restricted or must close without further execution
-2. admin applies restrictive lifecycle action through approved controls
-3. public-safe views update according to policy
-4. historical lineage remains queryable
-
-### 24.7 Retry behavior
-- duplicate period creation returns same canonical period result
-- duplicate eligibility attachment returns same lineage result where applicable
-- duplicate allocation generation or intent creation returns same canonical result or duplicate-safe conflict
-- duplicate approve/release/correct/reprocess/discrepancy actions return same terminal action result
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Profit Participation API
-    participant PER as Period Store
-    participant ELI as Eligibility Store
-    participant ALL as Allocation Store
-    participant INT as Payout Intent Store
-    participant EXE as Execution Reference Store
-
-    S->>API: POST /internal/v1/profit-participation/periods
-    API->>PER: Create draft period
-    API-->>S: period summary
-
-    S->>API: POST /internal/v1/profit-participation/periods/{period_id}/eligibility-runs
-    API->>ELI: Create eligibility linkage
-    API-->>S: eligibility summary
-
-    S->>API: POST /internal/v1/profit-participation/periods/{period_id}/allocations/generate
-    API->>ALL: Create allocations
-    API-->>S: allocation summary
-
-    S->>API: POST /internal/v1/profit-participation/periods/{period_id}/payout-intents
-    API->>INT: Create payout intents
-    API-->>S: intent summary
-
-    S->>API: POST /internal/v1/profit-participation/payout-intents/{payout_intent_id}/execution-references
-    API->>EXE: Create execution linkage
-    API-->>S: execution summary
-```
-
----
-
-## 26. Security and Risk Controls
-
-1. **Profit-participation truth is backend-owned**  
-   Frontends and informal channels may not authoritatively define allocation or payout-intent truth.
-
-2. **Layer separation is mandatory**  
-   The API must keep profit participation separate from FUZE token balances, Platform Credits, raw treasury balances, and executed payout settlement.
-
-3. **Eligibility-before-allocation**  
-   Allocation generation must require approved eligibility lineage.
-
-4. **Approval-before-release**  
-   Release for execution must require explicit period/intention approval according to policy.
-
-5. **Least privilege**  
-   Internal write and admin release/correction routes must be limited to authorized services and operators.
-
-6. **Immutable lineage for economic changes**  
-   Corrections, supersession, and reprocess actions must preserve historical lineage rather than erase prior state.
-
-7. **Public-private field separation**  
-   Public and first-party routes must not expose internal treasury notes, security details, or raw allocation-preparation internals beyond bounded policy.
-
-8. **Problem-details discipline**  
-   Error bodies must be structured and safe, without exposing hidden internal-only details.
-
-9. **Audit immutability**  
-   Sensitive profit-participation actions require durable immutable audit lineage.
-
-10. **Execution-status integrity**  
-    Released payout intents must not be represented as executed payouts until execution-reference lineage confirms downstream progress.
-
----
-
-## 27. Operational Considerations
-
-- public and first-party status routes should remain highly available
-- allocation generation and payout-intent creation are correctness-sensitive and must preserve economic integrity
-- partial-execution and failed-execution cases should surface clearly to ops views
-- discrepancy and reprocess flows should be observable and retryable
-- monitoring should alert on:
-  - failed allocation generation
-  - duplicate-intent anomalies
-  - release-without-approval attempts
-  - execution-reference drift
-  - unusual correction or reprocess volume
-  - public-status inconsistency versus canonical state
-
----
-
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between profit participation allocation truth, executed payout settlement, FUZE token holdings, Platform Credits, and treasury truth.
-2. Only `fuze-backend-api` owns canonical profit participation period, allocation, and payout-intent truth.
-3. Periods, eligibility runs, allocations, payout intents, and execution references are durable and backend-owned.
-4. Public and first-party routes expose only bounded safe status views.
-5. Eligibility lineage and required approval are enforced before release.
-6. Corrections, supersession, and reprocess actions preserve immutable lineage.
-7. Allocation, release, correction, and reprocess actions are idempotent and auditable.
-8. Internal and admin profit-participation routes are least-privilege and backend-only.
-9. Admin routes require reason-coded privileged authorization.
-10. Event emissions exist for major profit-participation mutations.
-11. Response and error semantics are stable and machine-readable.
-12. Database schema separates periods, eligibility, allocations, payout intents, execution references, and discrepancy layers.
-13. Public and first-party consumers can rely on canonical status routes without seeing hidden internal preparation details.
-14. Discrepancy handling is supported and safely replayable.
-15. Mermaid diagrams remain consistent with prose and data model.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-1. Internal service creates draft profit participation period successfully.
-2. Internal service attaches approved eligibility run successfully.
-3. Internal service generates allocations successfully.
-4. Internal service creates payout intents successfully.
-5. Internal service links execution reference successfully.
-6. Admin approves period successfully.
-7. Admin releases approved period successfully.
-8. Public actor reads published period summary successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access internal allocation detail.
-10. Internal service without write privilege cannot create period.
-11. Allocation generation without approved eligibility returns `PROFIT_PARTICIPATION_ELIGIBILITY_REQUIRED`.
-12. Release without approval returns `PROFIT_PARTICIPATION_APPROVAL_REQUIRED`.
-13. Duplicate intent creation for same covered allocation set returns `PROFIT_PARTICIPATION_DUPLICATE_INTENT`.
-14. Authenticated actor without authorized linkage cannot read claimant-linked detail.
-
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call admin approve/release/correct routes.
-16. Internal service without allocation privilege cannot generate allocations.
-17. Operator without release privilege cannot release period/intents.
-18. Profit-participation release does not authorize treasury execution or prove completed payout settlement by itself.
-
-### 29.4 Idempotency and replay cases
-19. Repeating period creation with same idempotency key returns original draft period result.
-20. Repeating eligibility attachment with same idempotency key returns original lineage result.
-21. Repeating release with same idempotency key returns original release result.
-22. Repeating correction or discrepancy resolution with same idempotency key returns original action result.
-
-### 29.5 Concurrency cases
-23. Concurrent allocation generation attempts preserve one canonical current allocation lineage and one duplicate-safe outcome where appropriate.
-24. Concurrent release and correction actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent execution-reference links on same payout intent preserve one explicit execution lineage set and duplicate-safe outcomes where appropriate.
-
-### 29.6 Recovery / admin cases
-26. Failed payout-intent execution-preparation flow can be reprocessed under controlled policy with explicit lineage.
-27. Corrected allocation remains historically linked to original allocation.
-28. Discrepancy resolution closes allocation or execution conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful period creation emits `profit_participation.period_created`.
-30. Successful eligibility attachment emits `profit_participation.eligibility_attached`.
-31. Successful allocation generation emits `profit_participation.allocations_generated`.
-32. Successful release emits `profit_participation.period_released`.
-33. Successful discrepancy resolution emits `profit_participation.discrepancy_resolved` with critical audit lineage.
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact claimant-linkage model for first-party authenticated status views is deferred.
-2. Exact allocation-unit formula and rounding rules by period are deferred.
-3. Exact release-batching strategy for payout intents is deferred.
-4. Exact public-safe aggregate disclosure depth for active versus completed periods is deferred.
-5. Exact correction taxonomy for partial execution anomalies is deferred.
-6. Exact discrepancy taxonomy for allocation and execution coordination conflicts is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  profit-participation/
-  payout-ledger/
-  payout-execution/
-  transparency-reporting/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep period identity, eligibility linkage, allocation generation, payout-intent creation, and execution-reference linkage in one canonical domain service
-- perform period-state, eligibility-integrity, and allocation-total checks inside the commit boundary
-- keep approval, release, correction, and reprocess actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public and first-party status views from canonical truth; do not let derived views mutate participation state
-
----
-
-## 32. Frontend Consumption Notes
-
-### For `fuze-frontend-webapp`
-- may read public period/status views and bounded first-party claimant-linked views where approved
-- must not infer executed payout settlement from release or submitted-intent status alone
-- must treat backend profit-participation responses as authoritative
-- should clearly distinguish approved, released, partially executed, completed, corrected, and superseded states when visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged approve, release, correction, reprocess, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical profit-participation truth client-side
-- should present immutable allocation and payout-intent lineage separately from current status summaries
-
----
-
-## 33. Contract Derivation Notes
-
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public period/status and first-party claimant-linked read operations
-- internal period creation, eligibility attachment, allocation generation, payout-intent, and execution-reference operations
-- admin approve / release / correction / reprocess / discrepancy operations
-- shared problem-details schema
-- profit-participation lifecycle events in AsyncAPI
-
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public period-status lookup helpers
-- first-party claimant-status helpers for approved surfaces
-- typed period, allocation-status, and payout-intent summary models
-- problem-error models for profit-participation outcomes
-
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out clearly.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit where relevant.
+- [x] Accepted-state vs final-success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behaviors are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Architecture Diagram clarifies API consumers, surface families, owner domains, data stores, event systems, async workers, chain systems, and downstream consumers.
+- [x] Data Design diagram uses Mermaid syntax.
+- [x] Data Design diagram distinguishes canonical and derived resources.
+- [x] Flow View is clear.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax.
+- [x] Data Flows distinguish accepted-state responses from final outcomes.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Acceptance Criteria include observable pass/fail conditions.
+- [x] Test Cases cover positive, negative, authorization, entitlement/visibility, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

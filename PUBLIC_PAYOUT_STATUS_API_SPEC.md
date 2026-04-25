@@ -1,685 +1,583 @@
-# PUBLIC_PAYOUT_STATUS_API_SPEC
+# PUBLIC_PAYOUT_STATUS_API_SPEC.md
+
+## Document Metadata
+
+- **Document Name:** `PUBLIC_PAYOUT_STATUS_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / production-grade interface-contract specification
+- **Status:** Draft canonical API SPEC v2
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Public Payout Status Domain; named individual owner not specified in retrieved governing materials
+- **Approval Authority:** FUZE platform architecture and API governance approval workflow; explicit named authority not specified in retrieved governing materials
+- **Review Cadence:** Quarterly and whenever payout-ledger, Base payout execution, transparency/reporting, public API, registry, chain, audit, or access-control posture materially changes
+- **Governing Layer:** Public-read / public-trust companion API layer derived from refined payout, public API, and public trust semantics
+- **Parent Registry:** FUZE API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Backend/API engineering, frontend/public surfaces, public trust/reporting teams, payout ledger implementers, Base payout execution implementers, registry/reporting authors, security, audit, operations, OpenAPI/AsyncAPI/SDK authors, QA and contract-validation teams
+- **Primary Purpose:** Define the canonical API contract for FUZE public payout-status surfaces, including cycle-status publication, claim-window visibility, public-safe funding and claim-progress posture, payout-status timelines, artifact linkage, correction/supersession lineage, authenticated enrichments, event behavior, and implementation guardrails
+- **Primary Upstream References:** `PUBLIC_PAYOUT_STATUS_API_SPEC.md` v1, `PAYOUT_LEDGER_SPEC.md`, `PAYOUT_LEDGER_API_SPEC.md`, `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`, `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md`, `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`, `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`, `TRANSPARENCY_MODEL_SPEC.md`, `TRANSPARENCY_REPORTING_SPEC.md`, `PUBLIC_API_SPEC.md`, `API_ARCHITECTURE_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`, `CHAIN_ARCHITECTURE_SPEC.md`, account/session foundation documents, workspace access-control foundation documents
+- **Primary Downstream Dependents:** public payout pages, holder-facing status views, public transparency surfaces, public metadata and registry lookup surfaces, reporting exports, partner-safe status integrations, API implementation contracts, OpenAPI/AsyncAPI contracts, SDK read surfaces, public cache/projection services, QA/regression suites
+- **API Surface Families Covered:** public-read, authenticated-read, first-party read, internal service, admin/control-plane, event/async, reporting/export, public-trust projection
+- **API Surface Families Excluded:** claim submission APIs, raw private-holder entitlement APIs, treasury-control APIs, Base contract ABI APIs, internal eligibility computation APIs, governance/vault mutation APIs, low-level worker/runbook APIs, unrestricted third-party payout webhooks
+- **Canonical System Owner(s):** Public Payout Status Domain for public payout-status publication truth; Payout Ledger Domain for payout-cycle ledger truth; Base Payout Execution Domain for execution truth; Profit Participation Domain for payout-cycle semantic truth; Snapshot and Eligibility Domain for eligibility truth; Transparency/Registry domains for their own publication truth
+- **Canonical API Owner:** FUZE Public Payout Status API owner within `fuze-backend-api`; named owner not specified in retrieved materials
+- **Supersedes:** Earlier or weaker interpretations that treat public payout status as raw payout-ledger export, frontend-owned display copy, transparency-report narrative, Base execution status flag, generic payout dashboard, or direct holder-entitlement surface
+- **Superseded By:** None currently defined
+- **Related Decision Records:** Not explicitly specified in retrieved governing materials
+- **Canonical Status Note:** This API spec governs interface-contract expression only. Refined system specs own semantic truth; this API spec expresses public payout-status semantics safely at the interface layer.
+- **Implementation Status:** Normative draft for downstream implementation alignment
+- **Approval Status:** Pending explicit FUZE approval workflow
+- **Change Summary:** Upgrades the v1 public payout-status API into API SPEC v2 with explicit hierarchy metadata, truth classes, ownership boundaries, route families, request/response/error/status models, idempotency, audit, public/internal/admin separation, diagrams, flow views, acceptance criteria, and test cases.
+
+## Purpose
+
+This specification defines the production-grade FUZE API contract for public payout-status operations.
+
+The Public Payout Status API exists because FUZE needs a stable public trust surface for payout-cycle visibility that is narrower than canonical payout-ledger truth, narrower than Base payout execution truth, and more structured than informal announcements or dashboard copy. It exposes public-safe payout-cycle state, claim-window posture, funding posture, correction lineage, linked artifacts, and payout-status history without leaking private eligibility details, internal preparation details, treasury-sensitive controls, or raw execution internals.
+
+This API MUST preserve the distinction between:
+
+- canonical payout-cycle ledger truth,
+- public payout-status publication truth,
+- Base execution truth,
+- profit-participation semantic truth,
+- eligibility and holder-specific truth,
+- transparency/reporting truth,
+- registry truth,
+- derived public read-model truth,
+- and presentation copy.
+
+## Scope
+
+This specification governs:
+
+- public-read payout-status list and detail surfaces;
+- public payout-cycle status lookup by public cycle reference;
+- public claim-window visibility surfaces;
+- public-safe funding and claim-progress summaries;
+- authenticated actor-aware payout-status enrichments where policy permits;
+- internal service APIs for creating, linking, refreshing, and preparing payout-status records;
+- admin/control-plane APIs for publication, restriction, withdrawal, correction, supersession, and discrepancy resolution;
+- event and async behavior for public payout-status lifecycle changes;
+- request, response, error, status, idempotency, retry, audit, observability, compatibility, and migration rules.
+
+## Out of Scope
+
+This API MUST NOT define or own:
+
+- claim submission, claim execution, or claimant transaction mutation;
+- detailed holder entitlement computation;
+- snapshot and eligibility algorithms;
+- payout-ledger lifecycle truth beyond bounded public status publication;
+- Base payout execution runs, batches, receipts, attempts, or reconciliation truth;
+- treasury approval, vault action, multisig, timelock, or governance controls;
+- transparency-report authoring workflow;
+- public contract/wallet registry mutation truth;
+- low-level website rendering, static-site generation, explorer integration, database topology, or queue internals.
 
-## 1. Title
+## Design Goals
 
-**PUBLIC_PAYOUT_STATUS_API_SPEC.md**
+1. Expose payout-cycle status in a stable, public-safe, intelligible form.
+2. Prevent public status from becoming a hidden owner of payout-ledger, execution, eligibility, treasury, or reporting truth.
+3. Preserve correction, withdrawal, supersession, and discrepancy lineage.
+4. Support public, first-party, internal, admin, event, and reporting consumers without collapsing their permissions.
+5. Make status publication idempotent, auditable, observable, versionable, and migration-safe.
+6. Provide enough contract precision for OpenAPI, AsyncAPI, SDK, backend, frontend, cache, and QA derivation.
 
----
+## Non-Goals
 
-## 2. Document Metadata
+This specification does not attempt to:
 
-- **Document Name:** PUBLIC_PAYOUT_STATUS_API_SPEC.md
-- **API Classification:** public-read, authenticated-read, internal, event-driven
-- **Owning Domain:** Public Payout Status Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** public payout status records, payout-status publication states, payout-cycle public projections, claim-window visibility records, artifact link records, correction-safe public payout lineage, and bounded actor-aware payout-status enrichments in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE public payout status, including public cycle-status publication, claim-window visibility, payout-linked trust-surface discovery, bounded holder-safe enrichments, and correction-safe payout-status lineage across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
+- expose raw internal payout preparation state;
+- publish private holder-level eligibility or claim details by default;
+- replace the payout ledger with a public status table;
+- make public transparency reports canonical payout truth;
+- make Base chain observations automatically equivalent to public payout status;
+- provide a generic public write surface;
+- allow frontend display labels to define business state.
 
----
+## Core Principles
 
-## 2.1 API Classification Header
+### Public status is a deliberate publication layer
 
-- **API Classification:** public-read | authenticated-read | internal | event-driven
-- **Owning Domain:** Public Payout Status Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** public payout-status publication domain
+Public payout status MUST be an intentionally governed publication layer. It MUST NOT be implemented as an automatic raw dump from payout ledger, Base execution, treasury, eligibility, or transparency stores.
 
----
+### Public status is not payout truth
 
-## 3. Purpose
+Payout-ledger truth, Base execution truth, profit-participation truth, eligibility truth, treasury truth, and transparency/reporting truth remain owned by their respective domains. Public payout status MAY reference them and publish bounded summaries, but MUST NOT redefine them.
 
-This document defines the canonical API specification for FUZE public payout status operations. It translates the governing FUZE platform architecture, public API rules, payout-ledger rules, profit participation rules, snapshot and eligibility rules, Base payout execution rules, transparency rules, and API architecture rules into an implementation-ready API contract.
+### Historical intelligibility is mandatory
 
-This API exists because FUZE requires a public trust surface for payout-cycle visibility that is narrower than internal payout truth and more structured than informal announcements. Public payout status must therefore remain a deliberate public-read layer that explains cycle state, funding posture, claim-window posture, correction lineage, and public-safe status history without leaking unsafe internal detail or silently redefining canonical payout truth.
+Corrections, supersessions, withdrawals, and restrictions MUST preserve lineage. Silent rewriting of public payout status is forbidden.
 
-Public payout status must preserve explicit distinction between:
-- canonical payout-cycle business truth,
-- public payout-status publication,
-- public payout ledger and transparency artifacts,
-- and bounded holder-safe enrichments.
+### Public-safe and authenticated-safe are distinct
 
-Accordingly, this specification defines how public payout-status records, payout-status families, publication states, cycle references, claim-window visibility, artifact links, and correction lineage are represented, and how public payout-status behavior remains auditable, idempotent, and architecture-consistent across FUZE.
+Public unauthenticated status, authenticated actor-aware enrichments, internal canonical records, and admin/control-plane actions MUST remain distinct route families and response classes.
 
----
+### Accepted publication is not final source truth
 
-## 4. Scope
+If public-status publication or refresh is asynchronous, `accepted` means that a publication operation was accepted, not that upstream payout state changed or final public propagation completed.
 
-This specification covers:
+## Canonical Definitions
 
-- public-read APIs for public payout-cycle status, claim-window visibility, payout-status timelines, and payout-linked trust-surface discovery
-- authenticated read APIs for bounded actor-aware payout-status enrichments where policy allows
-- internal APIs for public payout-status record creation, artifact linkage, publication, correction, supersession, and withdrawal
-- publication-state handling for public payout status records, payout-status timelines, and derived public payout summaries
-- event emission requirements for payout-status lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+- **Public Payout Status Record:** The canonical public-status publication-domain record for a payout-status surface.
+- **Payout Status Family:** A classification family such as `cycle_status`, `claim_window_status`, `funding_posture`, `correction_notice`, `timeline`, or `supporting_artifact`.
+- **Public Cycle Reference:** A public-safe identifier for a payout cycle. It MUST be stable and MUST NOT expose unsafe internal identifiers unless explicitly approved.
+- **Claim-Window Visibility Record:** A publication-domain record describing public-safe claim-window posture, such as scheduled, open, closing, closed, or superseded.
+- **Artifact Link:** A public-safe link to a transparency report, registry entry, ledger summary, proof artifact, or documentation artifact.
+- **Authenticated Enrichment:** A bounded actor-aware extension to public status. It MAY expose additional safe context for an authenticated actor, but MUST NOT expose full private entitlement truth unless governed by a more specific claim/holder API.
+- **Supersession Link:** A lineage relation connecting an older status record to its successor or corrective status.
+- **Discrepancy Case:** A remediation record for stale, conflicting, incomplete, or unsafe public payout status.
 
-This specification does **not** redefine:
+## Truth Class Taxonomy
 
-- payout-ledger ownership in full detail
-- profit participation business logic in full detail
-- snapshot and eligibility computation in full detail
-- Base payout execution internals in full detail
-- holder-specific claim entitlement logic in full detail
-- transparency-report authoring workflow in full detail
-- public registry ownership in full detail
-- low-level website rendering implementation
+This API MUST distinguish these truth classes:
 
-Those remain governed by their own source-of-truth specifications.
+1. **Semantic truth:** payout-cycle meaning owned by Profit Participation.
+2. **Ledger truth:** cycle identity, funding references, claim-state aggregate posture, correction lineage, and visibility-class posture owned by Payout Ledger.
+3. **Execution truth:** Base execution run, submission, receipt, settlement, and claim-state facts owned by Base Payout Execution and chain-adjacent systems.
+4. **Eligibility truth:** snapshot, eligibility, and entitlement-input truth owned by Snapshot and Eligibility.
+5. **Treasury/control truth:** funding authority, vault action, multisig/timelock, and governance approvals owned by treasury/governance domains.
+6. **API contract truth:** route families, request/response/error/status/idempotency/audit expectations governed by this spec.
+7. **Public publication truth:** public payout-status record state, classification, artifact linkage, publication state, and supersession lineage owned by this domain.
+8. **Event/async truth:** lifecycle event records and async operation status for publication and projection behavior.
+9. **Projection/reporting truth:** derived indexes, public pages, exports, reporting summaries, and caches.
+10. **Presentation truth:** labels, explanatory text, badge colors, UI status copy, and chart formatting.
 
----
+These truth classes MUST NOT be collapsed into a single `status` object.
 
-## 5. Source-of-Truth Inputs
+## Architectural Position in the Spec Hierarchy
 
-### Primary FUZE docs and specs used
+This API sits below refined system specifications and adjacent to public trust API companions. It expresses, but does not own, upstream payout semantics.
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+Upstream semantic owners include:
 
-#### Primary payout / public-read / trust-surface sources
-- `PUBLIC_API_SPEC.md`
-- `PAYOUT_LEDGER_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
-- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
-- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `API_ARCHITECTURE_SPEC.md`
+- `PAYOUT_LEDGER_SPEC.md` for structured payout-cycle record truth;
+- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md` for execution truth and reconciliation posture;
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md` for payout-cycle business meaning;
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` for eligibility truth;
+- `TRANSPARENCY_MODEL_SPEC.md` and `TRANSPARENCY_REPORTING_SPEC.md` for public explanation/reporting truth;
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` for official contract and wallet registry truth;
+- `PUBLIC_API_SPEC.md` and `API_ARCHITECTURE_SPEC.md` for interface governance.
 
-#### Supporting runtime and control sources
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `BUSINESS_CONTINUITY_AND_RECOVERY_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+## API Surface Families
 
-### Highest-priority interpretation applied
+### Public-read surfaces
 
-For this file, the most important governing interpretation is:
+Public-read routes expose published payout-status records and public cycle status. They require no authentication and MUST be safe for unauthenticated public use.
 
-1. public payout status is a deliberate public trust surface and not a convenience export of internal payout records
-2. backend owns canonical public payout-status publication truth
-3. public payout status must remain explicitly separate from payout-cycle business truth, payout execution truth, and holder-specific entitlement truth
-4. cycle state, funding posture, claim-window posture, correction lineage, and public-safe status history are suitable public surfaces when intentionally designed
-5. unsafe internal payout preparation detail, private eligibility detail, and control-plane mutation capabilities must remain non-public
-6. payout publication corrections and supersession must preserve historical intelligibility rather than silently rewriting public meaning
+### Authenticated-read and first-party surfaces
 
-### Supporting external standards used only as guidance
+Authenticated routes expose bounded actor-aware enrichments. They MUST use account/session and authorization checks and MUST NOT expose raw entitlement or private claim detail unless approved by a narrower holder/claim API.
 
-- HTTP semantics for public-read and bounded authenticated-read APIs
-- structured problem-details error design
-- general status-surface, timeline, and trust-surface publication patterns as supporting guidance
+### Internal service surfaces
 
-External guidance does not override FUZE source-of-truth documents.
+Internal routes create, refresh, link, and prepare payout-status records. They require service identity, least privilege, and idempotency.
 
----
+### Admin/control-plane surfaces
 
-## 6. Governing Architecture and Ownership Interpretation
+Admin routes publish, withdraw, supersede, restrict, or resolve discrepancies. They require privileged operator authorization, reason codes, audit events, and idempotency.
 
-This API belongs to the **Public Payout Status Domain** because it owns the canonical lifecycle of:
+### Event/async surfaces
 
-- public payout-status records,
-- payout-status family classification,
-- payout-cycle public references,
-- claim-window visibility publication,
-- public funding and claim-progress summaries,
-- public-safe artifact linkage,
-- and correction-safe payout-status history.
+Lifecycle events announce public payout-status changes to internal consumers. External webhook publication is not enabled by default.
 
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable payout-status publication truth
-- payout status must be built from canonical payout-owned domains without becoming a shadow owner
-- multiple trust-sensitive public surfaces require one stable payout-status layer
-- public trust requires structured, versionable payout visibility beyond ad hoc announcements
-- audit generation and correction lineage must be centralized
+### Reporting/export surfaces
 
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend may render payout status but must not own canonical payout-status publication truth
-- `fuze-frontend-admin`, because admin may publish or supersede payout-status artifacts but must not own payout-status truth
-- payout-ledger domain, because payout ledger owns canonical payout-cycle trust records while this domain owns a bounded public status surface derived from them
-- Base payout execution domain, because execution truth is one linked source but not the full public payout-status layer
-- snapshot and eligibility domain, because eligibility truth feeds payout status but is not owned here
-- transparency domain, because transparency artifacts may link to payout status but do not own payout-status publication truth
-
-### Architectural implications
-
-- every public payout-status record must declare what payout-status surface it is
-- every public payout-status record must preserve whether it is a primary public status record, a supporting artifact, or a derived public summary
-- public payout status may link to payout cycles, claim windows, transparency reports, registry entries, and public artifacts without owning their deeper truth
-- payout-status corrections, supersession, and withdrawal must preserve historical lineage rather than silently rewriting public meaning
-- authenticated enrichments must remain bounded and must not turn payout-status surfaces into hidden control interfaces
-
----
-
-## 7. Domain Responsibilities
-
-The Public Payout Status API domain is responsible for:
-
-1. maintaining canonical public payout-status records and payout-status family profiles
-2. classifying payout-status records as primary status records, supporting artifacts, or derived public summaries
-3. publishing stable public-read payout-cycle status surfaces for funding posture, claim-window posture, correction lineage, and timeline discovery
-4. preserving explicit publication, withdrawal, and supersession state
-5. linking payout-status records to payout-ledger artifacts, transparency reports, public registries, and other public trust artifacts
-6. exposing bounded authenticated-read payout-status enrichments where actor context is relevant
-7. emitting public payout-status lifecycle events
-8. generating audit lineage for sensitive publication and correction actions
-9. preserving separation between public payout-status artifacts and private canonical payout truth
-10. supporting public-safe degraded modes and trust-preserving payout-status behavior
-
-The domain is not responsible for:
-
-- owning payout-ledger truth
-- owning entitlement computation truth
-- owning payout execution truth
-- exposing arbitrary internal payout preparation state publicly
-- replacing domain-specific public APIs where richer payout contracts are needed
-- performing canonical eligibility reconciliation as its source-of-truth function
-
----
-
-## 8. Out of Scope
-
-The following are out of scope for this API specification:
+Reporting/export surfaces MAY expose derived public-safe status datasets but MUST preserve lineage, classification, and staleness metadata.
 
-- arbitrary public write APIs
-- claim submission or claim mutation APIs
-- payout entitlement authoring
-- private-holder entitlement APIs in full detail
-- governance-, treasury-, or control-plane payout mutation flows
-- end-user claim portal UX
-- low-level static site generation
-- internal audit investigation workflows
-
----
+## System / API Boundaries
 
-## 9. Canonical Entities and Data Ownership
+This API governs the public payout-status publication domain. It does not own payout-cycle truth, execution truth, eligibility truth, treasury truth, registry truth, reporting truth, or frontend presentation truth.
 
-### Durable entities
+Public status MAY reference payout-ledger records, Base execution references, transparency artifacts, and registry entries. Those references MUST remain typed and attributable. A public status record MUST declare whether it is a primary public status record, supporting artifact, derived summary, correction notice, or authenticated enrichment.
 
-#### 9.1 public_payout_status_records
-- **Owner:** Public Payout Status Domain
-- **Purpose:** canonical public payout-status records
-- **Nature:** source-of-truth durable entity
+## Adjacent API Boundaries
 
-#### 9.2 payout_status_family_profiles
-- **Owner:** Public Payout Status Domain
-- **Purpose:** profiles for payout-status families such as cycle status, claim-window status, correction notices, payout timelines, and supporting artifacts
-- **Nature:** source-of-truth durable entity
+- `PAYOUT_LEDGER_API_SPEC.md` owns payout-cycle ledger mutations and canonical ledger reads.
+- `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md` owns execution runs, batches, receipts, attempts, reconciliation, and execution-discrepancy APIs.
+- `PROFIT_PARTICIPATION_API_SPEC.md` owns participation periods, allocations, and payout-intent semantics.
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_API_SPEC.md` owns eligibility runs and eligibility lineage.
+- `PUBLIC_TRANSPARENCY_API_SPEC.md` owns public transparency publication records and disclosures.
+- `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md` owns public registry lookup and official public designation reads.
+- `PUBLIC_METADATA_API_SPEC.md` owns general public metadata publication.
+- `PUBLIC_API_SPEC.md` governs public API posture and exposure limits.
 
-#### 9.3 payout_status_classifications
-- **Owner:** Public Payout Status Domain
-- **Purpose:** classification of payout-status records as primary status records, supporting artifacts, or derived summaries
-- **Nature:** source-of-truth durable entity
+## Conflict Resolution Rules
 
-#### 9.4 payout_status_publication_states
-- **Owner:** Public Payout Status Domain
-- **Purpose:** publication, visibility, withdrawal, and lifecycle state of payout-status records
-- **Nature:** source-of-truth durable entity
+1. Higher-order refined platform and ownership specs override this document on semantic ownership.
+2. `PAYOUT_LEDGER_SPEC.md` wins on canonical payout-cycle ledger meaning.
+3. `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md` wins on execution state, receipt, and reconciliation meaning.
+4. `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` wins on eligibility and entitlement-input meaning.
+5. Treasury/governance specs win on funding authority and control posture.
+6. Transparency/reporting specs win on report publication truth.
+7. This API wins only on public payout-status interface-contract behavior and publication-domain record contracts.
+8. If ambiguity remains, choose the narrower, safer public exposure and mark the record or operation as `discrepancy_under_review`, `restricted`, or `publication_pending` rather than inferring success.
 
-#### 9.5 payout_status_cycle_references
-- **Owner:** Public Payout Status Domain
-- **Purpose:** explicit linkage from public payout-status records to payout-cycle identifiers and public cycle lineage
-- **Nature:** source-of-truth durable lineage entity
+## Default Decision Rules
 
-#### 9.6 payout_status_claim_window_records
-- **Owner:** Public Payout Status Domain
-- **Purpose:** claim-window visibility posture and public claim-window timeline records
-- **Nature:** source-of-truth durable entity
-
-#### 9.7 payout_status_artifact_links
-- **Owner:** Public Payout Status Domain
-- **Purpose:** links to public reports, payout-ledger records, registry entries, and supporting public artifacts
-- **Nature:** source-of-truth durable lineage entity
+- No valid public cycle reference means no public cycle-status publication.
+- No approved payout-ledger reference means public status MUST NOT imply canonical payout-cycle truth.
+- No validated execution reference means public status MUST NOT imply execution confirmation.
+- No approved visibility profile means unauthenticated exposure MUST be denied.
+- If public status conflicts with canonical ledger or execution truth, public status MUST be corrected, superseded, restricted, or marked under review.
+- If authenticated enrichment could reveal private entitlement or unsafe internal detail, it MUST be denied or narrowed.
+- If a public record is stale but not incorrect, it MUST expose staleness/last-refreshed metadata rather than silently pretending freshness.
+- If an operation mutates publication state, it MUST be reason-coded, idempotent, and audited.
 
-#### 9.8 payout_status_scope_enrichments
-- **Owner:** Public Payout Status Domain
-- **Purpose:** bounded authenticated-read enrichment rules by actor or scope
-- **Nature:** durable lineage entity
+## Roles / Actors / API Consumers
 
-#### 9.9 payout_status_supersession_links
-- **Owner:** Public Payout Status Domain
-- **Purpose:** supersession and correction lineage between payout-status records
-- **Nature:** durable lineage entity
+- **Public reader:** unauthenticated public consumer of published payout-status records.
+- **Holder / authenticated user:** authenticated actor eligible for bounded actor-aware status enrichment where policy allows.
+- **First-party client:** FUZE frontend or first-party application consuming public or authenticated status APIs.
+- **Internal service:** service identity creating, refreshing, linking, or preparing publication-domain records.
+- **Admin/operator:** privileged actor publishing, withdrawing, superseding, restricting, or resolving public-status discrepancies.
+- **Reporting/public-trust consumer:** consumer that incorporates status records into transparency/reporting surfaces.
+- **SDK/OpenAPI consumer:** downstream generated client surface consuming stable public or authenticated routes.
 
-#### 9.10 payout_status_discrepancy_cases
-- **Owner:** Public Payout Status Domain
-- **Purpose:** review and remediation records for stale, incorrect, incomplete, or inconsistent public payout status
-- **Nature:** durable review/remediation entity
-
-#### 9.11 payout_status_mutation_actions
-- **Owner:** Public Payout Status Domain
-- **Purpose:** high-level action records for create, publish, withdraw, correct, supersede, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.12 payout_status_audit_events
-- **Owner:** Audit / Activity domain, sourced by Public Payout Status Domain
-- **Purpose:** immutable trail for sensitive payout-status actions
-- **Nature:** durable audit records
+## Resource / Entity Families
 
-### Derived or cached entities
+Canonical publication-domain entities:
 
-#### 9.13 payout_status_index_views
-- **Owner:** derived read-model layer
-- **Purpose:** list/index projections for payout-status discovery surfaces
-- **Nature:** derived
+- `public_payout_status_record`
+- `payout_status_family_profile`
+- `payout_status_classification`
+- `payout_status_publication_state`
+- `payout_status_cycle_reference`
+- `payout_status_claim_window_record`
+- `payout_status_artifact_link`
+- `payout_status_scope_enrichment`
+- `payout_status_supersession_link`
+- `payout_status_discrepancy_case`
+- `payout_status_mutation_action`
+- `payout_status_audit_reference`
+- `payout_status_idempotency_record`
+- `payout_status_projection_checkpoint`
 
-#### 9.14 payout_status_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe payout status summaries and bounded authenticated enrichments
-- **Nature:** derived
+Derived entities:
 
-#### 9.15 payout_status_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into stale or inconsistent payout-status conditions
-- **Nature:** derived
+- `public_payout_status_index_view`
+- `public_payout_status_detail_view`
+- `public_payout_cycle_status_view`
+- `holder_safe_payout_status_view`
+- `payout_status_reporting_export`
+- `payout_status_cache_entry`
 
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 payout-status record lifecycle
-
-Possible states:
-
-- `draft`
-- `published`
-- `restricted`
-- `deprecated`
-- `superseded`
-- `archived`
-
-### 10.2 publication-state lifecycle
-
-Possible states:
-
-- `unpublished`
-- `published_public`
-- `published_authenticated`
-- `restricted`
-- `withdrawn`
-
-### 10.3 claim-window visibility lifecycle
-
-Possible states:
-
-- `not_open`
-- `scheduled`
-- `open`
-- `closing`
-- `closed`
-- `superseded`
+## Ownership Model
 
-### 10.4 discrepancy lifecycle
-
-Possible states:
-
-- `opened`
-- `under_review`
-- `resolved`
-- `failed`
-- `closed`
-
-Lifecycle notes:
-- published does not imply ownership of linked payout domains
-- public-safe and authenticated-only visibility must remain explicit
-- claim-window status is a bounded public visibility object and not the same thing as internal claim-processing truth
-- supersession must preserve historical public intelligibility
-- withdrawn or restricted states must not silently erase audit lineage
-
----
-
-## 11. API Surface Overview
-
-The API surface is divided into three families:
-
-### 11.1 Public-read APIs
-Used by public users, holders, community observers, and integrators for:
-- payout-status index retrieval
-- payout-status detail retrieval
-- payout-cycle public status discovery
-- claim-window public visibility discovery
-- payout-linked trust-surface discovery
-
-### 11.2 Authenticated read APIs
-Used by authenticated users and approved clients for:
-- bounded payout-status enrichment
-- actor- or scope-sensitive payout-status visibility where policy allows
-- authenticated access to payout references not broadly public but safe within actor scope
-
-### 11.3 Internal service and admin APIs
-Used by trusted internal services and privileged operators for:
-- creating and updating payout-status records
-- publishing, correcting, superseding, restricting, or withdrawing records
-- linking artifacts and maintaining correction lineage
-- resolving payout-status discrepancies
-
----
-
-## 12. Authentication and Authorization Model
-
-### 12.1 Authentication posture by route family
-
-#### Public-read routes
-No authentication required:
-- list payout-status records
-- retrieve payout-status detail
-- read public cycle-status and claim-window discovery where published
-
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded authenticated-only payout status
-- read actor- or workspace-scoped payout-status enrichments where allowed
-
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create and update payout-status records
-- attach artifact links
-- refresh publication states
-- read canonical truth
-
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- publish, withdraw, restrict, supersede, and resolve discrepancy cases
-
-### 12.2 Authorization checkpoints
-
-Authorization must evaluate:
-- caller identity and route family
-- whether payout-status record is public, authenticated-only, or internal-only
-- whether actor has scope visibility for authenticated enrichments
-- whether service has create/publish/link/read privilege
-- whether operator role is present for publication or correction actions
-- whether current payout-status state allows requested mutation
-
-### 12.3 Sensitive action rules
-
-The following require heightened checks:
-- publication of new public payout-status records
-- publication of funding-, claim-window-, or correction-sensitive payout-status records
-- withdrawal or restriction of already public payout-status artifacts
-- supersession of trust-sensitive published payout status
-- discrepancy-resolution actions
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-## 13.1 Public-Read APIs
-
-### 13.1.1 `GET /v1/public-payout-status`
-**Purpose:** list published public payout-status records  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `payout_status_family`
-- optional `classification`
-- optional `claim_window_state`
-- optional `status`
-- pagination
-**Response Summary:**
-- payout-status record summaries
-- family and classification labels
-- publication state
-- payout-cycle summary
-- claim-window summary
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
-
-### 13.1.2 `GET /v1/public-payout-status/{public_payout_status_id}`
-**Purpose:** retrieve one public payout-status record  
-**Caller Type:** public  
-**Response Summary:**
-- payout-status detail
-- classification and visibility information
-- payout-cycle reference
-- claim-window summary
-- artifact links
-- supersession guidance where relevant
-- public-safe status references
-**Side Effects:** none
-
-### 13.1.3 `GET /v1/public-payout-status/cycles/{payout_cycle_public_ref}`
-**Purpose:** retrieve public payout-cycle status detail by public cycle reference  
-**Caller Type:** public  
-**Response Summary:**
-- public cycle-status summary
-- funding posture summary
-- claim-window posture
-- correction lineage summary
-- linked trust-surface references
-**Side Effects:** none
-
-## 13.2 Authenticated Read APIs
-
-### 13.2.1 `GET /v1/public-payout-status/me`
-**Purpose:** retrieve bounded actor-aware payout-status enrichments where policy allows  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `payout_status_family`
-- pagination
-**Response Summary:**
-- payout-status summary list
-- actor-safe enrichment data
-- scoped references where allowed
-**Side Effects:** none
-
-### 13.2.2 `GET /v1/public-payout-status/me/{public_payout_status_id}`
-**Purpose:** retrieve one bounded actor-aware payout-status detail  
-**Caller Type:** authenticated user  
-**Response Summary:**
-- base public payout-status detail
-- bounded authenticated enrichment
-- scoped artifact references where allowed
-**Side Effects:** none
-
-## 13.3 Internal Service APIs
-
-### 13.3.1 `POST /internal/v1/public-payout-status`
-**Purpose:** create draft public payout-status record  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
-- `payout_status_family`
-- `classification`
-- `title`
-- optional `summary`
-- `payout_cycle_reference`
-- optional `claim_window_state`
-- `idempotency_key`
-**Response Summary:** payout-status record summary
-**Side Effects:** creates draft payout-status record
-**Idempotency Behavior:** required
-**Audit Requirements:** payout-status creation audit
-**Emitted Events:** `public_payout_status.record_created`
-
-### 13.3.2 `POST /internal/v1/public-payout-status/{public_payout_status_id}/artifact-links`
-**Purpose:** attach artifact links to one payout-status record  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `artifact_type`
-- `artifact_reference`
-- optional `artifact_summary`
-- `idempotency_key`
-**Response Summary:** artifact-link summary
-**Side Effects:** creates artifact-link lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** artifact-link audit
-**Emitted Events:** `public_payout_status.artifact_linked`
-
-### 13.3.3 `POST /internal/v1/public-payout-status/{public_payout_status_id}/scope-enrichments`
-**Purpose:** attach bounded authenticated enrichment rules to one payout-status record  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `scope_type`
-- `scope_reference`
-- `enrichment_profile`
-- `idempotency_key`
-**Response Summary:** scope-enrichment summary
-**Side Effects:** creates enrichment lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** enrichment audit
-**Emitted Events:** `public_payout_status.scope_enrichment_linked`
-
-### 13.3.4 `GET /internal/v1/public-payout-status/{public_payout_status_id}`
-**Purpose:** retrieve canonical public payout-status truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full payout-status record, classification, payout-cycle reference, claim-window records, publication state, artifact links, enrichments, supersession lineage, and discrepancy lineage
-**Side Effects:** none
-
-## 13.4 Admin / Control-Plane APIs
-
-### 13.4.1 `POST /admin/v1/public-payout-status/{public_payout_status_id}/publish`
-**Purpose:** publish public payout-status record under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `visibility_target`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** published payout-status summary
-**Side Effects:** publication state changes to published_public or published_authenticated
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_payout_status.record_published`
-
-### 13.4.2 `POST /admin/v1/public-payout-status/{public_payout_status_id}/withdraw`
-**Purpose:** withdraw or restrict public payout-status visibility under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `withdrawal_mode`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** withdrawn payout-status summary
-**Side Effects:** publication state changes to restricted or withdrawn
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_payout_status.record_withdrawn`
-
-### 13.4.3 `POST /admin/v1/public-payout-status/{public_payout_status_id}/supersede`
-**Purpose:** supersede one public payout-status record with another under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_public_payout_status_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates supersession linkage and updates visible preference
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_payout_status.record_superseded`
-
-### 13.4.4 `POST /admin/v1/public-payout-status/discrepancies`
-**Purpose:** resolve public payout-status discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, restrict, withdraw, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_payout_status.discrepancy_resolved`
-
----
-
-## 14. Request Rules
-
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive public payout-status mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored public payout-status truth as authoritative input
-
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- publication of new public payout-status records
-- publication of funding-, claim-window-, or correction-sensitive payout-status records
-- withdrawal or restriction of already public payout-status records
-- supersession of trust-sensitive published payout-status artifacts
-- discrepancy-resolution actions
-
-Heightened validation may include:
-- family/classification consistency checks
-- payout-cycle and claim-window validation
-- public-safe versus authenticated-only visibility checks
-- operator role confirmation
-- payout or reporting case linkage for sensitive actions
-
-### 14.3 Scope integrity rule
-Public payout-status mutations must target valid and authorized records, artifact links, enrichment records, claim-window records, and discrepancy records. Services and operators must not mutate unrelated or unauthorized payout-status state.
-
-### 14.4 Layer-separation rule
-Public payout-status domain must remain the public payout visibility layer. It must not collapse:
-- payout-ledger ownership,
-- entitlement ownership,
-- payout execution ownership,
-- transparency ownership,
-- or internal orchestration state
-into one ambiguous payout-status object.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- family and classification summaries
-- payout-cycle and claim-window summaries where relevant
-- artifact-link and publication-state summaries where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If publication propagation, withdrawal, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target payout-status record or discrepancy
-- mutation type
-- resulting publication state
-- withdrawal, supersession, or restriction effects where relevant
-- whether public-safe views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal payout-status truth
-- primary public payout-status records
-- supporting artifacts
-- derived public summaries
-- actor-scoped enrichment versus ordinary public payout status
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
+The Public Payout Status Domain owns public-status publication records, lifecycle state, status-family classification, public cycle references, claim-window visibility publication, artifact linkage, public-status discrepancy cases, and supersession lineage.
+
+It MUST NOT own payout-cycle ledger truth, Base execution truth, eligibility truth, funding authorization truth, transparency-report truth, registry truth, or private claim history. Derived views, exports, caches, dashboards, frontend pages, and SDK classes MUST remain downstream consumers.
+
+## Authority / Decision Model
+
+Routine public readers have read-only access to published public records. Authenticated actors may receive bounded enrichments only through policy-approved route families. Internal services may create and refresh records only with service identity and least-privilege authorization. Admin/operator actions may publish, restrict, withdraw, correct, supersede, or resolve discrepancies only through explicit reason-coded, audited, idempotent operations.
+
+Admin override paths MUST be bounded and MUST NOT silently rewrite or delete published history.
+
+## Authentication Model
+
+Public-read routes MAY be unauthenticated. Authenticated enrichment routes MUST require valid FUZE account/session authentication. Internal service routes MUST require service-to-service authentication. Admin/control-plane routes MUST require privileged operator authentication and step-up or policy checks where sensitive.
+
+Authentication MUST NOT be treated as authorization. A valid session does not imply entitlement to private payout detail.
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+- caller posture: public, authenticated, service, admin/operator;
+- route family and operation class;
+- publication state and visibility target;
+- public-safe versus authenticated-only classification;
+- actor scope and policy for enrichments;
+- service permission for internal mutations;
+- operator permission for publication/correction actions;
+- current state transition validity;
+- reason-code and policy-version requirements for sensitive actions.
+
+## Entitlement / Capability-Gating Model
+
+Public status is not an entitlement system. Authenticated enrichments MAY use entitlement or wallet-aware context to determine visibility, but MUST NOT author entitlement truth. Product capability gates MAY govern whether a client can access certain enriched views, but capability gating MUST NOT expand semantic visibility beyond policy-approved data.
+
+## API State Model
+
+### Public payout-status record lifecycle
+
+`draft -> ready_for_review -> published -> restricted -> superseded | deprecated | archived`
+
+### Publication-state lifecycle
+
+`unpublished -> published_public | published_authenticated -> restricted -> withdrawn | archived`
+
+### Claim-window visibility lifecycle
+
+`not_open -> scheduled -> open -> closing -> closed -> superseded`
+
+### Discrepancy lifecycle
+
+`opened -> under_review -> resolved | failed -> closed`
+
+### Async publication action lifecycle
+
+`received -> authenticated -> authorized -> validated -> idempotency_checked -> accepted -> queued -> projected -> published | failed | restricted`
+
+## Lifecycle / Workflow Model
+
+1. Internal service creates or refreshes a draft status record from approved upstream references.
+2. The API validates family, classification, public cycle reference, claim-window posture, and source-domain linkage.
+3. The API stores idempotency, operation, audit, and correlation lineage.
+4. Publication readiness checks ensure visibility and source references are valid.
+5. Admin/operator publishes, restricts, withdraws, corrects, or supersedes through reason-coded control-plane actions.
+6. Public projections and caches refresh asynchronously where needed.
+7. Events notify internal reporting, metadata, transparency, and monitoring consumers.
+8. Public and authenticated clients read stable list/detail/cycle surfaces.
+9. If source-domain truth changes or conflict is detected, the API opens a discrepancy case and corrects, supersedes, restricts, or withdraws with preserved lineage.
+
+## Architecture Diagram - Mermaid flowchart
+
+```mermaid
+flowchart LR
+  PublicReader[Public Readers / Community / Integrators]
+  Holder[Authenticated Holder / FUZE User]
+  FirstParty[First-Party Clients]
+  Admin[Admin / Operator]
+  InternalSvc[Internal Payout / Reporting Services]
+
+  PublicAPI[Public Payout Status API\npublic-read + authenticated-read]
+  InternalAPI[Internal Public Status API\nservice-only]
+  AdminAPI[Admin Public Status Control API]
+
+  PPS[(Public Payout Status Store\npublication truth)]
+  Idem[(Idempotency Records)]
+  Audit[(Audit / Activity Records)]
+  Proj[(Public Status Projections / Cache)]
+  Events[Event Bus / Async Projection]
+
+  Ledger[Payout Ledger Domain\ncycle ledger truth]
+  Execution[Base Payout Execution Domain\nexecution truth]
+  Profit[Profit Participation Domain\ncycle semantic truth]
+  Eligibility[Snapshot & Eligibility Domain\neligibility truth]
+  Transparency[Transparency / Reporting Domain]
+  Registry[Public Registry Domain]
+
+  PublicReader --> PublicAPI
+  Holder --> PublicAPI
+  FirstParty --> PublicAPI
+  Admin --> AdminAPI
+  InternalSvc --> InternalAPI
+
+  PublicAPI --> Proj
+  PublicAPI --> PPS
+  InternalAPI --> PPS
+  AdminAPI --> PPS
+  InternalAPI --> Idem
+  AdminAPI --> Idem
+  InternalAPI --> Audit
+  AdminAPI --> Audit
+  PPS --> Events
+  Events --> Proj
+  Events --> Transparency
+
+  Ledger --> InternalAPI
+  Execution --> InternalAPI
+  Profit --> InternalAPI
+  Eligibility --> InternalAPI
+  Transparency --> PPS
+  Registry --> PPS
+
+  PublicAPI -. derived only .-> Ledger
+  PublicAPI -. no mutation .-> Execution
+```
+
+## Data Design - Mermaid Diagram
+
+```mermaid
+erDiagram
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_PUBLICATION_STATE : has
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_CYCLE_REFERENCE : references
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_CLAIM_WINDOW_RECORD : publishes
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_ARTIFACT_LINK : links
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_SCOPE_ENRICHMENT : enriches
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_SUPERSESSION_LINK : supersedes
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_DISCREPANCY_CASE : reviews
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PAYOUT_STATUS_MUTATION_ACTION : mutates
+  PAYOUT_STATUS_MUTATION_ACTION ||--|| IDEMPOTENCY_RECORD : guarded_by
+  PAYOUT_STATUS_MUTATION_ACTION ||--|| AUDIT_EVENT : produces
+  PUBLIC_PAYOUT_STATUS_RECORD ||--o{ PUBLIC_PAYOUT_STATUS_PROJECTION : derives
+
+  PUBLIC_PAYOUT_STATUS_RECORD {
+    string id PK
+    string family
+    string classification
+    string state
+    string canonical_owner_reference
+    datetime created_at
+    datetime updated_at
+  }
+  PAYOUT_STATUS_PUBLICATION_STATE {
+    string id PK
+    string record_id FK
+    string visibility_target
+    string publication_state
+    datetime published_at
+    datetime withdrawn_at
+  }
+  PAYOUT_STATUS_CYCLE_REFERENCE {
+    string id PK
+    string record_id FK
+    string public_cycle_ref
+    string ledger_reference
+    string source_truth_class
+  }
+  PAYOUT_STATUS_CLAIM_WINDOW_RECORD {
+    string id PK
+    string record_id FK
+    string claim_window_state
+    datetime window_open_at
+    datetime window_close_at
+    string freshness_status
+  }
+  PAYOUT_STATUS_ARTIFACT_LINK {
+    string id PK
+    string record_id FK
+    string artifact_type
+    string artifact_reference
+    string visibility_class
+  }
+  PUBLIC_PAYOUT_STATUS_PROJECTION {
+    string id PK
+    string record_id FK
+    string projection_type
+    string freshness_status
+    datetime generated_at
+  }
+```
+
+## Flow View
+
+### Public read path
+
+1. Client calls public list/detail/cycle route.
+2. API applies public route-level rate limits and abuse controls.
+3. API reads only published public projections or canonical records with `published_public` state.
+4. API includes classification, public cycle reference, claim-window summary, linked artifacts, supersession guidance, freshness metadata, and stable timestamps.
+5. API omits internal references, private eligibility detail, private holder data, treasury-sensitive detail, and raw execution internals.
+
+### Authenticated enrichment path
+
+1. Authenticated client calls `/me` status route.
+2. API validates account/session and scope.
+3. Authorization evaluates actor-safe enrichment profile.
+4. API returns public base data plus bounded enrichment.
+5. API does not expose raw entitlement truth unless a narrower approved claim/holder API governs that behavior.
+
+### Internal publication path
+
+1. Internal service submits create/refresh/link request with service identity, correlation ID, and idempotency key.
+2. API validates source references against payout ledger, execution, eligibility, transparency, and registry linkage requirements.
+3. API persists draft or updated publication-domain record.
+4. API emits lifecycle event and audit linkage.
+5. Projection jobs refresh public/read views if publication state permits.
+
+### Admin correction path
+
+1. Operator submits publish, withdraw, supersede, restrict, or discrepancy-resolution action.
+2. API validates operator permission, reason code, policy posture, state transition, idempotency, and source-domain consistency.
+3. API persists action, audit, and lineage records.
+4. Public projections are refreshed or restricted asynchronously.
+5. Events notify reporting, transparency, monitoring, and dependent public surfaces.
+
+### Failure and degraded-mode path
+
+If source-domain systems are unavailable, public reads MAY serve last-known published projections with freshness/staleness metadata. Mutation and publication actions requiring source validation MUST fail closed or enter `publication_pending` / `discrepancy_under_review`, not infer source truth.
+
+## Data Flows - Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Public/Authenticated Client
+  participant API as Public Payout Status API
+  participant Auth as Auth/Authz Layer
+  participant PPS as Public Status Store
+  participant Cache as Public Projection Cache
+  participant Ledger as Payout Ledger Domain
+  participant Exec as Base Execution Domain
+  participant Audit as Audit Service
+  participant Bus as Event Bus
+
+  C->>API: GET /v1/public-payout-status/cycles/{public_cycle_ref}
+  API->>Auth: Apply public/authenticated posture and rate limits
+  Auth-->>API: Allowed posture
+  API->>Cache: Read published public projection
+  alt Projection fresh and published
+    Cache-->>API: Public-safe status view
+    API-->>C: 200 public payout status + freshness metadata
+  else Projection missing or stale
+    API->>PPS: Read canonical publication record
+    PPS-->>API: Record + publication state + lineage
+    API-->>C: 200 public status or 503/206 stale-safe response
+  end
+
+  participant S as Internal Service
+  S->>API: POST /internal/v1/public-payout-status (Idempotency-Key)
+  API->>Auth: Verify service identity and permission
+  API->>Ledger: Validate payout-cycle reference
+  Ledger-->>API: Valid/invalid ledger reference
+  API->>Exec: Validate execution reference if supplied
+  Exec-->>API: Valid/invalid execution reference
+  API->>PPS: Create draft status record + lineage
+  API->>Audit: Record mutation audit
+  API->>Bus: Emit public_payout_status.record_created
+  API-->>S: 201 created or 202 accepted
+
+  participant O as Admin Operator
+  O->>API: POST /admin/v1/public-payout-status/{id}/publish
+  API->>Auth: Verify operator, policy, reason code
+  API->>PPS: Transition publication state
+  API->>Audit: Critical audit event
+  API->>Bus: Emit record_published
+  Bus->>Cache: Refresh public projection
+  API-->>O: 200/202 published operation response
+```
+
+## Request Model
+
+All mutation requests MUST include:
+
+- authenticated service or operator identity;
+- `Idempotency-Key` header;
+- `X-Correlation-Id` or equivalent request correlation;
+- explicit `reason_code` for admin/control-plane actions;
+- target resource identifier;
+- source reference identifiers where linking upstream domains;
+- visibility target where publication state changes;
+- request body schema version where supported.
+
+Public read requests SHOULD support pagination, filtering by family/classification/claim-window state/public cycle reference, cache validators, and API versioning metadata.
+
+## Response Model
+
+Responses MUST distinguish:
+
+- public-safe status summaries;
+- authenticated enrichments;
+- canonical internal publication records;
+- admin operation responses;
+- async operation references;
+- stale/degraded public projections;
+- superseded or withdrawn statuses;
+- source-domain unavailable states.
+
+Successful public responses MUST include stable identifiers, family, classification, publication state, public cycle reference, claim-window posture where applicable, public-safe funding/claim summary where applicable, artifact links, supersession guidance where applicable, `last_updated_at`, `source_freshness`, and `correlation_id` where available.
+
+## Error / Result / Status Model
+
+Structured errors MUST include:
+
 - `type`
 - `title`
 - `status`
@@ -688,690 +586,365 @@ The API uses structured problem-details style error responses.
 - `instance`
 - `correlation_id`
 
-### 16.2 Common error codes
+Canonical error classes include:
 
-#### Authorization / permission errors
 - `PUBLIC_PAYOUT_STATUS_PERMISSION_DENIED`
 - `PUBLIC_PAYOUT_STATUS_OPERATOR_PERMISSION_DENIED`
 - `PUBLIC_PAYOUT_STATUS_SERVICE_PERMISSION_DENIED`
 - `PUBLIC_PAYOUT_STATUS_AUDIENCE_PERMISSION_DENIED`
-
-#### State conflict errors
+- `PUBLIC_PAYOUT_STATUS_RECORD_NOT_FOUND`
 - `PUBLIC_PAYOUT_STATUS_RECORD_STATE_INVALID`
 - `PUBLIC_PAYOUT_STATUS_PUBLICATION_STATE_INVALID`
-- `PUBLIC_PAYOUT_STATUS_SUPERSESSION_CONFLICT`
 - `PUBLIC_PAYOUT_STATUS_VISIBILITY_CONFLICT`
-
-#### Policy / safety errors
-- `PUBLIC_PAYOUT_STATUS_CLASSIFICATION_REQUIRED`
+- `PUBLIC_PAYOUT_STATUS_SUPERSESSION_CONFLICT`
 - `PUBLIC_PAYOUT_STATUS_PAYOUT_REFERENCE_REQUIRED`
-- `PUBLIC_PAYOUT_STATUS_VISIBILITY_NOT_ALLOWED`
+- `PUBLIC_PAYOUT_STATUS_SOURCE_REFERENCE_INVALID`
+- `PUBLIC_PAYOUT_STATUS_CLASSIFICATION_REQUIRED`
 - `PUBLIC_PAYOUT_STATUS_PUBLICATION_NOT_ALLOWED`
 - `PUBLIC_PAYOUT_STATUS_WITHDRAWAL_NOT_ALLOWED`
-
-#### Request integrity errors
 - `PUBLIC_PAYOUT_STATUS_IDEMPOTENCY_KEY_REQUIRED`
-- `PUBLIC_PAYOUT_STATUS_REQUEST_INVALID`
-- `PUBLIC_PAYOUT_STATUS_REQUEST_UNPROCESSABLE`
-
-#### Dependency or provider errors
-- `PUBLIC_PAYOUT_STATUS_STORAGE_UNAVAILABLE`
+- `PUBLIC_PAYOUT_STATUS_IDEMPOTENCY_CONFLICT`
+- `PUBLIC_PAYOUT_STATUS_RATE_LIMITED`
 - `PUBLIC_PAYOUT_STATUS_LEDGER_UNAVAILABLE`
-- `PUBLIC_PAYOUT_STATUS_REPORTING_UNAVAILABLE`
+- `PUBLIC_PAYOUT_STATUS_EXECUTION_UNAVAILABLE`
+- `PUBLIC_PAYOUT_STATUS_PROJECTION_STALE`
 
-### 16.3 Error handling rules
-- do not expose hidden internal governance, treasury, security, or audit detail in public or low-privilege responses
-- do not imply canonical entitlement or execution truth from payout-status publication alone
-- distinguish classification/visibility failure from generic invalid state
-- distinguish missing payout reference from generic invalid request
-- include retry guidance only where safe
+Public errors MUST NOT expose hidden treasury, security, signer, provider, internal topology, private eligibility, or audit investigation details.
 
----
+## Idempotency / Retry / Replay Model
 
-## 17. Idempotency and Mutation Safety
+Idempotency is REQUIRED for:
 
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- payout-status record creation
-- artifact-link attachment
-- scope-enrichment attachment
-- publish
-- withdraw
-- supersede
-- discrepancy resolution
+- internal record creation;
+- artifact-link attachment;
+- scope-enrichment attachment;
+- publication;
+- withdrawal/restriction;
+- supersession;
+- correction;
+- discrepancy resolution;
+- async projection refresh requests where replay could cause duplicate publication or audit ambiguity.
 
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
+The idempotency store MUST bind key, actor/service, route family, request hash, target resource, operation class, terminal result, and expiration policy. Same-key same-request replay MUST return the original semantic outcome. Same-key different-request replay MUST fail with `PUBLIC_PAYOUT_STATUS_IDEMPOTENCY_CONFLICT`.
 
-### 17.3 Mutation safety rules
-- one canonical visible payout-status record per current payout-status lineage unless explicit supersession exists
-- artifact and enrichment links must remain referentially consistent with payout-status family and classification
-- public publication and authenticated publication must remain explicitly distinct
-- corrections and supersession must preserve prior payout-status lineage
-- withdrawal and restriction must preserve auditability and public explanation where appropriate
+Retries MUST NOT create duplicate status records, duplicate artifact links, duplicate supersession links, duplicate audit records, or contradictory publication states.
 
----
+## Rate Limit / Abuse-Control Model
 
-## 18. Versioning and Compatibility Rules
+Public-read routes MUST have route-family-specific rate limits and cache-aware controls. Authenticated enrichment routes MUST have stricter per-account and per-scope limits. Admin/internal routes MUST have low-volume, high-signal controls and anomaly detection.
 
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
+Abuse controls MUST prevent enumeration of private or authenticated-only statuses, scraping patterns that stress trust surfaces during payout cycles, and attempts to infer unpublished payout state from error variation.
 
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to payout-status family, classification, claim-window state, or visibility meaning
-- new payout-status families, artifact-link types, and claim-window fields may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
+## Endpoint / Route Family Model
 
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of primary public payout-status record versus supporting artifact versus derived summary
-- changing visibility semantics incompatibly
-- removing critical payout-reference, claim-window, or artifact-link fields
-- changing supersession or withdrawal semantics incompatibly
+### Public read routes
 
-Such changes require explicit migration planning and version evolution.
+- `GET /v1/public-payout-status`
+- `GET /v1/public-payout-status/{public_payout_status_id}`
+- `GET /v1/public-payout-status/cycles/{payout_cycle_public_ref}`
+- `GET /v1/public-payout-status/cycles/{payout_cycle_public_ref}/timeline`
+- `GET /v1/public-payout-status/claim-windows/current`
 
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
+### Authenticated read routes
 
----
+- `GET /v1/public-payout-status/me`
+- `GET /v1/public-payout-status/me/{public_payout_status_id}`
+- `GET /v1/public-payout-status/me/cycles/{payout_cycle_public_ref}`
 
-## 19. Event Emission and Webhook Behavior
+### Internal service routes
 
-This domain is event-capable.
+- `POST /internal/v1/public-payout-status`
+- `PATCH /internal/v1/public-payout-status/{id}`
+- `POST /internal/v1/public-payout-status/{id}/artifact-links`
+- `POST /internal/v1/public-payout-status/{id}/scope-enrichments`
+- `POST /internal/v1/public-payout-status/{id}/refresh-source-lineage`
+- `GET /internal/v1/public-payout-status/{id}`
 
-### 19.1 Internal events
-The Public Payout Status domain must emit canonical internal events such as:
+### Admin/control-plane routes
+
+- `POST /admin/v1/public-payout-status/{id}/publish`
+- `POST /admin/v1/public-payout-status/{id}/restrict`
+- `POST /admin/v1/public-payout-status/{id}/withdraw`
+- `POST /admin/v1/public-payout-status/{id}/supersede`
+- `POST /admin/v1/public-payout-status/{id}/correct`
+- `POST /admin/v1/public-payout-status/discrepancies`
+
+Route names MAY be refined by implementation contracts, but MUST preserve the surface-family separation and semantics above.
+
+## Public API Considerations
+
+Public routes MUST expose only approved public-safe information. They MUST support stable versioning, conservative response fields, cache semantics, deprecation metadata, and safe error behavior. Public routes MUST NOT expose direct internal IDs unless explicitly classified as public-safe.
+
+## First-Party Application API Considerations
+
+First-party clients MAY consume public and authenticated surfaces. First-party usage does not prove a route should become a public contract. Frontend display copy MUST remain presentational and MUST NOT redefine status-state semantics.
+
+## Internal Service API Considerations
+
+Internal service APIs MUST be service-authenticated, least-privilege, schema-versioned, idempotent, and auditable. Internal routes MUST NOT become broad hidden write shortcuts into payout-ledger, execution, eligibility, treasury, or transparency domains.
+
+## Admin / Control-Plane API Considerations
+
+Admin operations MUST be explicit, bounded, reason-coded, policy-constrained, audited, and separated from public/first-party routes. Admin actions MUST preserve before/after summaries and lineage. Published records MUST NOT be silently deleted.
+
+## Event / Webhook / Async API Considerations
+
+Canonical internal events include:
+
 - `public_payout_status.record_created`
+- `public_payout_status.record_updated`
 - `public_payout_status.artifact_linked`
 - `public_payout_status.scope_enrichment_linked`
 - `public_payout_status.record_published`
+- `public_payout_status.record_restricted`
 - `public_payout_status.record_withdrawn`
+- `public_payout_status.record_corrected`
 - `public_payout_status.record_superseded`
+- `public_payout_status.discrepancy_opened`
 - `public_payout_status.discrepancy_resolved`
+- `public_payout_status.projection_refreshed`
 
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- public payout-status ID
-- payout-status family
-- classification
-- publication state
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound public payout-status webhooks by default. Any future outbound payout-status publication webhook surface must be narrow, security-reviewed, and governed by a separate contract.
-
----
-
-## 20. Audit and Activity Requirements
-
-The following actions must generate durable audit events:
-
-- payout-status record creation
-- artifact-link attachment
-- publish, withdraw, supersede, and discrepancy actions
-- scope-enrichment linkage where sensitivity requires
-- other sensitive public payout-status mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target payout-status record / artifact link / discrepancy reference as applicable
-- action type
-- before/after summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `public_payout_status_records`
-- `id` PK
-- `payout_status_family`
-- `classification`
-- `title`
-- `summary`
-- `state`
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-**Constraints:**
-- index on (`payout_status_family`, `classification`)
-- index on `state`
-
-### 21.2 `payout_status_family_profiles`
-- `id` PK
-- `payout_status_family`
-- `allowed_classifications_json`
-- `claim_window_profile_json`
-- `visibility_profile_json`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- unique `payout_status_family`
-
-### 21.3 `payout_status_classifications`
-- `id` PK
-- `public_payout_status_record_id` FK -> `public_payout_status_records.id`
-- `classification`
-- `canonical_owner_reference`
-- `created_at`
-
-**Constraints:**
-- index on `public_payout_status_record_id`
-
-### 21.4 `payout_status_publication_states`
-- `id` PK
-- `public_payout_status_record_id` FK -> `public_payout_status_records.id`
-- `publication_state`
-- `published_at` nullable
-- `restricted_at` nullable
-- `withdrawn_at` nullable
-- `created_at`
-
-**Constraints:**
-- index on `public_payout_status_record_id`
-- index on `publication_state`
-
-### 21.5 `payout_status_cycle_references`
-- `id` PK
-- `public_payout_status_record_id` FK -> `public_payout_status_records.id`
-- `payout_cycle_reference`
-- `public_cycle_label`
-- `created_at`
-
-**Constraints:**
-- index on `public_payout_status_record_id`
-
-### 21.6 `payout_status_claim_window_records`
-- `id` PK
-- `public_payout_status_record_id` FK -> `public_payout_status_records.id`
-- `claim_window_state`
-- `window_open_at` nullable
-- `window_close_at` nullable
-- `created_at`
-
-**Constraints:**
-- index on `public_payout_status_record_id`
-- index on `claim_window_state`
-
-### 21.7 `payout_status_artifact_links`
-- `id` PK
-- `public_payout_status_record_id` FK -> `public_payout_status_records.id`
-- `artifact_type`
-- `artifact_reference`
-- `artifact_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `public_payout_status_record_id`
-
-### 21.8 `payout_status_scope_enrichments`
-- `id` PK
-- `public_payout_status_record_id` FK -> `public_payout_status_records.id`
-- `scope_type`
-- `scope_reference`
-- `enrichment_profile_json`
-- `created_at`
-
-**Constraints:**
-- index on `public_payout_status_record_id`
-
-### 21.9 `payout_status_supersession_links`
-- `id` PK
-- `from_public_payout_status_id` FK -> `public_payout_status_records.id`
-- `to_public_payout_status_id` FK -> `public_payout_status_records.id`
-- `reason_code`
-- `created_at`
-
-**Constraints:**
-- unique (`from_public_payout_status_id`, `to_public_payout_status_id`)
-
-### 21.10 `payout_status_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.11 `payout_status_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.12 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.13 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical public payout-status truth stays in payout-status records, family profiles, classifications, publication states, cycle references, claim-window records, artifact links, enrichments, supersession links, and discrepancy records
-- payout-ledger, profit participation, snapshot/eligibility, and execution canonical truths remain external and are referenced rather than duplicated
-- public-safe views must derive from canonical public payout-status truth filtered by publication state and visibility class
-- actor-scoped enrichments remain bounded overlays rather than new canonical payout owners
-
-### Reconciliation notes
-- one visible public payout-status record should reconcile to one current payout-status lineage under current preference
-- publication state must reconcile with allowed family/classification combinations
-- cycle references and claim-window records must reconcile to linked payout-cycle truth
-- discrepancy cases must preserve review lineage for stale or conflicting public payout-status conditions
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    PPSAPI[Public Payout Status API<br/>fuze-backend-api]
-    RecordStore[(public_payout_status_records)]
-    FamilyStore[(payout_status_family_profiles)]
-    CycleStore[(payout_status_cycle_references)]
-    ClaimStore[(payout_status_claim_window_records)]
-    PubStore[(payout_status_publication_states)]
-    ArtifactStore[(payout_status_artifact_links)]
-    EnrichStore[(payout_status_scope_enrichments)]
-    InternalSvc[Internal FUZE Services]
-
-    PublicUser --> PPSAPI
-    AuthUser --> WebApp
-    WebApp --> PPSAPI
-    AdminUI --> PPSAPI
-    InternalSvc --> PPSAPI
-
-    PPSAPI --> RecordStore
-    PPSAPI --> FamilyStore
-    PPSAPI --> CycleStore
-    PPSAPI --> ClaimStore
-    PPSAPI --> PubStore
-    PPSAPI --> ArtifactStore
-    PPSAPI --> EnrichStore
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    public_payout_status_records ||--o{ payout_status_classifications : classifies
-    public_payout_status_records ||--o{ payout_status_publication_states : publishes
-    public_payout_status_records ||--o{ payout_status_cycle_references : references
-    public_payout_status_records ||--o{ payout_status_claim_window_records : opens
-    public_payout_status_records ||--o{ payout_status_artifact_links : links
-    public_payout_status_records ||--o{ payout_status_scope_enrichments : enriches
-    public_payout_status_records ||--o{ payout_status_mutation_actions : tracks
-
-    public_payout_status_records {
-        uuid id PK
-        string payout_status_family
-        string classification
-        string title
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime closed_at
-    }
-
-    payout_status_publication_states {
-        uuid id PK
-        uuid public_payout_status_record_id FK
-        string publication_state
-        datetime published_at
-        datetime restricted_at
-        datetime withdrawn_at
-        datetime created_at
-    }
-
-    payout_status_cycle_references {
-        uuid id PK
-        uuid public_payout_status_record_id FK
-        string payout_cycle_reference
-        string public_cycle_label
-        datetime created_at
-    }
-
-    payout_status_claim_window_records {
-        uuid id PK
-        uuid public_payout_status_record_id FK
-        string claim_window_state
-        datetime window_open_at
-        datetime window_close_at
-        datetime created_at
-    }
-
-    payout_status_artifact_links {
-        uuid id PK
-        uuid public_payout_status_record_id FK
-        string artifact_type
-        string artifact_reference
-        datetime created_at
-    }
-
-    payout_status_scope_enrichments {
-        uuid id PK
-        uuid public_payout_status_record_id FK
-        string scope_type
-        string scope_reference
-        datetime created_at
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path — publish primary public payout status
-1. internal service creates draft payout-status record
-2. payout-cycle reference, claim-window status, and artifact links are attached to payout-ledger, transparency, or registry artifacts
-3. operator validates family/classification and publication intent
-4. admin publishes record publicly
-5. public index, cycle, and detail surfaces become available
-6. external readers can discover the record as primary status record, supporting artifact, or derived summary
-
-### 24.2 Happy path — authenticated enrichment
-1. payout-status record is already published or authenticated-visible
-2. bounded actor/scope enrichment is linked internally
-3. authenticated actor requests the payout-status artifact
-4. backend returns base public payout status plus scoped enrichment where policy allows
-5. actor sees additional safe context without gaining hidden payout control access
-
-### 24.3 Alternate path — superseding an older payout-status publication
-1. older payout-status record must be replaced or corrected
-2. replacement record is created and validated
-3. admin supersedes the older record
-4. previous record remains historically linked and interpretable
-5. new record becomes current visible preference
-
-### 24.4 Failure path — invalid classification or publication posture
-1. payout-status record is created or modified
-2. backend detects missing classification, invalid family/classification combination, or disallowed visibility posture
-3. request is rejected or record remains unpublished
-4. no unsafe public payout-status surface is produced
-
-### 24.5 Failure and remediation path — stale or incorrect public payout status
-1. linked payout-cycle, claim-window, or public artifact changes or payout status becomes stale/inconsistent
-2. admin opens discrepancy-resolution flow
-3. backend preserves existing lineage
-4. corrected or superseding payout-status record is created
-5. discrepancy closes with preserved history
-
-### 24.6 Degraded-mode path
-1. linked payout report, ledger surface, or status artifact is delayed or degraded
-2. public payout-status surface stays available where safe
-3. backend communicates freshness or visibility degradation explicitly
-4. canonical truth mutation is not implied by degraded presentation
-
-### 24.7 Retry behavior
-- duplicate payout-status creation returns same canonical record result
-- duplicate artifact or enrichment attachment returns same lineage result where applicable
-- duplicate publish/withdraw/supersede/discrepancy actions return same terminal action result
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Public Payout Status API
-    participant R as Payout Status Store
-    participant C as Cycle Reference Store
-    participant A as Artifact Store
-    participant P as Publication Store
-    participant E as Enrichment Store
-
-    S->>API: POST /internal/v1/public-payout-status
-    API->>R: Create payout-status record
-    API->>C: Create payout-cycle reference
-    API-->>S: payout-status summary
-
-    S->>API: POST /internal/v1/public-payout-status/{id}/artifact-links
-    API->>A: Create artifact link
-    API-->>S: artifact summary
-
-    S->>API: POST /internal/v1/public-payout-status/{id}/scope-enrichments
-    API->>E: Create scope enrichment
-    API-->>S: enrichment summary
-
-    S->>API: POST /admin/v1/public-payout-status/{id}/publish
-    API->>P: Create publication state
-    API-->>S: publication summary
-```
-
----
-
-## 26. Security and Risk Controls
-
-1. **Public payout-status truth is backend-owned**  
-   Frontends and informal publication channels may not authoritatively define public payout status.
-
-2. **Payout status is not a control plane**  
-   Public payout-status surfaces must support trust, legibility, and cycle visibility, not expose payout authoring, treasury controls, eligibility internals, or execution controls.
-
-3. **Classification clarity is mandatory**  
-   Public payout status must explicitly distinguish primary status records, supporting artifacts, and derived public summaries so external consumers do not mistake one for another.
-
-4. **Public-safe visibility discipline**  
-   Publication state must keep public, authenticated-only, and internal-only payout status clearly separated.
-
-5. **Rate limits and abuse controls**  
-   Public payout-status surfaces require public-surface protections such as rate limiting, actor/token throttling, input hardening, and stable pagination expectations.
-
-6. **Backward-compatibility discipline**  
-   Public payout-status surfaces must follow explicit versioning and conservative compatibility rules because public interfaces carry strong ecosystem trust obligations.
-
-7. **Audit-linked publication**  
-   Publication, withdrawal, and supersession of payout-status artifacts must remain traceable into internal audit systems.
-
-8. **Secrets/config boundary discipline**  
-   Public payout status may include only values intentionally classed as public and must not leak confidential or control-sensitive configuration.
-
-9. **Trust-preserving degraded modes**  
-   Public payout status should preserve the difference between freshness lag, execution delay, and canonical truth mutation.
-
-10. **Historical intelligibility**  
-   Corrections and supersession must preserve lineage so public trust surfaces remain historically interpretable.
-
----
-
-## 27. Operational Considerations
-
-- public payout-status index, cycle, and detail reads should be highly available
-- publication-state changes and artifact-link correctness are trust-sensitive and must be monitored
-- funding-sensitive, claim-window-sensitive, and correction-sensitive payout surfaces should surface clearly to ops views
-- supersession and discrepancy workflows should be observable and reviewable
-- monitoring should alert on:
-  - stale public payout status during active claim windows
-  - publication failures for trusted payout-status artifacts
-  - public/private visibility divergence
-  - broken payout artifact references
-  - public-safe view inconsistency versus canonical payout-status state
-  - degraded public trust surfaces during active payout cycles
-
----
-
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between public payout-status truth, payout-ledger truth, profit participation truth, execution truth, and internal domain truth.
-2. Only `fuze-backend-api` owns canonical public payout-status publication truth.
-3. Public payout-status records, family profiles, classifications, publication states, cycle references, claim-window records, artifact links, enrichments, supersession links, and discrepancy records are durable and backend-owned.
-4. Public and authenticated routes expose only bounded safe public payout-status views.
-5. Payout-status family, classification, cycle reference, claim-window posture, and visibility posture are explicit and validated.
-6. Public payout status distinguishes primary status records, supporting artifacts, and derived summary models.
-7. Publication, withdrawal, supersession, and discrepancy actions preserve immutable lineage.
-8. Public payout-status mutation actions are idempotent and auditable.
-9. Internal and admin public payout-status routes are least-privilege and backend-only.
-10. Admin routes require reason-coded privileged authorization.
-11. Event emissions exist for major public payout-status mutations.
-12. Database schema separates records, family profiles, classifications, publication states, cycle references, claim-window records, artifact links, enrichments, supersession links, and discrepancy layers.
-13. Public-safe consumers can rely on public payout-status views without needing internal platform knowledge.
-14. Public payout status supports rate-limited, versioned, supportable external integration behavior.
-15. Mermaid diagrams remain consistent with prose and data model.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-1. Internal service creates draft public payout-status record successfully.
-2. Internal service attaches artifact link successfully.
-3. Internal service attaches scope enrichment successfully.
-4. Admin publishes public payout status successfully.
-5. Public user reads published payout-status index successfully.
-6. Public user reads one published payout-status record successfully.
-7. Public user reads cycle-status detail successfully.
-8. Admin supersedes stale payout status successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access unpublished or internal-only payout status.
-10. Internal service without write privilege cannot create payout-status record.
-11. Publication without valid classification returns `PUBLIC_PAYOUT_STATUS_CLASSIFICATION_REQUIRED`.
-12. Publication without required payout reference returns `PUBLIC_PAYOUT_STATUS_PAYOUT_REFERENCE_REQUIRED`.
-13. Disallowed visibility target returns `PUBLIC_PAYOUT_STATUS_VISIBILITY_NOT_ALLOWED`.
-14. Withdrawal attempt in incompatible state returns `PUBLIC_PAYOUT_STATUS_WITHDRAWAL_NOT_ALLOWED`.
-
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call admin payout-status publication APIs.
-16. Internal service without artifact-link privilege cannot attach artifact links.
-17. Operator without publication privilege cannot publish payout status.
-18. Published public payout status does not imply canonical ownership of linked payout-ledger/execution/eligibility truth.
-
-### 29.4 Idempotency and replay cases
-19. Repeating payout-status creation with same idempotency key returns original payout-status result.
-20. Repeating artifact-link attachment with same idempotency key returns original linkage result.
-21. Repeating publish or withdraw with same idempotency key returns original terminal action result.
-22. Repeating supersede or discrepancy resolution with same idempotency key returns original terminal action result.
-
-### 29.5 Concurrency cases
-23. Concurrent artifact-link updates preserve one explicit current linkage lineage and duplicate-safe outcomes where appropriate.
-24. Concurrent publish and withdraw actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent supersede and discrepancy actions preserve explicit visible lineage without ambiguity.
-
-### 29.6 Recovery / admin cases
-26. Stale or mislinked public payout status can be corrected under controlled policy with explicit lineage.
-27. Superseded public payout status remains historically linked to the original record.
-28. Discrepancy resolution closes payout reference, visibility, or reporting conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful payout-status creation emits `public_payout_status.record_created`.
-30. Successful artifact-link attachment emits `public_payout_status.artifact_linked`.
-31. Successful publication emits `public_payout_status.record_published`.
-32. Successful withdrawal emits `public_payout_status.record_withdrawn`.
-33. Successful discrepancy resolution emits `public_payout_status.discrepancy_resolved` with critical audit lineage.
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact payout-status family taxonomy code sets are deferred.
-2. Exact public-safe claim-window detail depth is deferred.
-3. Exact actor-scoped enrichment taxonomy is deferred.
-4. Exact public-safe disclosure depth for funding posture is deferred.
-5. Exact discrepancy taxonomy for payout-status/publication conflicts is deferred.
-6. Exact partner-oriented payout-status quota strategy is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  public-payout-status/
-  payout-ledger/
-  profit-participation/
-  public-transparency/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep payout-status records, family profiles, cycle references, claim-window records, publication state, artifact links, and supersession logic in one canonical domain service
-- perform family/classification/visibility/payout-reference checks inside the commit boundary
-- keep publish, withdraw, supersede, and discrepancy actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public-safe payout-status views from canonical truth; do not let derived views mutate payout-status state
-
----
-
-## 32. Frontend Consumption Notes
-
-### For `fuze-frontend-webapp`
-- may read public payout status and bounded authenticated enrichments where approved
-- must not infer canonical domain ownership from public payout status alone
-- must treat backend public payout-status responses as authoritative for publication state and trust-surface semantics
-- should clearly distinguish primary status records, supporting artifacts, and derived summary views when visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged publish, withdraw, supersede, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical public payout-status truth client-side
-- should present immutable payout-status history and correction lineage separately from current visible state
-
----
-
-## 33. Contract Derivation Notes
-
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public payout-status index/detail/cycle read operations
-- authenticated payout-status enrichment read operations
-- internal payout-status creation, artifact-link, and enrichment operations
-- admin publish / withdraw / supersede / discrepancy operations
-- shared problem-details schema
-- public payout-status lifecycle events in AsyncAPI
-
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public payout-status lookup helpers
-- public cycle-status discovery helpers
-- typed payout-status family, classification, claim-window, and publication-state summary models
-- problem-error models for public payout-status outcomes
-
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+Event payloads MUST include event ID, event type, occurred_at, public payout-status ID, public cycle reference where applicable, family, classification, publication state, actor type, reason code where applicable, correlation ID, and schema version.
+
+External third-party outbound public payout-status webhooks are intentionally deferred. Any future webhook surface MUST be separately security-reviewed, versioned, deduplicated, retry-safe, and scoped.
+
+## Chain-Adjacent API Considerations
+
+This API may expose public-safe chain-adjacent references such as public cycle references, registry links, contract references, chain network labels, or execution-summary posture. It MUST NOT expose raw signer details, private contract-adapter routing, internal receipt interpretation beyond public-safe summary, or chain facts as if they automatically own public payout-status publication truth.
+
+## Data Model / Storage Support Implications
+
+Implementations MUST support durable records for public-status records, publication states, cycle references, claim-window records, artifact links, enrichments, supersession links, discrepancy cases, mutation actions, idempotency records, audit references, projection checkpoints, and event outbox entries.
+
+Storage convenience MUST NOT change domain ownership. Projection and cache stores MUST preserve canonical record references and freshness metadata.
+
+## Read Model / Projection / Reporting Rules
+
+Read models MAY serve public list/detail/timeline/status responses. They MUST:
+
+- identify projection freshness;
+- preserve public cycle reference and source linkage;
+- distinguish public-safe, authenticated-safe, internal, and admin-only fields;
+- preserve supersession and withdrawal guidance;
+- label derived summaries as derived;
+- never become mutation owners;
+- fail safely or serve stale-safe responses with explicit metadata during source-domain degradation.
+
+## Security / Risk / Privacy Controls
+
+The API MUST protect private holder data, eligibility details, treasury-sensitive data, internal execution topology, signing/provider routes, audit investigations, incident details, and unpublished status. Public responses MUST be safe by default. Authenticated enrichments MUST use object-level and function-level authorization.
+
+## Audit / Traceability / Observability Requirements
+
+Sensitive actions MUST generate durable audit records including actor type, actor reference, route family, operation class, target record, source references, before/after summary, reason code, policy version where applicable, idempotency key, correlation ID, request ID, occurred_at, and outcome.
+
+Observability MUST include request metrics, error rates, stale projection metrics, publication latency, event lag, source-domain validation failures, idempotency conflicts, rate-limit events, authorization failures, and discrepancy counts.
+
+## Failure Handling / Edge Cases
+
+- If payout ledger is unavailable, new publication requiring ledger validation MUST fail closed or remain pending.
+- If execution reference validation is unavailable, public status MUST NOT infer execution success.
+- If a published record is discovered inaccurate, it MUST be corrected, superseded, restricted, or withdrawn with lineage.
+- If a public projection is stale, response MUST include staleness metadata or return a safe degraded status.
+- If an authenticated enrichment policy is ambiguous, deny enrichment and return public base status where safe.
+- If a public cycle reference maps to superseded lineage, response MUST guide to current canonical public status.
+- If idempotency replay conflicts, mutation MUST fail without side effects.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+The API is versioned under `/v1`, `/internal/v1`, and `/admin/v1`. Additive response fields are preferred. Breaking changes require explicit version evolution and migration windows.
+
+Breaking changes include changing the meaning of status family, classification, publication state, claim-window state, supersession semantics, public cycle reference, or visibility target; removing required lineage fields; or widening public exposure without approval.
+
+Deprecated routes and fields MUST include deprecation metadata and compatibility windows suitable for public, first-party, internal, reporting, and SDK consumers.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI contracts MUST preserve route-family separation, response-class distinctions, structured errors, idempotency headers, correlation IDs, visibility semantics, and deprecation metadata. AsyncAPI contracts MUST preserve event schemas, event IDs, deduplication keys, schema versions, and lifecycle semantics.
+
+SDKs MUST NOT hide publication-state, staleness, supersession, or visibility semantics behind generic booleans. SDK convenience methods MUST remain subordinate to API contract truth.
+
+## Implementation-Contract Guardrails
+
+Implementations MUST NOT:
+
+- expose payout-ledger internals as public status without classification;
+- expose Base execution internals as public status without public-safe projection;
+- accept frontend-authored status as canonical;
+- let reporting copy mutate publication truth;
+- infer claim finality from submission state;
+- infer payout success from public publication;
+- collapse `published`, `open_for_claims`, `funded`, `confirmed`, and `closed` into one boolean;
+- silently overwrite public status history;
+- make admin actions appear as public routes;
+- omit audit and idempotency for sensitive mutations.
+
+## Downstream Execution Staging
+
+1. Confirm source-domain references and final route taxonomy.
+2. Implement storage and idempotency records.
+3. Implement internal create/refresh/link APIs.
+4. Implement admin publish/restrict/withdraw/supersede/correct APIs.
+5. Implement projection generation and public read routes.
+6. Implement authenticated enrichment policy evaluation.
+7. Implement event outbox and AsyncAPI contracts.
+8. Implement audit, observability, abuse controls, and degraded-mode behavior.
+9. Validate OpenAPI/SDK derivation and contract tests.
+10. Run migration and public compatibility review before publication.
+
+## Required Downstream Specs / Contract Layers
+
+- OpenAPI contract for public, authenticated, internal, and admin routes;
+- AsyncAPI contract for lifecycle events;
+- implementation contract for public-status store and projection schema;
+- authorization policy contract for authenticated enrichments;
+- audit event contract;
+- cache/projection freshness contract;
+- QA/regression suite for public-status lifecycle;
+- runbook for discrepancy and withdrawal workflows.
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns include:
+
+- raw payout-ledger export as public status;
+- raw Base execution record exposure as public status;
+- public route for payout-status mutation;
+- frontend-owned public payout status;
+- unclassified status strings;
+- public responses with private eligibility details;
+- public responses that leak treasury or signer details;
+- silent correction of previously published status;
+- using transparency-report copy as canonical payout status;
+- treating stale projections as source truth;
+- broad internal service writes that can bypass publication controls.
+
+## Canonical Examples / Anti-Examples
+
+### Canonical example
+
+A public cycle-status response includes `public_cycle_ref`, `status_family=cycle_status`, `publication_state=published_public`, `claim_window_state=open`, `source_freshness=fresh`, `artifact_links`, `supersession=null`, and public-safe timestamps.
+
+### Anti-example
+
+A public response says `paid=true` because one Base transaction hash exists, without validating payout-ledger lineage, execution confirmation, claim-state posture, and publication policy. This is forbidden because it collapses execution truth, ledger truth, and public publication truth.
+
+### Canonical correction example
+
+A published claim-window status is later found stale. The API creates a correction action, links supersession lineage, emits `record_corrected`, refreshes the public projection, and preserves the original record as superseded.
+
+## Acceptance Criteria
+
+1. Public unauthenticated routes return only records with `published_public` visibility.
+2. Authenticated routes require valid session and policy-approved enrichment profile.
+3. Internal mutations require service identity, idempotency key, and correlation ID.
+4. Admin publication/correction/withdrawal/supersession actions require privileged operator authorization, reason code, idempotency key, audit event, and valid state transition.
+5. Public responses distinguish public status, authenticated enrichment, derived summaries, and artifact links.
+6. Public status cannot be created without a valid source-domain reference where required.
+7. Public status cannot imply ledger truth, execution truth, eligibility truth, or final claim success beyond approved public-safe summary.
+8. Idempotent replay of same mutation returns original terminal outcome; conflicting replay fails with no side effects.
+9. Corrections and supersessions preserve lineage and never silently overwrite published history.
+10. Stale projections include freshness metadata or fail safely.
+11. Events are emitted for record creation, publication, withdrawal, supersession, correction, discrepancy resolution, and projection refresh.
+12. Audit records include actor, target, action, before/after summary, reason code, idempotency/correlation references, and timestamp.
+13. Public errors do not leak private eligibility, treasury, signer, provider, incident, or internal topology details.
+14. OpenAPI and AsyncAPI outputs preserve route-family separation and event schema semantics.
+15. Migration plans preserve compatibility for public and first-party consumers before semantic changes.
+
+## Test Cases
+
+| ID | Scenario | Expected Result |
+|---|---|---|
+| PPS-001 | Public list retrieves published statuses | Returns only `published_public` records with public-safe fields |
+| PPS-002 | Public detail requests restricted record | Returns not found or visibility-safe denial without leaking existence where policy requires |
+| PPS-003 | Authenticated user requests bounded enrichment | Returns base status plus allowed actor-safe enrichment |
+| PPS-004 | Authenticated user requests unauthorized enrichment | Returns permission denial or base-only response per policy |
+| PPS-005 | Internal service creates draft without idempotency key | Fails with `PUBLIC_PAYOUT_STATUS_IDEMPOTENCY_KEY_REQUIRED` |
+| PPS-006 | Internal service retries identical create request | Returns original created record without duplicate side effects |
+| PPS-007 | Same idempotency key with different body | Fails with `PUBLIC_PAYOUT_STATUS_IDEMPOTENCY_CONFLICT` |
+| PPS-008 | Admin publishes without reason code | Fails validation with no state change |
+| PPS-009 | Admin publishes valid ready record | State changes to `published_public` or `published_authenticated`, audit and event recorded |
+| PPS-010 | Public status references invalid payout cycle | Mutation fails or remains pending; no public publication |
+| PPS-011 | Public status claims execution confirmed without execution reference | Publication denied or restricted |
+| PPS-012 | Published record is corrected | New correction/supersession lineage created; original remains historically visible as superseded where safe |
+| PPS-013 | Withdrawal of public record | Record becomes withdrawn/restricted; audit/event emitted; public projection removed or marked withdrawn |
+| PPS-014 | Projection cache stale | Response includes staleness metadata or safe degraded status |
+| PPS-015 | Ledger unavailable during publication | Action fails closed or remains accepted/pending; does not infer source truth |
+| PPS-016 | Public API rate limit exceeded | Returns structured rate-limit error without source truth leakage |
+| PPS-017 | Event consumer receives duplicate event | Consumer can deduplicate using event ID and schema version |
+| PPS-018 | Migration removes classification field | Contract validation fails as breaking change without version migration |
+| PPS-019 | Frontend attempts to submit canonical status copy | Request is rejected; frontend is not canonical owner |
+| PPS-020 | Audit review of admin correction | Audit trail reconstructs actor, reason, before/after, target, correlation, and idempotency references |
+
+## Dependencies / Cross-Spec Links
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
+- `SYSTEM_SPEC_INDEX.md`
+- `PAYOUT_LEDGER_SPEC.md`
+- `PAYOUT_LEDGER_API_SPEC.md`
+- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
+- `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md`
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `API_ARCHITECTURE_SPEC.md`
+- `PUBLIC_METADATA_API_SPEC.md`
+- `PUBLIC_TRANSPARENCY_API_SPEC.md`
+- `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md`
+- `TRANSPARENCY_MODEL_SPEC.md`
+- `TRANSPARENCY_REPORTING_SPEC.md`
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+
+## Explicitly Deferred Items
+
+- Third-party outbound payout-status webhook contracts;
+- full private claimant/holder claim-history API;
+- explorer-specific chain display details;
+- detailed public website rendering design;
+- final machine-readable OpenAPI/AsyncAPI schema files;
+- named approval authority and named document owner assignment;
+- exact retention schedule for public-status records and projections.
+
+## Final Normative Summary
+
+The Public Payout Status API is the canonical interface-contract layer for FUZE public payout-status publication. It MUST provide public-safe and authenticated-safe payout visibility while preserving strict separation from payout-ledger, Base execution, eligibility, treasury, transparency, registry, audit, and presentation truth. It MUST be idempotent, auditable, correction-safe, projection-aware, migration-safe, and explicit about source-domain boundaries. Public status MAY explain approved payout posture; it MUST NOT become hidden source truth.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit, with named owner unknown stated.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, authenticated, internal, admin/control, event, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model/projection/cache/reporting rules are explicit.
+- [x] Chain-adjacent responsibilities are explicit.
+- [x] Accepted-state versus final source truth is explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behavior is explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design diagram uses Mermaid syntax and distinguishes canonical from derived records.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases include positive, negative, authorization, entitlement/enrichment, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation coverage.

@@ -1,329 +1,481 @@
-# FOUNDATION_GOVERNANCE_API_SPEC
+# FOUNDATION_GOVERNANCE_API_SPEC.md
 
-## 1. Title
+## Document Metadata
 
-**FOUNDATION_GOVERNANCE_API_SPEC.md**
-
----
-
-## 2. Document Metadata
-
-- **Document Name:** FOUNDATION_GOVERNANCE_API_SPEC.md
-- **API Classification:** internal, admin, event-driven, public-read, chain-adjacent
-- **Owning Domain:** Foundation Governance Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** Foundation policy versions, Foundation action records, principal-protection interpretations, allowed-use and restricted-use records, Foundation control-path records, profit-participation treatment references, reporting references, and correction-safe Foundation governance lineage in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE Foundation governance, including Foundation-sensitive policy interpretation, principal-protection enforcement, category-aware allowed-use handling, bounded control pathways, explicit profit-participation treatment, and structured audit/reporting-safe lifecycle management across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 2.1 API Classification Header
-
-- **API Classification:** internal | admin | event-driven | public-read | chain-adjacent
-- **Owning Domain:** Foundation Governance Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** Foundation governance and Foundation-sensitive action domain
-
----
-
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE Foundation governance operations. It translates the governing FUZE platform architecture, Foundation governance rules, Foundation Vault rules, vault action policy, treasury control policy, multisig and timelock expectations, profit participation treatment expectations, transparency expectations, audit requirements, and API architecture rules into an implementation-ready API contract.
-
-This API exists because the FUZE Foundation is not an ordinary treasury category and not a generic operator wallet. It is a distinct long-horizon stewardship structure intended to reinforce institutional continuity, protected capital meaning, and public trust. Foundation governance therefore cannot be treated as a minor subclass of treasury administration. It must preserve:
-
-- a distinct governance domain,
-- principal-preservation logic,
-- stronger restraint than ordinary treasury,
-- explicit allowed-use and disallowed-use treatment,
-- explicit treatment in holder-facing profit-participation systems,
-- stronger governance-path legibility,
-- and stronger reporting compatibility.
-
-Accordingly, this specification defines how Foundation policy versions, Foundation-sensitive action records, principal-protection classifications, use-treatment records, approval paths, control references, profit-participation treatment references, and reporting references are represented, and how Foundation governance remains auditable, idempotent, and architecture-consistent across FUZE.
+- **Document Name:** `FOUNDATION_GOVERNANCE_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 — Production-grade API specification
+- **Status:** Draft canonical API specification for production review
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Foundation Governance Domain; named individual owner not specified in retrieved governing materials
+- **Approval Authority:** FUZE architecture and governance approval workflow; named approval body not explicitly specified in retrieved governing materials
+- **Review Cadence:** Quarterly and whenever Foundation role definition, governance-model posture, treasury-control posture, vault-action posture, multisig/timelock posture, profit-participation posture, transparency posture, or public-trust publication posture materially changes
+- **Governing Layer:** API contract expression layer for Foundation governance, stewardship, protected-capital governance, and Foundation-specific control pathways
+- **Parent Registry:** `API_SPEC_INDEX.md` and the FUZE API SPEC v2 canonical registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Backend engineering, platform architecture, contracts engineering, treasury and finance stakeholders, governance/control-plane authors, security engineering, audit/compliance, public-trust/reporting authors, implementation-contract authors, OpenAPI/AsyncAPI/SDK authors, QA and production-readiness reviewers
+- **Primary Purpose:** Define the production-grade API contract for FUZE Foundation governance, including Foundation policy versions, Foundation-sensitive action records, principal-protection posture, allowed/disallowed-use treatment, control-path linkage, explicit profit-participation treatment, correction/supersession lineage, public-safe Foundation visibility, and downstream implementation guardrails
+- **Primary Upstream References:** `REFINED_SYSTEM_SPEC_INDEX.md`, `DOCS_SPEC_INDEX.md`, `SYSTEM_SPEC_INDEX.md`, `API_SPEC_INDEX.md`, `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`, `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`, `PLATFORM_ARCHITECTURE_SPEC.md`, `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`, `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`, `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`, `GOVERNANCE_MODEL_SPEC.md`, `FOUNDATION_GOVERNANCE_SPEC.md`, `TREASURY_CONTROL_POLICY_SPEC.md`, `VAULT_ACTION_POLICY_SPEC.md`, `MULTISIG_AND_TIMELOCK_SPEC.md`, `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`, `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`, `PAYOUT_LEDGER_SPEC.md`, `TRANSPARENCY_MODEL_SPEC.md`, `TRANSPARENCY_REPORTING_SPEC.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`, `CHAIN_ARCHITECTURE_SPEC.md`, `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`, `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
+- **Primary Downstream Dependents:** Foundation governance implementation contracts, Foundation-sensitive admin/control-plane tooling, treasury-control integration contracts, vault-action integration contracts, multisig/timelock control references, profit-participation treatment contracts, transparency/reporting/public-safe Foundation views, discrepancy and correction runbooks, OpenAPI/AsyncAPI/SDK derivation layers
+- **API Surface Families Covered:** Public-read, first-party authenticated read, internal service, admin/control-plane, event/async, reporting/export, chain-adjacent reference surfaces
+- **API Surface Families Excluded:** Raw smart-contract ABI interfaces, signer key-management APIs, direct treasury accounting APIs, direct payout claim APIs, raw transparency report composition APIs, product-local budget workflows, generic governance APIs outside Foundation-specific posture
+- **Canonical System Owner(s):** Foundation Governance Domain owns Foundation stewardship semantics, principal-protection posture, allowed/disallowed-use governance, Foundation-sensitive action meaning, explicit profit-participation treatment posture, and Foundation-specific correction/supersession lineage
+- **Canonical API Owner:** Foundation Governance API Domain, implemented through backend-owned API and service contracts
+- **Supersedes:** API SPEC v1 `FOUNDATION_GOVERNANCE_API_SPEC.md` where it conflicts with this v2 production-grade API specification; weaker interpretations that treat Foundation APIs as treasury aliases, generic reserve administration, unrestricted operator controls, or public narrative pages
+- **Superseded By:** None currently defined
+- **Related Decision Records:** Not explicitly specified in retrieved governing materials
+- **Canonical Status Note:** This API spec is the API-contract expression of the active refined Foundation governance semantics. It does not own system semantics. `FOUNDATION_GOVERNANCE_SPEC.md` and higher refined system specifications own semantic truth.
+- **Implementation Status:** Normative API contract target; downstream implementation MUST align before production-grade activation
+- **Approval Status:** Draft pending explicit FUZE approval workflow
+- **Change Summary:** Upgrades the existing v1 Foundation governance API material into API SPEC v2 format; reinforces Foundation-specific stewardship and principal-preservation semantics; separates Foundation governance from treasury, vault, multisig/timelock, payout, reporting, and public registry truth; adds explicit route-family posture, request/response/error/idempotency/audit/migration/event rules, diagrams, acceptance criteria, and test cases
 
 ---
 
-## 4. Scope
+## Purpose
 
-This specification covers:
+This document defines the FUZE API SPEC v2 contract for Foundation governance APIs.
 
-- internal APIs for Foundation policy versioning and Foundation-sensitive action lifecycle management
-- internal APIs for principal-protection classification, allowed-use handling, disallowed-use treatment, and stewardship-consistency evaluation
-- internal APIs for approval-path, multisig/timelock, emergency, reporting, and profit-participation-treatment linkage
-- internal read APIs for canonical Foundation governance truth
-- admin/control-plane APIs for approve, reject, pause, escalate, exceptional treatment, supersede, and discrepancy resolution
-- public-read APIs for bounded public-safe Foundation governance summaries and public-safe Foundation action reporting summaries where policy allows
-- event emission requirements for Foundation governance lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+The Foundation Governance API exists because the FUZE Foundation is not an ordinary treasury category, not a generic operator wallet, not a casual reserve label, and not a narrative-only trust device. It is a distinct long-horizon stewardship and protected-capital governance structure. API contracts that create, review, approve, link, expose, correct, or supersede Foundation-sensitive records MUST preserve that distinction.
 
-This specification does **not** redefine:
+This specification governs how API surfaces represent and enforce:
 
-- low-level Foundation Vault contract mechanics in full detail
-- the full treasury-control policy domain
-- the full vault-action policy domain
-- the full multisig signer set or timelock configuration detail
-- raw treasury accounting exports
-- final transparency-report composition
-- exact claimant-facing payout interfaces
-- low-level contract ABI implementations
+1. Foundation policy versions.
+2. Foundation-sensitive action records.
+3. Foundation principal-protection posture.
+4. Allowed-use and disallowed-use classifications.
+5. Stewardship consistency evaluation.
+6. Foundation-specific destination and use-rationale treatment.
+7. Control-path references to governance, multisig, timelock, emergency, or exceptional mechanisms.
+8. Explicit Foundation treatment in profit-participation, eligibility-adjacent, reporting, and transparency surfaces.
+9. Correction, supersession, discrepancy, and historical-intelligibility lineage.
+10. Public-safe Foundation visibility without unsafe exposure of internal control detail.
 
-Those remain governed by their own source-of-truth specifications.
+This API specification does not redefine Foundation semantics. It expresses refined Foundation semantics as enforceable interface-contract rules.
 
 ---
 
-## 5. Source-of-Truth Inputs
+## Scope
 
-### Primary FUZE docs and specs used
+This specification covers API contract rules for:
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
+- public-safe reads of active Foundation policy and published Foundation action summaries;
+- first-party authenticated reads of bounded Foundation-related views where approved;
+- internal service APIs for creating, classifying, validating, linking, and reading Foundation-governance records;
+- admin/control-plane APIs for approving, rejecting, pausing, escalating, declaring exceptional treatment, superseding, correcting, and resolving Foundation-governance discrepancies;
+- event and async APIs for Foundation lifecycle publication, projection refresh, discrepancy remediation, reporting linkage, and downstream coordination;
+- reporting/export contracts that expose public-safe or restricted Foundation summaries without becoming canonical mutation owners;
+- chain-adjacent API references that link Foundation governance actions to on-chain or multisig/timelock execution without collapsing off-chain governance truth into chain-native truth.
+
+---
+
+## Out of Scope
+
+This specification does not govern:
+
+- low-level Foundation Vault contract ABIs;
+- signer roster, private key custody, safe module configuration, or exact quorum mechanics;
+- final treasury control policy tables for every reserve or wallet;
+- full vault-by-vault allowed-action catalogs;
+- exact payout-cycle funding, claim, or eligibility execution logic;
+- raw financial accounting exports;
+- final transparency-report composition;
+- final public registry composition for all contracts and wallets;
+- generic governance APIs outside Foundation-specific action semantics;
+- product-local budget approval workflows;
+- user-interface layout or copywriting beyond API-visible status and summary fields;
+- legal, tax, or regulatory determinations.
+
+Where any of those areas affect Foundation-governance API behavior, this specification defines only the Foundation-governance interface contract and reference boundaries.
+
+---
+
+## Design Goals
+
+1. Preserve the Foundation as a distinct long-horizon stewardship domain.
+2. Prevent API routes from treating Foundation capital as ordinary treasury liquidity.
+3. Make principal-protection posture explicit in every material Foundation-sensitive action.
+4. Require narrow allowed-use interpretation and explicit restricted-use treatment.
+5. Preserve separation between Foundation approval, downstream execution, public reporting, and final business outcome.
+6. Provide deterministic request, response, error, idempotency, event, audit, and migration behavior.
+7. Enable safe OpenAPI, AsyncAPI, SDK, admin tooling, and implementation-contract derivation.
+8. Ensure public-safe Foundation visibility is useful, correction-aware, and bounded.
+9. Make exceptions narrow, reason-coded, audited, and post-reviewed.
+10. Prevent route, schema, ownership, projection, public exposure, and reporting drift.
+
+---
+
+## Non-Goals
+
+This API spec does not attempt to:
+
+- make the Foundation a general treasury interface;
+- expose all Foundation-governance internals publicly;
+- turn public dashboards into canonical Foundation truth;
+- let internal service APIs become hidden broad-write shortcuts;
+- allow admin/control-plane convenience to bypass policy, authorization, idempotency, or audit requirements;
+- make chain execution the sole source of Foundation-governance meaning;
+- make Foundation participation in profit participation implicit or inferred;
+- replace downstream machine-readable OpenAPI, AsyncAPI, database schema, service runbook, or contract ABI documents.
+
+---
+
+## Core Principles
+
+### 1. Refined Semantics Own Truth
+
+`FOUNDATION_GOVERNANCE_SPEC.md` and higher refined system specifications own Foundation semantics. This API spec owns the interface-contract expression of those semantics.
+
+### 2. Foundation Is Not Treasury Convenience
+
+Foundation-governance APIs MUST NOT allow Foundation assets, actions, or policies to degrade into ordinary treasury movement, generic liquidity support, discretionary operator control, or informal market-support behavior.
+
+### 3. Principal Preservation by Default
+
+Foundation principal begins from preservation, not flexibility. Any material impairment, repurposing, destination change, or policy exception MUST be explicit, reviewable, reason-coded, and governance-constrained.
+
+### 4. Approval Is Not Execution
+
+Foundation approval authorizes a controlled path. It does not itself prove downstream execution, settlement, report publication, payout treatment, or final business outcome.
+
+### 5. Explicit Treatment in Adjacent Systems
+
+Foundation treatment in profit participation, eligibility-adjacent datasets, reporting artifacts, transparency reports, public registry surfaces, and chain-adjacent execution MUST be explicit and versioned. It MUST NOT be inferred from wallet labels or public narrative.
+
+### 6. Public-Safe Visibility Is Derived
+
+Public Foundation summaries, dashboards, exports, registry references, and reporting views are derived from canonical Foundation governance truth. They MUST NOT mutate Foundation truth or override canonical records.
+
+### 7. Exceptions Are Narrow
+
+Exceptional Foundation handling MAY exist only as a bounded, reason-coded, policy-constrained, audited, time-limited, and post-reviewed pathway.
+
+### 8. Historical Intelligibility Is Mandatory
+
+Correction, supersession, discrepancy, restricted publication, and exceptional treatment MUST preserve prior meaning and lineage. Silent overwrites are forbidden.
+
+---
+
+## Canonical Definitions
+
+- **Foundation:** FUZE’s distinct long-horizon stewardship structure for continuity, credibility, and trust-sensitive capital discipline.
+- **Foundation Principal:** Protected long-horizon Foundation capital subject to stronger preservation logic and exceptional-use thresholds.
+- **Foundation Policy Version:** Canonical policy record that defines Foundation governance rules and their version lineage.
+- **Foundation-Sensitive Action:** Any action that materially affects Foundation principal, Foundation treatment, Foundation-controlled destinations, Foundation role meaning, or Foundation-specific public interpretation.
+- **Principal-Sensitive Action:** A Foundation-sensitive action that may impair, repurpose, reduce, move, encumber, reclassify, or publicly reinterpret Foundation principal.
+- **Allowed Use:** A narrowly interpreted Foundation use category consistent with long-horizon stewardship and institutional continuity.
+- **Restricted or Disallowed Use:** A use category that would cause Foundation capital to behave like ordinary operating treasury, discretionary liquidity, market support, shortfall reservoir, generic campaign spend, or unbounded backstop pool.
+- **Stewardship Consistency:** API-visible classification of whether the action is consistent with Foundation purpose, policy version, principal protection, and public-trust posture.
+- **Foundation Control Reference:** A reference to governance approval, multisig, timelock, emergency, exceptional, or execution-control mechanism associated with a Foundation-sensitive action.
+- **Foundation Treatment Reference:** A structured reference describing how Foundation-held assets or balances are treated in profit participation, eligibility-adjacent, reporting, or transparency contexts.
+- **Public-Safe Foundation View:** A derived read model that exposes bounded Foundation information suitable for public consumption.
+
+---
+
+## Truth Class Taxonomy
+
+The API MUST preserve the following truth classes:
+
+1. **Semantic truth:** Foundation stewardship, principal-protection, allowed-use, restricted-use, and Foundation-sensitive action meaning owned by the refined Foundation governance spec.
+2. **API contract truth:** Route families, request/response structures, error classes, idempotency behavior, events, and compatibility rules owned by this API spec.
+3. **Policy truth:** Foundation policy versions, governance policy references, approval rules, and allowed-use policies.
+4. **Approval truth:** Records showing whether a Foundation-sensitive action was proposed, reviewed, approved, rejected, paused, escalated, or superseded.
+5. **Execution truth:** Downstream execution, multisig/timelock, vault, chain, or operational records that carry out an approved path.
+6. **Ledger/storage truth:** Durable Foundation governance records, idempotency records, operation records, and audit records.
+7. **Profit-participation treatment truth:** Explicit Foundation inclusion/exclusion/treatment references consumed by profit-participation and eligibility-adjacent systems.
+8. **Public read-model truth:** Derived public-safe views, summaries, exports, and reports generated from canonical records.
+9. **Audit truth:** Immutable evidence of Foundation-sensitive mutations, operator actions, policy decisions, and correction/supersession lineage.
+10. **Runtime truth:** Async operations, projection jobs, retry state, dead-letter state, discrepancy remediation state, and degraded-mode state.
+11. **Presentation truth:** UI labels, copy, status text, and summaries derived from canonical and public-safe read models.
+12. **Chain-adjacent truth:** Chain observations, transaction hashes, safe transactions, timelock queue records, or contract execution references, which are not full substitutes for Foundation governance meaning.
+
+These truth classes MUST NOT be collapsed into a single Foundation dashboard, wallet label, contract event, admin screen, public article, or reporting export.
+
+---
+
+## Architectural Position in the Spec Hierarchy
+
+This API specification sits below:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
 - `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
 - `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
 - `PLATFORM_ARCHITECTURE_SPEC.md`
 - `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
 - `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
 - `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
-
-#### Primary Foundation / governance / control sources
-- `FOUNDATION_GOVERNANCE_SPEC.md`
-- `FOUNDATION_VAULT_SPEC.md`
-- `MULTISIG_AND_TIMELOCK_SPEC.md`
 - `GOVERNANCE_MODEL_SPEC.md`
-- `TREASURY_CONTROL_POLICY_SPEC.md`
-- `VAULT_ACTION_POLICY_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
+- `FOUNDATION_GOVERNANCE_SPEC.md`
+- shared API architecture specs including `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, and `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
 
-#### Core docs inputs
-- `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `TOKEN_CONTRACT_ARCHITECTURE_.md`
-- `FUZE_TOKENOMICS_TABLES.md`
-- `ALLOCATION_WALLET_MAP.md`
-- `tokenomics/FOUNDATION_VAULT.md`
+It sits above or alongside:
 
-#### API and runtime sources
-- `API_ARCHITECTURE_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-
-#### Security and operations sources
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
-
-### Highest-priority interpretation applied
-
-For this file, the most important governing interpretation is:
-
-1. the Foundation is a distinct governance domain and not a disguised extension of ordinary treasury
-2. backend owns canonical Foundation governance policy truth and Foundation-sensitive action truth
-3. the Foundation principal should begin from preservation rather than flexibility
-4. Foundation-sensitive actions require stronger restraint, stronger review quality, and stronger reporting legibility than ordinary treasury-sensitive actions
-5. Foundation treatment in profit participation must be explicit rather than silent or inferred
-6. Foundation governance must remain structurally legible to the market and auditable over time
-
-### Supporting external standards used only as guidance
-
-- HTTP semantics for internal mutation and bounded public-read APIs
-- structured problem-details error design
-- general policy-versioning, stewardship-governance, and correction-lineage patterns as supporting guidance
-
-External guidance does not override FUZE source-of-truth documents.
+- Foundation governance implementation contracts;
+- admin/control-plane implementation contracts;
+- Foundation policy database schemas;
+- Foundation public-safe projection contracts;
+- Foundation reporting/export contracts;
+- Foundation discrepancy/remediation runbooks;
+- downstream OpenAPI/AsyncAPI/SDK artifacts.
 
 ---
 
-## 6. Governing Architecture and Ownership Interpretation
+## Upstream Semantic Owners
 
-This API belongs to the **Foundation Governance Domain** because it owns the canonical lifecycle of:
-
-- Foundation policy version interpretation,
-- Foundation-sensitive action records,
-- principal-protection and stewardship-consistency evaluation,
-- allowed-use and restricted-use classification,
-- explicit profit-participation treatment references,
-- governance-path and control-reference linkage,
-- and correction-safe Foundation governance history.
-
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable Foundation governance truth
-- Foundation-sensitive actions require centralized rule enforcement and stronger review discipline
-- Foundation trust value depends on explicit off-chain governance-path records in addition to contract constraints
-- multiple adjacent governance and reporting domains depend on one canonical Foundation-governance truth source
-- public trust requires structured explanation and lineage, not only contract-level prohibition
-
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend only reads bounded public-safe or first-party-safe summaries
-- `fuze-frontend-admin`, because admin may propose, approve, pause, or escalate Foundation-sensitive actions but must not own canonical policy truth
-- `fuze-contracts`, because Foundation contracts enforce some capital constraints but do not own the full governance interpretation of what Foundation-sensitive actions mean
-- treasury-control domain, because treasury control governs treasury-sensitive control posture while Foundation governance governs the Foundation as a distinct stewardship structure
-- vault-action-policy domain, because vault policy governs category action meaning broadly while Foundation governance adds stronger stewardship-specific restrictions and interpretation
-- profit-participation domain, because Foundation participation in that system must be explicit but the Foundation domain owns its treatment policy
-
-### Architectural implications
-
-- every material Foundation-sensitive action must preserve explicit Foundation context
-- every material Foundation-sensitive action must preserve principal-protection meaning, allowed-use meaning, sensitivity classification, and governance-path meaning
-- principal-sensitive actions must be explicitly distinguished from ordinary Foundation-adjacent reporting or administrative actions
-- Foundation profit-participation treatment references must remain explicit and versioned
-- destination ambiguity is a governance risk and must be modeled explicitly
-- corrections and supersession must preserve historical stewardship meaning rather than silently rewriting records
+- **Foundation Governance Domain:** owns Foundation stewardship, principal protection, allowed-use/restricted-use interpretation, Foundation-sensitive action meaning, Foundation treatment posture, and correction/supersession lineage.
+- **Governance Model Domain:** owns higher-order governance scope classification, governance action lifecycle, approval posture, exceptional-governance posture, and bounded future participation rules.
+- **Treasury Control Policy Domain:** owns treasury-sensitive reserve controls and treasury-action policy. Foundation governance consumes treasury references but does not become ordinary treasury.
+- **Vault Action Policy Domain:** owns what each vault category may do. Foundation governance adds stricter stewardship interpretation for Foundation-controlled or Foundation-sensitive actions.
+- **Multisig and Timelock Domain:** owns threshold, delay, queued action, ready-for-execution, cancellation, expiry, and control-path semantics. Foundation governance links to those controls but does not own their technical internals.
+- **Profit Participation Domain:** owns payout and participation truth. Foundation governance owns only explicit Foundation treatment policy consumed by that domain.
+- **Transparency and Reporting Domains:** own public-trust interpretation and recurring report artifacts. Foundation governance provides source truth and references but does not compose final reports.
+- **Public Contract and Wallet Registry Domain:** owns public designation truth for contracts and wallets. Foundation governance may require or reference registry changes but does not own registry publication truth.
+- **Audit Domain:** owns immutable audit-record semantics and evidence-access posture.
 
 ---
 
-## 7. Domain Responsibilities
+## API Surface Families
 
-The Foundation Governance API domain is responsible for:
+### Public-Read Surface
 
-1. maintaining canonical Foundation policy versions and Foundation-sensitive action records
-2. classifying Foundation actions by principal sensitivity, stewardship consistency, use class, destination class, and reporting expectations
-3. validating whether a proposed action remains consistent with the Foundation’s long-horizon stewardship purpose
-4. preserving distinct treatment between Foundation principal, Foundation operations flows, and ordinary treasury capital
-5. recording proposal, approval, execution, emergency, and reporting-path linkage for Foundation-sensitive actions
-6. linking Foundation actions to public reporting, registry, payout-cycle, eligibility-treatment, and exception references where applicable
-7. supporting admin approve, reject, pause, escalate, exceptional treatment, supersede, and discrepancy workflows
-8. emitting Foundation governance lifecycle events
-9. generating audit lineage for sensitive Foundation governance mutations
-10. preserving separation between Foundation governance, treasury control, vault action policy, and downstream execution truth
+Public-read APIs MAY expose bounded Foundation policy summaries, published Foundation-action summaries, public-safe correction/supersession information, public-safe reporting references, and public-safe treatment explanations. They MUST NOT expose internal approval notes, operator identity details, unsafe control-path details, raw internal financial logic, private treasury data, or unapproved Foundation-sensitive action drafts.
 
-The domain is not responsible for:
+### First-Party Authenticated Surface
 
-- owning raw Foundation Vault contract execution state
-- replacing treasury control policy
-- replacing multisig/timelock technical enforcement
-- replacing transparency reports
-- replacing profit participation logic
-- allowing broad discretionary reuse of Foundation capital outside stewardship meaning
+First-party authenticated APIs MAY expose caller-scoped or first-party-safe Foundation views where policy allows. Authentication alone does not grant access to privileged Foundation governance truth.
 
----
+### Internal Service Surface
 
-## 8. Out of Scope
+Internal service APIs MAY create and update Foundation-governance records only through owner-domain controlled routes. They MUST require service identity, explicit scope, idempotency keys for mutations, correlation IDs, and audit lineage.
 
-The following are out of scope for this API specification:
+### Admin / Control-Plane Surface
 
-- low-level signer-management or quorum configuration
-- raw token transfer execution APIs
-- final Foundation Vault ABI design
-- generic product budget approvals
-- end-user UI design for Foundation reporting
-- external explorer integration specifics
-- exact blocked-destination registry model
-- exact disclosure thresholds for every public report surface
+Admin/control-plane APIs MAY approve, reject, pause, escalate, declare exceptional treatment, supersede, or resolve discrepancies only under privileged operator authorization, reason codes, policy checks, idempotency, and critical audit logging.
+
+### Event / Webhook / Async Surface
+
+Internal events MAY publish Foundation lifecycle transitions and projection triggers. External webhooks MUST NOT be introduced unless a narrower approved public/partner contract explicitly allows them. Async APIs MUST distinguish accepted intent from final outcome.
+
+### Reporting / Export Surface
+
+Reporting/export APIs MAY expose derived public-safe or restricted Foundation reporting artifacts. They MUST preserve source lineage and must not become canonical mutation owners.
+
+### Chain-Adjacent Surface
+
+Chain-adjacent APIs MAY store and read references to transaction hashes, safes, timelock queue IDs, contract addresses, explorer references, and execution statuses. They MUST NOT treat chain observation alone as complete Foundation-governance meaning.
 
 ---
 
-## 9. Canonical Entities and Data Ownership
+## System / API Boundaries
 
-### Durable entities
+### Canonical Write Boundary
 
-#### 9.1 foundation_policy_versions
-- **Owner:** Foundation Governance Domain
-- **Purpose:** canonical policy versions governing Foundation-sensitive actions
-- **Nature:** source-of-truth durable entity
+Only the Foundation Governance API owner-domain surface may mutate Foundation policy versions, Foundation-sensitive action records, Foundation classifications, Foundation treatment references, Foundation correction/supersession lineage, and Foundation discrepancy records.
 
-#### 9.2 foundation_action_records
-- **Owner:** Foundation Governance Domain
-- **Purpose:** canonical Foundation-sensitive action records
-- **Nature:** source-of-truth durable entity
+### Canonical Read Boundary
 
-#### 9.3 foundation_principal_treatment_profiles
-- **Owner:** Foundation Governance Domain
-- **Purpose:** principal-protection interpretations and treatment profiles
-- **Nature:** source-of-truth durable entity
+Canonical internal reads come from owner-domain Foundation governance records. Public, reporting, and first-party views are derived projections.
 
-#### 9.4 foundation_action_classifications
-- **Owner:** Foundation Governance Domain
-- **Purpose:** explicit classification of stewardship consistency, principal sensitivity, use class, and timing sensitivity
-- **Nature:** source-of-truth durable entity
+### Derived Read Boundary
 
-#### 9.5 foundation_action_destinations
-- **Owner:** Foundation Governance Domain
-- **Purpose:** destination category, destination reference, use rationale, and destination-legibility validation posture
-- **Nature:** source-of-truth durable lineage entity
+Derived Foundation views MAY exist for public pages, transparency reports, stakeholder reports, search, dashboards, and exports. Derived views MUST include source references, freshness indicators, publication state, and correction/supersession posture where relevant.
 
-#### 9.6 foundation_action_approval_paths
-- **Owner:** Foundation Governance Domain
-- **Purpose:** explicit proposal, approval, and execution role-path records
-- **Nature:** source-of-truth durable lineage entity
+### Admin Boundary
 
-#### 9.7 foundation_action_control_references
-- **Owner:** Foundation Governance Domain
-- **Purpose:** structured references to multisig, timelock, emergency authority, or other bounded control paths
-- **Nature:** source-of-truth durable lineage entity
+Admin/control-plane APIs constrain privileged action; they do not own Foundation truth separately from the owner-domain service. Admin UI and admin orchestration MUST call owner-domain APIs rather than writing local truth.
 
-#### 9.8 foundation_profit_participation_treatment_refs
-- **Owner:** Foundation Governance Domain
-- **Purpose:** explicit treatment references for Foundation inclusion, exclusion, or bounded participation in profit participation systems
-- **Nature:** source-of-truth durable lineage entity
+### Chain Boundary
 
-#### 9.9 foundation_action_reporting_references
-- **Owner:** Foundation Governance Domain
-- **Purpose:** references to transparency reports, public registry references, payout references, and exception records
-- **Nature:** durable reporting-lineage entity
-
-#### 9.10 foundation_exception_records
-- **Owner:** Foundation Governance Domain
-- **Purpose:** exceptional or emergency Foundation-action records with post-incident review requirements
-- **Nature:** durable exceptional-case entity
-
-#### 9.11 foundation_discrepancy_cases
-- **Owner:** Foundation Governance Domain
-- **Purpose:** review and remediation records for invalid, stale, misclassified, or misreported Foundation-sensitive actions
-- **Nature:** durable review/remediation entity
-
-#### 9.12 foundation_mutation_actions
-- **Owner:** Foundation Governance Domain
-- **Purpose:** high-level action records for create, approve, reject, pause, escalate, exceptional, supersede, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.13 foundation_audit_events
-- **Owner:** Audit / Activity domain, sourced by Foundation Governance Domain
-- **Purpose:** immutable trail for sensitive Foundation governance actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.14 foundation_public_policy_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe Foundation policy and Foundation-action summaries
-- **Nature:** derived
-
-#### 9.15 foundation_internal_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** trusted Foundation-action and approval-path operational summaries
-- **Nature:** derived
-
-#### 9.16 foundation_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into stale, invalid, or misclassified Foundation-sensitive conditions
-- **Nature:** derived
+On-chain transactions, safe approvals, timelock queues, and contract events are execution or control evidence. They do not replace off-chain Foundation policy, approval, classification, treatment, reporting, or correction records.
 
 ---
 
-## 10. State Model and Lifecycle
+## Adjacent API Boundaries
 
-### 10.1 Foundation policy version lifecycle
+- `GOVERNANCE_MODEL_API_SPEC.md` governs cross-cutting governance action, policy, scope, review, and exceptional-governance APIs. Foundation APIs consume or specialize governance posture for Foundation-specific meaning.
+- `TREASURY_CONTROL_POLICY_API_SPEC.md` governs treasury-control APIs and reserve-sensitive treasury actions. It MUST NOT absorb Foundation-specific principal-preservation semantics.
+- `VAULT_ACTION_POLICY_API_SPEC.md` governs vault-category action APIs. It MUST NOT weaken Foundation governance where Foundation vaults or Foundation-sensitive destinations are involved.
+- `MULTISIG_AND_TIMELOCK_API_SPEC.md` governs control-profile and queued-action APIs. Foundation APIs link to control references but do not redefine threshold or delay mechanics.
+- `PROFIT_PARTICIPATION_API_SPEC.md` governs participation-period, allocation, and payout-intent APIs. Foundation APIs provide explicit Foundation treatment references only.
+- `TRANSPARENCY_MODEL_API_SPEC.md` and `TRANSPARENCY_REPORTING_API_SPEC.md` govern public-trust interpretation and recurring reporting APIs. Foundation APIs supply source-grounded Foundation facts and public-safe summaries.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` governs registry entries. Foundation APIs may require registry linkage for Foundation wallets or contracts but do not own registry publication truth.
 
-Possible states:
+---
+
+## Conflict Resolution Rules
+
+1. Active refined registry and higher constitutional materials win over narrower API text.
+2. Top-level boundary, ownership, architecture, domain ownership, and data ownership specifications win on ownership and boundary interpretation.
+3. `FOUNDATION_GOVERNANCE_SPEC.md` wins on Foundation stewardship, principal protection, allowed/disallowed-use interpretation, explicit treatment posture, and Foundation-specific correction/supersession semantics.
+4. `GOVERNANCE_MODEL_SPEC.md` wins on higher-order governance semantics, governance-scope classification, approval-path posture, exceptional-governance posture, and future participation boundaries.
+5. Treasury, vault, multisig/timelock, profit participation, registry, transparency, payout, audit, and chain specs win inside their own narrower source domains.
+6. This API spec wins on Foundation Governance API route-family posture, request/response/error/idempotency/event/audit/migration behavior, unless it conflicts with a higher semantic source.
+7. Public pages, dashboards, exports, caches, SDKs, and admin screens never win over canonical Foundation governance records.
+8. When ambiguity remains, implementations MUST choose the more conservative trust-preserving interpretation and open a discrepancy or decision-record process.
+
+---
+
+## Default Decision Rules
+
+1. Foundation capital is distinct from ordinary treasury by default.
+2. Foundation principal is preserved by default.
+3. Ambiguous use classes default to restricted or review-required.
+4. Ambiguous destination classes default to rejection or escalation, not silent approval.
+5. Ambiguous Foundation treatment in profit participation defaults to incomplete until explicit policy treatment is recorded.
+6. Public visibility defaults to public-safe summaries, not full internal disclosure.
+7. Admin override defaults to unavailable unless a route explicitly permits it with reason code, idempotency, authorization, and audit.
+8. Exceptional Foundation handling defaults to narrow duration, post-review, and remediation closure.
+9. If policy version, governance scope, principal sensitivity, approval path, or control reference is missing for a material action, the action MUST NOT proceed to approval or execution linkage.
+10. Historical Foundation meaning defaults to preserved lineage rather than overwrite.
+
+---
+
+## Roles / Actors / API Consumers
+
+### Human Actors
+
+- Foundation stewards where applicable.
+- Governance reviewers.
+- Privileged operators.
+- Treasury and finance stakeholders.
+- Public-trust and reporting authors.
+- Security and incident operators.
+- Audit and compliance reviewers.
+- Community/public readers of public-safe outputs.
+
+### System Actors
+
+- Foundation governance service.
+- Governance model service.
+- Treasury-control service.
+- Vault-action policy service.
+- Multisig/timelock control service.
+- Profit-participation service.
+- Snapshot/eligibility service.
+- Payout-ledger service.
+- Public registry service.
+- Transparency/reporting services.
+- Audit and activity service.
+- Event bus and projection workers.
+- Monitoring and alerting systems.
+
+### API Consumers
+
+- `fuze-backend-api` services through owner-domain and internal APIs.
+- Approved admin/control-plane clients through backend-mediated privileged routes.
+- Public web and public API consumers through public-safe reads.
+- First-party product clients through bounded authenticated reads.
+- Reporting/export systems through derived read contracts.
+- Async workers through internal events and job references.
+
+---
+
+## Resource / Entity Families
+
+### Canonical Resources
+
+- `foundation_policy_version`
+- `foundation_principal_treatment_profile`
+- `foundation_sensitive_action`
+- `foundation_action_classification`
+- `foundation_allowed_use_classification`
+- `foundation_destination`
+- `foundation_approval_path`
+- `foundation_control_reference`
+- `foundation_profit_participation_treatment_reference`
+- `foundation_reporting_reference`
+- `foundation_exception_record`
+- `foundation_discrepancy_case`
+- `foundation_correction_record`
+- `foundation_supersession_record`
+- `foundation_operation_record`
+- `foundation_idempotency_record`
+
+### Derived Resources
+
+- `foundation_public_policy_view`
+- `foundation_public_action_view`
+- `foundation_internal_status_view`
+- `foundation_reporting_export`
+- `foundation_projection_status`
+- `foundation_public_interpretation_view`
+
+### Audit and Runtime Resources
+
+- `foundation_audit_event`
+- `foundation_async_operation`
+- `foundation_projection_job`
+- `foundation_dead_letter_record`
+- `foundation_remediation_case`
+
+---
+
+## Ownership Model
+
+The Foundation Governance API owner owns mutation authority for canonical Foundation-governance resources. No public page, reporting service, treasury tool, vault tool, contract watcher, admin UI, payout service, registry service, or transparency surface may mutate Foundation truth directly.
+
+Adjacent systems MAY submit candidate inputs, references, or evidence to Foundation-governance APIs. Those inputs remain provider/input/reference truth until validated and accepted by Foundation Governance.
+
+---
+
+## Authority / Decision Model
+
+Foundation-sensitive decisions require explicit separation of:
+
+1. source-domain meaning;
+2. governance classification;
+3. Foundation policy version;
+4. principal-sensitivity classification;
+5. allowed-use/restricted-use determination;
+6. review/approval path;
+7. control-path reference;
+8. downstream execution reference;
+9. reporting/public interpretation reference;
+10. correction/supersession lineage.
+
+Admin/control-plane actors MAY initiate or approve bounded operations only when authorized. They do not own semantic truth. Internal services MAY create and link records only where their service identity and scope allow. Chain observers MAY provide evidence, but they do not decide Foundation-governance validity.
+
+---
+
+## Authentication Model
+
+Public-read routes MAY allow unauthenticated access where records are explicitly published. Authenticated first-party reads require valid session authentication. Internal service routes require service-to-service identity with environment-bound credentials. Admin/control-plane routes require authenticated privileged operator identity, step-up controls where policy requires, and a reason-coded operation request.
+
+Authentication MUST NOT be confused with authorization. A valid session or service identity is never sufficient by itself to approve Foundation-sensitive action.
+
+---
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+- caller type and route family;
+- Foundation-governance permission or service scope;
+- current resource state;
+- policy version applicability;
+- principal-sensitivity level;
+- allowed-use/restricted-use classification;
+- destination category and destination legitimacy;
+- control-path requirements;
+- reporting and public exposure constraints;
+- whether the requested mutation is legal for the current lifecycle state;
+- whether entitlement/capability gating applies to the consuming client or integration.
+
+Privileged admin operations MUST require explicit reason codes and MUST generate critical audit records.
+
+---
+
+## Entitlement / Capability-Gating Model
+
+Foundation-governance APIs are not ordinary product capabilities. Public reads MAY be generally available after publication. Internal, admin, export, and privileged report APIs MUST be gated by explicit service or operator capability. Future partner or authenticated stakeholder views MUST be explicitly enabled by policy and MUST NOT infer access from ordinary account or workspace membership.
+
+---
+
+## API State Model
+
+### Foundation Policy Version States
 
 - `draft`
 - `active`
@@ -331,9 +483,7 @@ Possible states:
 - `superseded`
 - `archived`
 
-### 10.2 Foundation action lifecycle
-
-Possible states:
+### Foundation-Sensitive Action States
 
 - `draft`
 - `proposed`
@@ -342,14 +492,12 @@ Possible states:
 - `rejected`
 - `ready_for_execution`
 - `executed_reference_linked`
-- `reported`
+- `reported_if_applicable`
 - `paused`
 - `superseded`
 - `closed`
 
-### 10.3 approval-path lifecycle
-
-Possible states:
+### Approval Path States
 
 - `proposal_recorded`
 - `approval_pending`
@@ -358,9 +506,7 @@ Possible states:
 - `execution_linked`
 - `closed`
 
-### 10.4 exceptional-action lifecycle
-
-Possible states:
+### Exceptional Treatment States
 
 - `declared`
 - `containment_active`
@@ -368,9 +514,7 @@ Possible states:
 - `closed`
 - `superseded`
 
-### 10.5 discrepancy lifecycle
-
-Possible states:
+### Discrepancy States
 
 - `opened`
 - `under_review`
@@ -378,435 +522,320 @@ Possible states:
 - `failed`
 - `closed`
 
-Lifecycle notes:
-- Foundation approval is distinct from execution linkage
-- reported is distinct from executed_reference_linked
-- exceptional treatment must remain explicitly narrower than normal authorization
-- supersession must preserve prior stewardship meaning and public explanation
+### Projection States
+
+- `not_projected`
+- `projection_pending`
+- `projected`
+- `projection_failed`
+- `stale`
+- `withheld`
+- `superseded`
 
 ---
 
-## 11. API Surface Overview
+## Lifecycle / Workflow Model
 
-The API surface is divided into four families:
-
-### 11.1 Public-read APIs
-Used by public users, holders, and community observers for:
-- reading bounded Foundation-governance summaries
-- reading public-safe Foundation-action summaries
-- reading category-aware public explanations of Foundation treatment where policy allows
-
-### 11.2 First-party authenticated read APIs
-Used by `fuze-frontend-webapp` and approved first-party clients for:
-- reading bounded Foundation-related public-safe and first-party-safe summaries where policy allows
-- reading linked payout or reporting references without exposing internal-only governance detail
-
-### 11.3 Internal service APIs
-Used by trusted internal services for:
-- creating Foundation actions
-- validating principal sensitivity, allowed-use posture, destinations, and profit-participation treatment
-- recording approval paths and control references
-- linking execution and reporting references
-- reading canonical truth
-
-### 11.4 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- approve, reject, pause, escalate, exceptional treatment, supersede, and discrepancy actions
-- stewardship-path repair and policy-governed remediation workflows
+1. A Foundation-sensitive change is identified by an internal service, governance reviewer, treasury/vault service, control-plane operator, reporting service, or discrepancy detector.
+2. The candidate input is submitted to Foundation Governance as a draft or proposed action.
+3. Foundation Governance validates policy version, governance scope, principal sensitivity, use class, destination category, and stewardship consistency.
+4. The API records a Foundation action classification and, where applicable, destination, treatment, control, reporting, and execution-reference placeholders.
+5. The action enters review and requires an approval path appropriate to sensitivity.
+6. The action is approved, rejected, paused, escalated, or declared exceptional.
+7. Approved actions MAY link to multisig/timelock, vault, treasury, registry, reporting, payout, or chain-adjacent execution references.
+8. Execution references are recorded as references, not as proof of Foundation semantic validity beyond the recorded control path.
+9. Public-safe views and reporting exports refresh asynchronously where policy allows.
+10. Corrections, supersessions, discrepancy closures, and exceptional post-reviews preserve lineage and audit evidence.
 
 ---
 
-## 12. Authentication and Authorization Model
+## Architecture Diagram — Mermaid flowchart
 
-### 12.1 Authentication posture by route family
+```mermaid
+flowchart TD
+  PublicReader[Public Reader / Community] --> PublicAPI[Public-Read Foundation API]
+  FirstParty[First-Party App] --> AuthAPI[Authenticated Foundation Read API]
+  Admin[Privileged Operator / Admin UI] --> AdminAPI[Admin Control-Plane Foundation API]
+  InternalSvc[Internal Services] --> InternalAPI[Internal Foundation Service API]
 
-#### Public-read routes
-No authentication required:
-- list public-safe Foundation policy summaries
-- read public-safe Foundation-action summaries and references where published
+  PublicAPI --> PublicViews[Derived Public-Safe Foundation Views]
+  AuthAPI --> BoundedViews[Bounded First-Party Foundation Views]
+  AdminAPI --> FoundationService[Foundation Governance Owner Service]
+  InternalAPI --> FoundationService
 
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded first-party-safe Foundation-related summaries where actor has visibility under policy
+  FoundationService --> PolicyStore[(Foundation Policy Versions)]
+  FoundationService --> ActionStore[(Foundation Action Records)]
+  FoundationService --> TreatmentStore[(Foundation Treatment References)]
+  FoundationService --> DiscrepancyStore[(Discrepancy / Correction / Supersession Records)]
+  FoundationService --> IdempotencyStore[(Idempotency / Operation Records)]
+  FoundationService --> Audit[(Audit Log and Activity)]
 
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create Foundation actions
-- classify actions
-- record destinations, approval paths, control references, profit-participation treatment references, and reporting links
-- read canonical truth
+  FoundationService --> Governance[Governance Model Service]
+  FoundationService --> Treasury[Treasury Control Policy Service]
+  FoundationService --> Vault[Vault Action Policy Service]
+  FoundationService --> MultiSig[Multisig / Timelock Control Service]
+  FoundationService --> Profit[Profit Participation / Eligibility Services]
+  FoundationService --> Registry[Public Contract and Wallet Registry]
+  FoundationService --> Reporting[Transparency / Stakeholder Reporting]
+  FoundationService --> EventBus[Event Bus]
 
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- approve, reject, pause, escalate, declare exceptional treatment, supersede, and resolve discrepancy cases
+  EventBus --> Workers[Projection / Export / Remediation Workers]
+  Workers --> PublicViews
+  Workers --> BoundedViews
+  Workers --> Reporting
 
-### 12.2 Authorization checkpoints
+  MultiSig --> ChainRefs[Chain-Adjacent Execution References]
+  ChainRefs --> Chain[(On-Chain / Contract Evidence)]
 
-Authorization must evaluate:
-- caller identity and route family
-- whether target action is public-safe, first-party-safe, or privileged internal state
-- whether internal service has create/classify/link/read privilege
-- whether admin/operator role is present for sensitive governance actions
-- whether current action state allows requested mutation
-- whether principal sensitivity, use class, or payout treatment require stronger control-path validation
-
-### 12.3 Sensitive action rules
-
-The following require heightened checks:
-- approval of material Foundation-sensitive actions
-- any action that materially affects Foundation principal or principal treatment
-- changes to Foundation treatment in profit participation
-- destination changes after action enters under_review or approved state
-- escalation or exceptional treatment
-- discrepancy-resolution actions
+  PublicViews -. derived .-> PublicReader
+  Reporting -. derived .-> PublicReader
+```
 
 ---
 
-## 13. API Endpoints / Interface Contracts
+## Data Design — Mermaid Diagram
 
-## 13.1 Public-Read APIs
+```mermaid
+erDiagram
+  FOUNDATION_POLICY_VERSION ||--o{ FOUNDATION_ACTION : governs
+  FOUNDATION_ACTION ||--o{ FOUNDATION_ACTION_CLASSIFICATION : has
+  FOUNDATION_ACTION ||--o{ FOUNDATION_DESTINATION : targets
+  FOUNDATION_ACTION ||--o{ FOUNDATION_APPROVAL_PATH : requires
+  FOUNDATION_ACTION ||--o{ FOUNDATION_CONTROL_REFERENCE : links
+  FOUNDATION_ACTION ||--o{ FOUNDATION_TREATMENT_REFERENCE : defines
+  FOUNDATION_ACTION ||--o{ FOUNDATION_REPORTING_REFERENCE : publishes
+  FOUNDATION_ACTION ||--o{ FOUNDATION_EXECUTION_REFERENCE : references
+  FOUNDATION_ACTION ||--o{ FOUNDATION_EXCEPTION_RECORD : may_have
+  FOUNDATION_ACTION ||--o{ FOUNDATION_DISCREPANCY_CASE : may_have
+  FOUNDATION_ACTION ||--o{ FOUNDATION_CORRECTION_RECORD : corrected_by
+  FOUNDATION_ACTION ||--o{ FOUNDATION_SUPERSESSION_RECORD : superseded_by
+  FOUNDATION_ACTION ||--o{ FOUNDATION_OPERATION_RECORD : mutated_by
+  FOUNDATION_OPERATION_RECORD ||--|| FOUNDATION_IDEMPOTENCY_RECORD : protected_by
+  FOUNDATION_OPERATION_RECORD ||--o{ FOUNDATION_AUDIT_EVENT : emits
+  FOUNDATION_ACTION ||--o{ FOUNDATION_PUBLIC_VIEW : projects_to
 
-### 13.1.1 `GET /v1/foundation-governance/policies`
-**Purpose:** list published public-safe Foundation policy summaries  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `state`
-- pagination
-**Response Summary:**
-- policy version summaries
-- active/superseded posture
-- public-safe stewardship and principal-treatment summaries
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
+  FOUNDATION_POLICY_VERSION {
+    string foundation_policy_version_id PK
+    string state
+    string policy_version
+    datetime effective_at
+    datetime superseded_at
+  }
+  FOUNDATION_ACTION {
+    string foundation_action_id PK
+    string action_class
+    string principal_sensitivity
+    string lifecycle_state
+    string policy_version_id FK
+    datetime created_at
+    datetime updated_at
+  }
+  FOUNDATION_ACTION_CLASSIFICATION {
+    string classification_id PK
+    string use_classification
+    string stewardship_consistency
+    string sensitivity_tier
+    string validation_state
+  }
+  FOUNDATION_DESTINATION {
+    string destination_id PK
+    string destination_category
+    string destination_reference
+    string destination_validation_state
+  }
+  FOUNDATION_CONTROL_REFERENCE {
+    string control_reference_id PK
+    string control_type
+    string external_reference
+    string control_state
+  }
+  FOUNDATION_TREATMENT_REFERENCE {
+    string treatment_reference_id PK
+    string adjacent_domain
+    string treatment_mode
+    string treatment_state
+  }
+  FOUNDATION_PUBLIC_VIEW {
+    string public_view_id PK
+    string publication_state
+    string freshness_state
+    string source_action_id FK
+  }
+```
 
-### 13.1.2 `GET /v1/foundation-governance/actions`
-**Purpose:** list published public-safe Foundation-action summaries  
-**Caller Type:** public  
-**Query Parameters Summary:**
-- optional `action_class`
-- optional `principal_sensitivity`
-- pagination
-**Response Summary:**
-- public-safe action summaries
-- stewardship class, sensitivity, and status
-- bounded reporting and registry references
-**Side Effects:** none
+---
 
-### 13.1.3 `GET /v1/foundation-governance/actions/{foundation_action_id}`
-**Purpose:** retrieve one public-safe Foundation-action detail  
-**Caller Type:** public  
-**Response Summary:**
-- public-safe action detail
-- stewardship and principal-sensitivity summary
-- destination-category summary
-- payout-treatment summary where published
-- reporting and public registry references where published
-- correction or supersession guidance where relevant
-**Side Effects:** none
+## Flow View
 
-## 13.2 First-Party Authenticated Read APIs
+### Main Foundation Action Flow
 
-### 13.2.1 `GET /v1/foundation-governance/me/actions`
-**Purpose:** retrieve bounded first-party-safe Foundation-related action summaries where actor has policy visibility  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `reference_type`
-- pagination
-**Response Summary:**
-- bounded Foundation-related summaries
-- linked public reporting or payout guidance where applicable
-**Side Effects:** none
+1. **Create candidate action:** Internal service submits a candidate Foundation-sensitive action with policy version, action class, principal sensitivity, and idempotency key.
+2. **Validate context:** Owner service validates policy version, caller scope, action class, principal sensitivity, destination category, allowed-use posture, and stewardship consistency.
+3. **Record canonical draft/proposal:** The service creates a canonical action and operation record.
+4. **Attach required references:** Destination, approval-path, control, profit-participation treatment, reporting, and execution-reference placeholders are attached as required.
+5. **Review and approve/reject:** Admin/control-plane or governance workflow approves, rejects, pauses, escalates, or declares exceptional handling.
+6. **Accepted async behavior:** If control-path or reporting updates are async, the API returns accepted state and an operation reference, not final outcome.
+7. **Execution/reference linkage:** Approved action links to downstream execution or control artifacts without making those artifacts Foundation semantic owners.
+8. **Projection and reporting:** Public-safe views and reporting references are generated asynchronously where policy permits.
+9. **Audit and observability:** Every mutation writes audit, correlation, trace, operation, and idempotency records.
+10. **Correction/supersession:** If records become stale, invalid, or unsafe, discrepancy/correction/supersession workflows preserve historical lineage.
 
-## 13.3 Internal Service APIs
+### Failure / Retry / Degraded-Mode Flow
 
-### 13.3.1 `POST /internal/v1/foundation-governance/actions`
-**Purpose:** create draft Foundation-sensitive action record  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
+1. If validation fails, return deterministic problem details and do not create partial canonical state unless explicitly recorded as a rejected input.
+2. If idempotency replay occurs, return the original compatible result.
+3. If downstream control or reporting linkage fails after accepted response, keep the Foundation action in a pending or degraded state and expose remediation status internally.
+4. If public projection fails, mark derived views stale or withheld rather than publishing incomplete Foundation meaning.
+5. If ambiguity cannot be resolved, open discrepancy review and block approval/execution progression.
+
+### Admin / Exceptional Flow
+
+1. Privileged operator submits reason-coded exceptional action.
+2. API validates privilege, state, policy, and emergency constraints.
+3. API records exceptional action and audit evidence.
+4. Ordinary action path is paused or constrained where required.
+5. Post-review is required before closure.
+6. Public-safe reporting occurs only where policy allows and MUST preserve safety and lineage.
+
+---
+
+## Data Flows — Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+  participant IS as Internal Service
+  participant FG as Foundation Governance API
+  participant Auth as AuthZ / Policy Engine
+  participant Store as Foundation Canonical Store
+  participant Audit as Audit Service
+  participant Bus as Event Bus
+  participant Worker as Projection Worker
+  participant Public as Public-Safe View
+  participant Ctrl as Multisig / Timelock Service
+  participant Report as Transparency Reporting
+
+  IS->>FG: POST /internal/v1/foundation-governance/actions + idempotency_key
+  FG->>Auth: Validate service scope, policy version, sensitivity, allowed use
+  Auth-->>FG: Authorized + policy decision
+  FG->>Store: Create action, classification, operation, idempotency record
+  FG->>Audit: Write action_created audit event
+  FG->>Bus: Emit foundation_governance.action_created
+  FG-->>IS: 201 Created canonical action
+
+  IS->>FG: POST /actions/{id}/approval-paths
+  FG->>Auth: Validate lifecycle and approval-path completeness
+  Auth-->>FG: Authorized
+  FG->>Store: Record approval path; state under_review
+  FG->>Audit: Write approval_path_recorded
+  FG->>Bus: Emit foundation_governance.approval_path_recorded
+  FG-->>IS: 200 Approval path summary
+
+  IS->>FG: POST /actions/{id}/control-references
+  FG->>Ctrl: Validate control reference exists or is acceptable
+  Ctrl-->>FG: Control reference accepted
+  FG->>Store: Link control reference
+  FG->>Audit: Write control_linked
+  FG->>Bus: Emit foundation_governance.control_linked
+  FG-->>IS: 202 Accepted if async validation continues
+
+  Bus-->>Worker: Projection refresh requested
+  Worker->>Store: Read canonical Foundation state
+  Worker->>Public: Update public-safe view if publishable
+  Worker->>Report: Link reporting reference if policy permits
+  Worker->>Audit: Write projection/reporting lineage
+```
+
+---
+
+## Request Model
+
+### Required Headers
+
+- `X-Correlation-ID` on all mutation and privileged read routes.
+- `Idempotency-Key` on all mutation routes.
+- Service identity headers or equivalent mTLS/service-auth context on internal routes.
+- Operator identity context on admin/control-plane routes.
+- API version or negotiated contract version where applicable.
+
+### Common Mutation Fields
+
+Mutation requests SHOULD include, where relevant:
+
+- `foundation_policy_version_id`
+- `foundation_action_id`
 - `action_class`
 - `principal_sensitivity`
-- `policy_version_reference`
-- optional `proposal_summary`
-- `idempotency_key`
-**Response Summary:** Foundation-action summary
-**Side Effects:** creates draft/proposed Foundation action and classification record
-**Idempotency Behavior:** required
-**Audit Requirements:** sensitive Foundation-action creation audit
-**Emitted Events:** `foundation_governance.action_created`
-
-### 13.3.2 `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/destinations`
-**Purpose:** attach destination and use-rationale metadata to one Foundation action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
+- `use_classification`
 - `destination_category`
 - `destination_reference`
-- `use_classification`
-- optional `timing_reference`
-- `idempotency_key`
-**Response Summary:** destination summary and validation posture
-**Side Effects:** creates destination linkage and destination-legibility validation record
-**Idempotency Behavior:** required
-**Audit Requirements:** destination-link audit
-**Emitted Events:** `foundation_governance.destination_validated`
-
-### 13.3.3 `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/approval-paths`
-**Purpose:** record proposal, approval, and execution-path structure for one Foundation action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `proposer_role`
-- `approver_role`
-- `executor_role`
-- optional `approval_path_summary`
-- `idempotency_key`
-**Response Summary:** approval-path summary
-**Side Effects:** creates approval-path lineage and may move action into under_review
-**Idempotency Behavior:** required
-**Audit Requirements:** approval-path audit
-**Emitted Events:** `foundation_governance.approval_path_recorded`
-
-### 13.3.4 `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/control-references`
-**Purpose:** attach multisig, timelock, emergency, or exceptional control references to one action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `multisig_reference`
-- optional `timelock_reference`
-- optional `emergency_authority_reference`
-- optional `control_summary`
-- `idempotency_key`
-**Response Summary:** control-reference summary
-**Side Effects:** creates control-path linkage
-**Idempotency Behavior:** required
-**Audit Requirements:** control-reference audit
-**Emitted Events:** `foundation_governance.control_linked`
-
-### 13.3.5 `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/profit-participation-treatment`
-**Purpose:** attach explicit Foundation treatment reference for profit participation or holder-facing eligibility systems  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
+- `stewardship_rationale`
 - `treatment_mode`
-- `treatment_reference`
-- optional `treatment_summary`
-- `idempotency_key`
-**Response Summary:** treatment-reference summary
-**Side Effects:** creates explicit Foundation treatment lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** treatment-reference audit
-**Emitted Events:** `foundation_governance.profit_participation_treatment_linked`
-
-### 13.3.6 `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/reporting-references`
-**Purpose:** attach transparency, registry, payout, or exception references to one Foundation action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `transparency_report_reference`
-- optional `public_registry_reference`
-- optional `payout_cycle_reference`
-- optional `exception_reference`
-- `idempotency_key`
-**Response Summary:** reporting-reference summary
-**Side Effects:** creates reporting and trust-surface linkage
-**Idempotency Behavior:** required
-**Audit Requirements:** reporting-link audit
-**Emitted Events:** `foundation_governance.reporting_linked`
-
-### 13.3.7 `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/execution-references`
-**Purpose:** link downstream execution reference to one Foundation action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `execution_reference_type`
-- `execution_reference_id`
-- optional `execution_summary`
-- `idempotency_key`
-**Response Summary:** execution-reference summary and updated action state
-**Side Effects:** creates execution linkage and may move action into executed_reference_linked
-**Idempotency Behavior:** required
-**Audit Requirements:** execution-link audit
-**Emitted Events:** `foundation_governance.execution_linked`
-
-### 13.3.8 `GET /internal/v1/foundation-governance/actions/{foundation_action_id}`
-**Purpose:** retrieve canonical Foundation-governance truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full Foundation action, policy version, principal-treatment profile, classification, destination, approval-path, control references, profit-participation treatment references, reporting references, and discrepancy lineage
-**Side Effects:** none
-
-## 13.4 Admin / Control-Plane APIs
-
-### 13.4.1 `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/approve`
-**Purpose:** approve Foundation-sensitive action under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
+- `control_reference`
+- `reporting_reference`
 - `reason_code`
 - `operator_note`
+- `source_reference`
+- `requested_effective_at`
 - `idempotency_key`
-**Response Summary:** approved action summary
-**Side Effects:** action moves to approved or ready_for_execution if checks pass
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.action_approved`
 
-### 13.4.2 `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/reject`
-**Purpose:** reject Foundation-sensitive action under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** rejected action summary
-**Side Effects:** action moves to rejected
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.action_rejected`
+### Validation Rules
 
-### 13.4.3 `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/pause`
-**Purpose:** pause Foundation-sensitive action under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** paused action summary
-**Side Effects:** action moves to paused
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.action_paused`
-
-### 13.4.4 `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/escalate`
-**Purpose:** escalate Foundation-sensitive action to stronger governance/control path  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `escalation_type`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** escalation summary
-**Side Effects:** action control path strengthens, for example through stronger timelock or approval posture
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.action_escalated`
-
-### 13.4.5 `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/exceptional`
-**Purpose:** declare emergency or exceptional Foundation treatment under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `exception_type`
-- `public_or_internal_summary`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** exceptional-action summary
-**Side Effects:** creates exception record and may restrict ordinary action path until review completes
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.exception_declared`
-
-### 13.4.6 `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/supersede`
-**Purpose:** supersede one Foundation-sensitive action with a replacement record under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_foundation_action_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates old-to-new supersession linkage and updates current policy-visible preference
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.action_superseded`
-
-### 13.4.7 `POST /admin/v1/foundation-governance/discrepancies`
-**Purpose:** resolve Foundation-governance discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, pause, escalate, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `foundation_governance.discrepancy_resolved`
+- Missing policy version on a material action is invalid.
+- Missing principal-sensitivity classification on a material action is invalid.
+- Missing reason code on admin/control-plane mutation is invalid.
+- Destination changes after `under_review` require explicit mutation route, reason code, and audit.
+- Profit-participation treatment changes require explicit treatment reference and policy version.
+- Ambiguous allowed-use classification MUST block approval until resolved.
 
 ---
 
-## 14. Request Rules
+## Response Model
 
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive Foundation-governance mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored Foundation-governance truth as authoritative input
+### Success Responses
 
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- proposal or approval of material Foundation-sensitive actions
-- any action affecting principal-preservation logic
-- any change to Foundation treatment in profit participation
-- destination or use changes after action enters under_review or approved state
-- escalation or exceptional treatment
-- discrepancy-resolution actions
+Successful responses MUST include:
 
-Heightened validation may include:
-- principal-sensitivity and stewardship-consistency checks
-- destination-category restriction checks
-- allowed-use versus disallowed-use checks
-- control-path completeness checks
-- operator role confirmation
-- governance/finance/security case linkage for sensitive actions
+- stable resource identifier;
+- lifecycle state;
+- policy version reference;
+- principal-sensitivity summary;
+- use-classification summary;
+- control-reference summary where applicable;
+- treatment-reference summary where applicable;
+- reporting-reference summary where applicable;
+- correction/supersession summary where applicable;
+- timestamps;
+- correlation ID;
+- operation ID for mutation responses.
 
-### 14.3 Scope integrity rule
-Foundation-governance mutations must target valid and authorized policy versions, action records, destination records, control references, treatment references, and discrepancy records. Services and operators must not mutate unrelated or unauthorized Foundation-governance state.
+### Accepted Responses
 
-### 14.4 Layer-separation rule
-Foundation governance must remain the stewardship-and-principal-protection layer for the Foundation. It must not collapse:
-- treasury-control meaning,
-- vault-action-policy meaning,
-- multisig/timelock execution,
-- profit-participation execution,
-- or transparency reporting
-into one ambiguous state object.
+Accepted async responses MUST include:
 
----
+- `operation_id`;
+- accepted lifecycle state;
+- pending work type;
+- status URL or internal status reference;
+- retry guidance;
+- clear statement that accepted state is not final business outcome.
 
-## 15. Response Rules
+### Public Read Responses
 
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- action, principal-treatment, or destination summaries where relevant
-- control-path, treatment-reference, and reporting-reference summaries where relevant
-- correlation references for mutations
+Public responses MUST be bounded and MUST distinguish:
 
-### 15.2 Async-accepted response rules
-If escalation, exceptional review, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target action or discrepancy
-- mutation type
-- resulting policy/action/control-path state
-- pause, escalation, exceptional, supersession, or closure effects where relevant
-- whether public-safe views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal Foundation-governance truth
-- public-safe Foundation policy summaries
-- public-safe Foundation-action reporting views
-- execution references versus final downstream execution outcomes
+- published Foundation policy summary;
+- public-safe action summary;
+- source reference and publication state;
+- supersession/correction state;
+- freshness or last-derived timestamp;
+- withheld or restricted fields, if represented.
 
 ---
 
-## 16. Error Model
+## Error / Result / Status Model
 
-The API uses structured problem-details style error responses.
+Errors MUST use structured problem-details style with:
 
-### 16.1 Required error fields
 - `type`
 - `title`
 - `status`
@@ -814,756 +843,604 @@ The API uses structured problem-details style error responses.
 - `detail`
 - `instance`
 - `correlation_id`
+- optional `operation_id`
+- optional `field_errors`
+- optional `policy_decision_reference`
 
-### 16.2 Common error codes
+### Required Error Codes
 
-#### Authorization / permission errors
 - `FOUNDATION_GOVERNANCE_PERMISSION_DENIED`
-- `FOUNDATION_GOVERNANCE_OPERATOR_PERMISSION_DENIED`
-- `FOUNDATION_GOVERNANCE_SERVICE_PERMISSION_DENIED`
-- `FOUNDATION_GOVERNANCE_AUDIENCE_PERMISSION_DENIED`
+- `FOUNDATION_GOVERNANCE_OPERATOR_SCOPE_REQUIRED`
+- `FOUNDATION_POLICY_VERSION_REQUIRED`
+- `FOUNDATION_POLICY_VERSION_NOT_ACTIVE`
+- `FOUNDATION_ACTION_NOT_FOUND`
+- `FOUNDATION_ACTION_STATE_CONFLICT`
+- `FOUNDATION_PRINCIPAL_SENSITIVITY_REQUIRED`
+- `FOUNDATION_USE_CLASSIFICATION_AMBIGUOUS`
+- `FOUNDATION_USE_RESTRICTED`
+- `FOUNDATION_DESTINATION_INVALID`
+- `FOUNDATION_CONTROL_REFERENCE_REQUIRED`
+- `FOUNDATION_TREATMENT_REFERENCE_REQUIRED`
+- `FOUNDATION_APPROVAL_PATH_INCOMPLETE`
+- `FOUNDATION_EXCEPTION_NOT_ALLOWED`
+- `FOUNDATION_IDEMPOTENCY_CONFLICT`
+- `FOUNDATION_RATE_LIMITED`
+- `FOUNDATION_PUBLICATION_WITHHELD`
+- `FOUNDATION_PROJECTION_STALE`
+- `FOUNDATION_DISCREPANCY_OPEN`
+- `FOUNDATION_MIGRATION_INCOMPLETE`
 
-#### State conflict errors
-- `FOUNDATION_GOVERNANCE_ACTION_STATE_INVALID`
-- `FOUNDATION_GOVERNANCE_POLICY_STATE_INVALID`
-- `FOUNDATION_GOVERNANCE_APPROVAL_PATH_INVALID`
-- `FOUNDATION_GOVERNANCE_SUPERSESSION_CONFLICT`
-- `FOUNDATION_GOVERNANCE_ESCALATION_CONFLICT`
+### Status Semantics
 
-#### Policy / safety errors
-- `FOUNDATION_GOVERNANCE_DESTINATION_NOT_ALLOWED`
-- `FOUNDATION_GOVERNANCE_POLICY_VERSION_REQUIRED`
-- `FOUNDATION_GOVERNANCE_APPROVAL_REQUIRED`
-- `FOUNDATION_GOVERNANCE_EXCEPTION_NOT_ALLOWED`
-- `FOUNDATION_GOVERNANCE_PRINCIPAL_RESTRICTION`
-
-#### Request integrity errors
-- `FOUNDATION_GOVERNANCE_IDEMPOTENCY_KEY_REQUIRED`
-- `FOUNDATION_GOVERNANCE_REQUEST_INVALID`
-- `FOUNDATION_GOVERNANCE_REQUEST_UNPROCESSABLE`
-
-#### Dependency or provider errors
-- `FOUNDATION_GOVERNANCE_EXECUTION_UNAVAILABLE`
-- `FOUNDATION_GOVERNANCE_STORAGE_UNAVAILABLE`
-- `FOUNDATION_GOVERNANCE_RECONCILIATION_UNAVAILABLE`
-
-### 16.3 Error handling rules
-- do not expose hidden internal governance, treasury, or security detail in public or low-privilege responses
-- do not imply permitted execution merely because a draft or proposed Foundation action exists
-- distinguish principal-preservation restriction failure from generic invalid state
-- distinguish policy-version-required from generic invalid request
-- include retry guidance only where safe
+- `approved` means governance approval exists, not downstream execution completion.
+- `ready_for_execution` means required API-side and control-path preconditions are met, not that execution happened.
+- `executed_reference_linked` means a downstream execution reference is linked, not that public reporting is complete.
+- `reported_if_applicable` means reporting linkage has been performed where policy requires, not that all public surfaces have refreshed.
+- `superseded` means a newer record controls current interpretation while historical lineage remains preserved.
 
 ---
 
-## 17. Idempotency and Mutation Safety
+## Idempotency / Retry / Replay Model
 
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- Foundation-action creation
-- destination attachment
-- approval-path recording
-- control-reference attachment
-- profit-participation treatment attachment
-- reporting-reference attachment
-- execution-reference linking
-- approve
-- reject
-- pause
-- escalate
-- exceptional
-- supersede
-- discrepancy resolution
+All Foundation-governance mutation APIs MUST be idempotent.
 
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
-
-### 17.3 Mutation safety rules
-- one canonical visible Foundation action per current action lineage unless explicit supersession exists
-- destination and control-path records must remain referentially consistent with principal sensitivity, stewardship class, and treatment references
-- approval, execution linkage, and reporting linkage must preserve proposal/approval/execution separation
-- corrections and supersession must preserve prior Foundation-action lineage
-- exceptional treatment must not silently normalize into routine Foundation behavior
+- Clients MUST send an idempotency key for every mutation.
+- Idempotency scope MUST include caller, route, target resource, payload fingerprint, and relevant policy version.
+- Exact replay MUST return the original compatible response.
+- Conflicting replay MUST return `FOUNDATION_IDEMPOTENCY_CONFLICT`.
+- Retry after accepted async response MUST not duplicate action records, audit events, control references, treatment references, or reporting references.
+- Idempotency records MUST be retained long enough to protect retries across client, worker, network, queue, and projection failure windows.
+- Admin/control-plane idempotency MUST preserve reason-code and operator identity lineage.
 
 ---
 
-## 18. Versioning and Compatibility Rules
+## Rate Limit / Abuse-Control Model
 
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
+Public-read APIs MUST be rate limited to protect public-trust surfaces from scraping, denial-of-service, and stale projection amplification. Admin/control-plane and internal routes MUST be protected by service-level limits, anomaly detection, replay detection, and sensitive-operation throttles.
 
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to proposed, approved, ready_for_execution, executed_reference_linked, reported, paused, or superseded states
-- new action classes, treatment modes, destination types, or control-reference types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
-
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of Foundation-action lifecycle states
-- changing public-safe Foundation-governance visibility semantics incompatibly
-- removing critical principal-treatment, destination, or control-path fields
-- changing exceptional-treatment or supersession semantics incompatibly
-
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
+Repeated failed attempts to mutate principal-sensitive, exceptional, destination-changing, or treatment-changing actions SHOULD trigger security review or operator-alert workflows.
 
 ---
 
-## 19. Event Emission and Webhook Behavior
+## Endpoint / Route Family Model
 
-This domain is event-capable.
+### Public-Read APIs
 
-### 19.1 Internal events
-The Foundation Governance domain must emit canonical internal events such as:
+- `GET /v1/foundation-governance/policies`
+- `GET /v1/foundation-governance/policies/{foundation_policy_version_id}`
+- `GET /v1/foundation-governance/actions`
+- `GET /v1/foundation-governance/actions/{foundation_action_id}`
+- `GET /v1/foundation-governance/public-views/{public_view_id}`
+
+### First-Party Authenticated APIs
+
+- `GET /v1/foundation-governance/me/actions`
+- `GET /v1/foundation-governance/me/treatment-references`
+
+These routes are optional and MUST remain bounded by policy and audience-scope rules.
+
+### Internal Service APIs
+
+- `POST /internal/v1/foundation-governance/actions`
+- `GET /internal/v1/foundation-governance/actions/{foundation_action_id}`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/classifications`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/destinations`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/approval-paths`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/control-references`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/profit-participation-treatment`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/reporting-references`
+- `POST /internal/v1/foundation-governance/actions/{foundation_action_id}/execution-references`
+- `GET /internal/v1/foundation-governance/discrepancies/{foundation_discrepancy_case_id}`
+
+### Admin / Control-Plane APIs
+
+- `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/approve`
+- `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/reject`
+- `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/pause`
+- `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/escalate`
+- `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/exceptional`
+- `POST /admin/v1/foundation-governance/actions/{foundation_action_id}/supersede`
+- `POST /admin/v1/foundation-governance/discrepancies`
+- `POST /admin/v1/foundation-governance/discrepancies/{foundation_discrepancy_case_id}/resolve`
+- `POST /admin/v1/foundation-governance/publication/{public_view_id}/withhold`
+
+### Reporting / Export APIs
+
+- `GET /internal/v1/foundation-governance/exports/actions`
+- `POST /internal/v1/foundation-governance/exports/actions`
+- `GET /internal/v1/foundation-governance/exports/{export_id}`
+
+Exports MUST be derived and source-linked.
+
+---
+
+## Public API Considerations
+
+Public APIs MUST default to narrower, safer, stable read contracts. They MAY expose only published Foundation records. They MUST include correction/supersession signals when relevant and MUST NOT expose internal operator details, full control-path internals, private financial data, non-public destinations, or unapproved drafts.
+
+Public API consumers MUST NOT be allowed to infer that a Foundation action is fully executed merely because it is approved or linked to a control reference.
+
+---
+
+## First-Party Application API Considerations
+
+First-party application APIs MUST preserve audience-scope limits and public-safe boundaries. First-party UI convenience MUST NOT introduce broader reads, broader filters, or local labels that reinterpret Foundation truth.
+
+---
+
+## Internal Service API Considerations
+
+Internal APIs MUST enforce owner-domain mutation discipline. Trusted services MAY submit inputs and references, but Foundation Governance must validate and accept them before they become canonical Foundation truth.
+
+Internal service APIs MUST NOT become hidden broad-write shortcuts. Every internal mutation requires service identity, idempotency, authorization, validation, audit, and correlation.
+
+---
+
+## Admin / Control-Plane API Considerations
+
+Admin/control-plane APIs are high-risk privileged pathways. They MUST be:
+
+- route-separated from ordinary application APIs;
+- least-privilege authorized;
+- reason-coded;
+- idempotent;
+- audited as critical activity;
+- correlated with policy version and operation ID;
+- constrained by lifecycle state;
+- observable through monitoring;
+- reviewable after exceptional use.
+
+Admin APIs MUST NOT silently override Foundation policy, erase history, or treat emergency conditions as standing discretion.
+
+---
+
+## Event / Webhook / Async API Considerations
+
+### Internal Events
+
+The API SHOULD emit internal events for:
+
+- `foundation_governance.policy_version_activated`
 - `foundation_governance.action_created`
+- `foundation_governance.action_classified`
 - `foundation_governance.destination_validated`
 - `foundation_governance.approval_path_recorded`
 - `foundation_governance.control_linked`
-- `foundation_governance.profit_participation_treatment_linked`
+- `foundation_governance.treatment_linked`
 - `foundation_governance.reporting_linked`
-- `foundation_governance.execution_linked`
 - `foundation_governance.action_approved`
 - `foundation_governance.action_rejected`
 - `foundation_governance.action_paused`
 - `foundation_governance.action_escalated`
 - `foundation_governance.exception_declared`
+- `foundation_governance.execution_linked`
+- `foundation_governance.public_view_projected`
 - `foundation_governance.action_superseded`
+- `foundation_governance.discrepancy_opened`
 - `foundation_governance.discrepancy_resolved`
 
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- Foundation action ID
-- action class
-- principal sensitivity
-- actor type
-- correlation ID
-- reason code where applicable
+Events MUST include event ID, schema version, aggregate ID, event type, occurred time, correlation ID, causation ID, actor/service identity class, policy version reference, and source state transition.
 
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound Foundation-governance webhooks by default. Any future outbound Foundation-status webhook surface must be narrow, security-reviewed, and governed by a separate contract.
+### External Webhooks
+
+External webhooks are not enabled by default. If later approved, they MUST expose only public-safe, versioned, stable events and MUST preserve replay safety, signature verification, delivery retries, and supersession/correction semantics.
 
 ---
 
-## 20. Audit and Activity Requirements
+## Chain-Adjacent API Considerations
 
-The following actions must generate durable audit events:
+Foundation Governance APIs MAY record chain-adjacent references, including contract addresses, safe transaction IDs, timelock queue IDs, transaction hashes, explorer references, and execution status snapshots. These references are evidence and linkage, not full Foundation governance truth.
 
-- Foundation-action creation
-- destination validation
-- approval-path recording
-- profit-participation treatment linkage
-- approve, reject, pause, escalate, and exceptional treatment
-- execution-reference and reporting-reference linkage for material actions
-- supersession and discrepancy-resolution actions
-- other sensitive Foundation-governance mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target action / principal-treatment / destination / control path / discrepancy reference as applicable
-- action type
-- before/after summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
+A chain transaction that appears valid at the contract layer MUST NOT automatically create a valid Foundation action unless it is linked to an approved Foundation governance record or discrepancy/remediation process.
 
 ---
 
-## 21. Data Model and Database Schema View
+## Data Model / Storage Support Implications
 
-### 21.1 `foundation_policy_versions`
-- `id` PK
-- `policy_version`
-- `state`
-- `policy_summary_json`
-- `created_at`
-- `activated_at` nullable
-- `superseded_at` nullable
+Storage design MUST support:
 
-**Constraints:**
-- unique `policy_version`
-- index on `state`
+- immutable operation records;
+- idempotency records;
+- policy versioning;
+- Foundation-sensitive action lifecycle history;
+- principal-sensitivity and allowed-use classifications;
+- destination and treatment references;
+- approval, control, execution, reporting, correction, and supersession linkage;
+- public-safe projection status;
+- audit-event references;
+- migration and compatibility metadata;
+- discrepancy remediation state.
 
-### 21.2 `foundation_action_records`
-- `id` PK
-- `action_class`
-- `principal_sensitivity`
-- `policy_version_reference`
-- `state`
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-**Constraints:**
-- index on (`action_class`, `principal_sensitivity`)
-- index on `state`
-
-### 21.3 `foundation_principal_treatment_profiles`
-- `id` PK
-- `treatment_mode`
-- `allowed_profile_json`
-- `restricted_profile_json`
-- `disallowed_profile_json`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- unique `treatment_mode`
-
-### 21.4 `foundation_action_classifications`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `stewardship_consistency_state`
-- `timing_sensitivity`
-- `classification_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-
-### 21.5 `foundation_action_destinations`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `destination_category`
-- `destination_reference`
-- `use_classification`
-- `timing_reference` nullable
-- `validation_state`
-- `created_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-- index on `validation_state`
-
-### 21.6 `foundation_action_approval_paths`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `proposer_role`
-- `approver_role`
-- `executor_role`
-- `state`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-- index on `state`
-
-### 21.7 `foundation_action_control_references`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `multisig_reference` nullable
-- `timelock_reference` nullable
-- `emergency_authority_reference` nullable
-- `created_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-
-### 21.8 `foundation_profit_participation_treatment_refs`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `treatment_mode`
-- `treatment_reference`
-- `treatment_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-
-### 21.9 `foundation_action_reporting_references`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `transparency_report_reference` nullable
-- `public_registry_reference` nullable
-- `payout_cycle_reference` nullable
-- `exception_reference` nullable
-- `created_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-
-### 21.10 `foundation_action_execution_references`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `execution_reference_type`
-- `execution_reference_id`
-- `execution_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `foundation_action_record_id`
-- index on (`execution_reference_type`, `execution_reference_id`)
-
-### 21.11 `foundation_exception_records`
-- `id` PK
-- `foundation_action_record_id` FK -> `foundation_action_records.id`
-- `exception_type`
-- `summary_json`
-- `state`
-- `created_at`
-- `closed_at` nullable
-
-### 21.12 `foundation_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.13 `foundation_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.14 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.15 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical Foundation-governance truth stays in policy versions, action records, principal-treatment profiles, classifications, destinations, approval paths, control references, treatment references, execution references, and discrepancy records
-- treasury-control, vault-action-policy, and multisig/timelock truth remain external and are referenced rather than duplicated
-- public-safe views must derive from canonical Foundation-governance truth filtered by disclosure policy
-- execution and reporting references remain explicit rather than embedded as opaque strings
-
-### Reconciliation notes
-- one visible Foundation action should reconcile to one current action lineage under current preference
-- destination restrictions and use classes must reconcile with Foundation stewardship meaning
-- approval paths must reconcile to required control-path posture
-- Foundation profit-participation treatment references must reconcile to reporting and holder-facing explanation where applicable
-- discrepancy cases must preserve review lineage for failed or conflicting Foundation-governance conditions
+Historical records MUST remain queryable for audit and public interpretation where policy allows.
 
 ---
 
-## 22. Architecture Diagram — Mermaid flowchart
+## Read Model / Projection / Reporting Rules
 
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    FAPI[Foundation Governance API<br/>fuze-backend-api]
-    PolicyStore[(foundation_policy_versions)]
-    ActionStore[(foundation_action_records)]
-    PrincipalStore[(foundation_principal_treatment_profiles)]
-    DestinationStore[(foundation_action_destinations)]
-    ApprovalStore[(foundation_action_approval_paths)]
-    ControlStore[(foundation_action_control_references)]
-    InternalSvc[Internal FUZE Services]
+Derived views MUST:
 
-    PublicUser --> FAPI
-    AuthUser --> WebApp
-    WebApp --> FAPI
-    AdminUI --> FAPI
-    InternalSvc --> FAPI
+1. reference canonical Foundation action or policy IDs;
+2. include projection timestamp and freshness state;
+3. include correction/supersession state;
+4. avoid private operator/control details;
+5. preserve distinction between approval, execution reference, and reporting completion;
+6. never mutate canonical Foundation governance records;
+7. become stale or withheld rather than publish unsafe or incomplete information;
+8. preserve public-safe interpretation after corrections.
 
-    FAPI --> PolicyStore
-    FAPI --> ActionStore
-    FAPI --> PrincipalStore
-    FAPI --> DestinationStore
-    FAPI --> ApprovalStore
-    FAPI --> ControlStore
-```
+Reporting exports MUST be source-linked and must not become independent Foundation truth.
 
 ---
 
-## 23. Data Design — Mermaid Diagram
+## Security / Risk / Privacy Controls
 
-```mermaid
-erDiagram
-    foundation_policy_versions ||--o{ foundation_action_records : governs
-    foundation_action_records ||--o{ foundation_action_classifications : classifies
-    foundation_action_records ||--o{ foundation_action_destinations : targets
-    foundation_action_records ||--o{ foundation_action_approval_paths : routes
-    foundation_action_records ||--o{ foundation_action_control_references : controls
-    foundation_action_records ||--o{ foundation_profit_participation_treatment_refs : treats
-    foundation_action_records ||--o{ foundation_action_reporting_references : reports
-    foundation_action_records ||--o{ foundation_action_execution_references : executes
-    foundation_action_records ||--o{ foundation_exception_records : excepts
-    foundation_action_records ||--o{ foundation_mutation_actions : tracks
+Foundation-governance APIs are trust-sensitive and MUST enforce:
 
-    foundation_policy_versions {
-        uuid id PK
-        string policy_version
-        string state
-        datetime created_at
-        datetime activated_at
-        datetime superseded_at
-    }
-
-    foundation_action_records {
-        uuid id PK
-        string action_class
-        string principal_sensitivity
-        string policy_version_reference
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime closed_at
-    }
-
-    foundation_action_classifications {
-        uuid id PK
-        uuid foundation_action_record_id FK
-        string stewardship_consistency_state
-        string timing_sensitivity
-        datetime created_at
-    }
-
-    foundation_action_destinations {
-        uuid id PK
-        uuid foundation_action_record_id FK
-        string destination_category
-        string destination_reference
-        string use_classification
-        string validation_state
-        datetime created_at
-    }
-
-    foundation_action_approval_paths {
-        uuid id PK
-        uuid foundation_action_record_id FK
-        string proposer_role
-        string approver_role
-        string executor_role
-        string state
-        datetime created_at
-        datetime updated_at
-    }
-
-    foundation_action_control_references {
-        uuid id PK
-        uuid foundation_action_record_id FK
-        string multisig_reference
-        string timelock_reference
-        string emergency_authority_reference
-        datetime created_at
-    }
-```
+- least privilege;
+- service identity;
+- privileged operator access controls;
+- environment-bound execution controls;
+- secrets and configuration separation;
+- structured audit logging;
+- request signing or equivalent controls for internal service routes where appropriate;
+- anomaly detection for repeated denied, conflicted, or sensitive requests;
+- safe redaction for public and first-party reads;
+- restricted field-level access for internal/private fields;
+- degraded-mode constraints that prevent unsafe publication or mutation.
 
 ---
 
-## 24. Flow View
+## Audit / Traceability / Observability Requirements
 
-### 24.1 Happy path — propose, approve, execute, report
-1. internal service creates draft Foundation-sensitive action
-2. destination and use rationale are attached and validated
-3. proposal, approval, and execution roles are recorded
-4. control references such as multisig and timelock are linked where required
-5. explicit profit-participation treatment reference is attached if relevant
-6. admin approves the action
-7. downstream execution reference is linked after execution path proceeds
-8. reporting and public registry references are attached
-9. public-safe Foundation-action view becomes explainable and historically traceable
+Every mutation MUST produce audit evidence containing:
 
-### 24.2 Happy path — explicit profit-participation treatment
-1. Foundation-sensitive action affects Foundation treatment in holder-facing payout logic
-2. system requires explicit treatment reference rather than implied inclusion or exclusion
-3. approval path and control references are recorded
-4. admin approves action after treatment basis is clear
-5. reporting reference is attached for holder-facing explanation
-6. public-safe Foundation-action summary preserves treatment clarity
+- actor or service identity;
+- route family;
+- operation ID;
+- idempotency key reference;
+- correlation ID;
+- trace ID;
+- policy version;
+- target resource;
+- previous state;
+- new state;
+- reason code where applicable;
+- validation decision reference;
+- control reference where applicable;
+- source reference where applicable.
 
-### 24.3 Alternate path — principal-sensitive escalation
-1. action touches principal-sensitive Foundation capital
-2. stewardship and destination validation require stronger restraint
-3. operator escalates to stronger governance/control path
-4. additional review or stronger timelock/multisig posture is linked
-5. action proceeds only if higher-control requirements are satisfied
-
-### 24.4 Failure path — destination or principal-preservation violation
-1. Foundation action is created or modified
-2. backend detects destination-category mismatch, principal-preservation conflict, or disallowed use classification
-3. request is rejected or paused
-4. no effective approval or public reporting is produced
-
-### 24.5 Failure and remediation path — discrepancy or misreporting
-1. Foundation action, destination, treatment, or reporting linkage becomes stale or inconsistent
-2. admin opens discrepancy-resolution flow
-3. backend preserves existing lineage
-4. corrected or superseding Foundation action or linkage is created
-5. discrepancy closes with preserved history
-
-### 24.6 Exceptional-action path
-1. emergency or exceptional condition is detected
-2. operator declares exceptional treatment with explicit reason and narrow containment posture
-3. ordinary governance shortcuts are not normalized into standing authority
-4. post-incident review remains required
-5. exceptional record closes only after structured review
-
-### 24.7 Retry behavior
-- duplicate Foundation-action creation returns same canonical action result
-- duplicate destination or control-reference attachment returns same lineage result where applicable
-- duplicate approve/reject/pause/escalate/exceptional/supersede/discrepancy actions return same terminal action result
+Observability MUST include metrics for mutation success/failure, validation denial, idempotency replay, projection lag, stale public views, discrepancy queues, exceptional actions, and control-reference failures.
 
 ---
 
-## 25. Data Flows — Mermaid sequenceDiagram
+## Failure Handling / Edge Cases
 
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Foundation Governance API
-    participant ACT as Action Store
-    participant DST as Destination Store
-    participant APP as Approval Store
-    participant CTRL as Control Store
-    participant TRT as Profit Participation Treatment Store
-    participant EXE as Execution Reference Store
-
-    S->>API: POST /internal/v1/foundation-governance/actions
-    API->>ACT: Create Foundation action
-    API-->>S: action summary
-
-    S->>API: POST /internal/v1/foundation-governance/actions/{action_id}/destinations
-    API->>DST: Create destination validation record
-    API-->>S: destination summary
-
-    S->>API: POST /internal/v1/foundation-governance/actions/{action_id}/approval-paths
-    API->>APP: Create approval-path record
-    API-->>S: approval-path summary
-
-    S->>API: POST /internal/v1/foundation-governance/actions/{action_id}/control-references
-    API->>CTRL: Create control-path linkage
-    API-->>S: control summary
-
-    S->>API: POST /internal/v1/foundation-governance/actions/{action_id}/profit-participation-treatment
-    API->>TRT: Create explicit treatment reference
-    API-->>S: treatment summary
-
-    S->>API: POST /internal/v1/foundation-governance/actions/{action_id}/execution-references
-    API->>EXE: Create execution linkage
-    API-->>S: execution summary
-```
+- **Missing policy version:** block mutation.
+- **Ambiguous use classification:** block approval and open review or discrepancy.
+- **Invalid destination:** reject or escalate; do not auto-correct.
+- **Principal-sensitive action without control reference:** block approval or readiness.
+- **Profit-participation treatment missing:** block adjacent participation linkage.
+- **Execution reference mismatch:** open discrepancy and prevent public-final wording.
+- **Projection lag:** mark public view stale or withhold.
+- **Duplicate submission:** use idempotency replay semantics.
+- **Conflicting retry:** return idempotency conflict.
+- **Admin emergency route misuse:** deny and alert security/audit.
+- **Legacy record lacks lineage:** preserve historical record but require migration normalization before production-grade mutation.
 
 ---
 
-## 26. Security and Risk Controls
+## Migration / Versioning / Compatibility / Deprecation Rules
 
-1. **Foundation-governance truth is backend-owned**  
-   Frontends and informal channels may not authoritatively define Foundation-sensitive action truth.
+This v2 API spec supersedes v1 interface posture where conflicts exist. Migration MUST:
 
-2. **Stewardship over convenience**  
-   Foundation decisions must prioritize long-term institutional coherence over short-term operational ease.
+1. map legacy Foundation action records to explicit policy versions, principal-sensitivity classifications, and lifecycle states;
+2. preserve historical IDs or provide stable aliases;
+3. preserve correction and supersession lineage;
+4. normalize any legacy Foundation-as-treasury aliases into explicit Foundation-governance records;
+5. reject or quarantine legacy records that lack required policy, classification, or approval-path data;
+6. maintain compatibility adapters only as temporary read or redirect layers;
+7. prevent old admin routes from mutating canonical records after cutover;
+8. publish deprecation notices for public or partner-facing route changes where applicable;
+9. keep public/trust-sensitive interpretations historically readable.
 
-3. **Principal-preservation first**  
-   Material Foundation principal actions must begin from preservation logic rather than ordinary deployment flexibility.
-
-4. **Distinct governance domain**  
-   Foundation governance must remain visibly distinct from ordinary treasury operation and routine platform administration.
-
-5. **Explicit authority over implied discretion**  
-   Foundation powers should be visible, bounded, and policy-defined.
-
-6. **Profit-participation treatment explicitness**  
-   Foundation treatment in holder-facing payout systems must be explicit, not hidden or inferred.
-
-7. **Least privilege**  
-   Internal write and admin approve/pause/escalate routes must be limited to authorized services and operators.
-
-8. **Emergency narrowness**  
-   Emergency controls should protect the Foundation without becoming a backdoor for ordinary discretionary use.
-
-9. **Audit immutability**  
-   Sensitive Foundation governance actions require durable immutable audit lineage.
-
-10. **Reporting compatibility**  
-    Material Foundation actions must remain compatible with transparency reporting and reserve-architecture visibility.
+API versions MUST remain explicit. Breaking changes require migration plan, compatibility period, audit evidence, and approval.
 
 ---
 
-## 27. Operational Considerations
+## OpenAPI / AsyncAPI / SDK Derivation Rules
 
-- Foundation-action and approval-path reads for trusted operators should be highly available
-- destination validation, stewardship consistency, principal-sensitivity treatment, and control-reference integrity are correctness-sensitive
-- principal-sensitive and payout-treatment-sensitive actions should surface clearly to ops views
-- exceptional-treatment and discrepancy workflows should be observable and reviewable
-- monitoring should alert on:
-  - missing approval-path records for material Foundation actions
-  - destination mismatches or principal-preservation violations
-  - control-reference omissions for high-sensitivity actions
-  - unusual exceptional-treatment frequency
-  - reporting-link gaps for executed material Foundation actions
-  - public-safe view inconsistency versus canonical Foundation-governance state
+OpenAPI, AsyncAPI, and SDK artifacts MUST preserve:
 
----
+- route-family separation;
+- public/internal/admin namespace separation;
+- request idempotency requirements;
+- structured problem-details errors;
+- accepted-state versus final-outcome semantics;
+- lifecycle enum meanings;
+- source/correlation/operation IDs;
+- public-safe field redaction;
+- correction/supersession fields;
+- event schema versioning;
+- chain-adjacent reference fields as references, not canonical truth.
 
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between Foundation-governance truth, treasury-control truth, vault-action-policy truth, execution truth, and transparency-report truth.
-2. Only `fuze-backend-api` owns canonical Foundation policy version and Foundation-action truth.
-3. Foundation policy versions, action records, principal-treatment profiles, classifications, destinations, approval paths, control references, treatment references, execution references, and discrepancy records are durable and backend-owned.
-4. Public and first-party routes expose only bounded safe Foundation-governance views.
-5. Principal-preservation, stewardship-consistency, and destination restrictions are explicit and validated.
-6. Proposal, approval, and execution separation is preserved for material Foundation actions.
-7. Principal-sensitive and profit-participation-treatment-sensitive actions are handled with stronger policy sensitivity.
-8. Approval, escalation, exceptional treatment, correction, and discrepancy actions preserve immutable lineage.
-9. Foundation-governance mutation actions are idempotent and auditable.
-10. Internal and admin Foundation-governance routes are least-privilege and backend-only.
-11. Admin routes require reason-coded privileged authorization.
-12. Event emissions exist for major Foundation-governance mutations.
-13. Database schema separates policy versions, actions, principal-treatment profiles, classifications, destinations, approval paths, control references, treatment references, execution references, and discrepancy layers.
-14. Public-safe consumers can rely on Foundation-governance views without needing hidden internal governance detail.
-15. Mermaid diagrams remain consistent with prose and data model.
+SDKs MUST NOT flatten admin, internal, and public routes into one generic client without explicit capability separation.
 
 ---
 
-## 29. Test Cases
+## Implementation-Contract Guardrails
 
-### 29.1 Positive cases
-1. Internal service creates draft Foundation action successfully.
-2. Internal service validates destination successfully.
-3. Internal service records approval path successfully.
-4. Internal service links control references successfully.
-5. Internal service links explicit profit-participation treatment successfully.
-6. Admin approves Foundation action successfully.
-7. Admin escalates principal-sensitive Foundation action successfully.
-8. Public actor reads published public-safe Foundation-action summary successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access internal Foundation-governance truth or discrepancy detail.
-10. Internal service without write privilege cannot create Foundation action.
-11. Foundation action without policy version returns `FOUNDATION_GOVERNANCE_POLICY_VERSION_REQUIRED`.
-12. Disallowed destination returns `FOUNDATION_GOVERNANCE_DESTINATION_NOT_ALLOWED`.
-13. Principal-sensitive action violating stronger restraint returns `FOUNDATION_GOVERNANCE_PRINCIPAL_RESTRICTION`.
-14. Exceptional treatment in ineligible state returns `FOUNDATION_GOVERNANCE_EXCEPTION_NOT_ALLOWED`.
-
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call Foundation-governance admin APIs.
-16. Internal service without destination-validation privilege cannot attach destination records.
-17. Operator without approval privilege cannot approve Foundation action.
-18. Approved Foundation action does not prove downstream execution or payout completion by itself.
-
-### 29.4 Idempotency and replay cases
-19. Repeating Foundation-action creation with same idempotency key returns original action result.
-20. Repeating control-reference attachment with same idempotency key returns original linkage result.
-21. Repeating approve or pause with same idempotency key returns original terminal action result.
-22. Repeating exceptional or discrepancy resolution with same idempotency key returns original terminal action result.
-
-### 29.5 Concurrency cases
-23. Concurrent destination updates preserve one explicit current validation lineage and duplicate-safe outcomes where appropriate.
-24. Concurrent approve and escalate actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent supersede and pause actions preserve explicit visible lineage without ambiguity.
-
-### 29.6 Recovery / admin cases
-26. Stale or misreported Foundation action can be corrected under controlled policy with explicit lineage.
-27. Superseded Foundation action remains historically linked to the original record.
-28. Discrepancy resolution closes principal-treatment, destination, or reporting conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful Foundation action creation emits `foundation_governance.action_created`.
-30. Successful destination validation emits `foundation_governance.destination_validated`.
-31. Successful approval emits `foundation_governance.action_approved`.
-32. Successful exceptional declaration emits `foundation_governance.exception_declared`.
-33. Successful discrepancy resolution emits `foundation_governance.discrepancy_resolved` with critical audit lineage.
+1. Foundation governance remains distinct from ordinary treasury control.
+2. Foundation principal-protection posture remains explicit.
+3. Foundation-sensitive actions remain classified by policy version, action class, principal sensitivity, use class, and destination category.
+4. Approval remains distinct from execution and reporting.
+5. Foundation treatment in profit participation remains explicit and source-linked.
+6. Public-safe summaries remain derived and bounded.
+7. Admin/control-plane mutations remain reason-coded, audited, and policy-constrained.
+8. Exceptional actions remain narrow and post-reviewed.
+9. Chain-adjacent references remain evidence, not full semantic ownership.
+10. Corrections and supersessions preserve historical meaning.
+11. Idempotency and replay safety are mandatory for all mutations.
+12. Downstream systems MUST NOT create shadow Foundation truth.
 
 ---
 
-## 30. Open Questions or Explicit Deferred Decisions
+## Downstream Execution Staging
 
-1. Exact Foundation action-class taxonomy code sets are deferred.
-2. Exact destination-category taxonomy and validation matrix are deferred.
-3. Exact principal-sensitive versus non-principal-sensitive classification thresholds are deferred.
-4. Exact public-safe disclosure depth for Foundation actions is deferred.
-5. Exact exceptional-treatment rollback taxonomy is deferred.
-6. Exact discrepancy taxonomy for Foundation-governance conflicts is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  foundation-governance/
-  treasury-control/
-  vault-action-policy/
-  profit-participation/
-  transparency-reporting/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep policy versions, Foundation actions, principal/destination validation, classification logic, approval-path logic, and control-reference linkage in one canonical domain service
-- perform stewardship, destination, principal-sensitivity, timing, and control-path completeness checks inside the commit boundary
-- keep approve, reject, pause, escalate, exceptional, supersede, and discrepancy actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public-safe Foundation-governance views from canonical truth; do not let derived views mutate Foundation-governance state
+1. Stabilize Foundation policy version resource model.
+2. Stabilize Foundation action lifecycle and classification enums.
+3. Implement internal create/classify/link/read APIs.
+4. Implement admin approve/reject/pause/escalate/exception/supersede/discrepancy APIs.
+5. Implement idempotency, operation, audit, and correlation records.
+6. Integrate governance, treasury, vault, multisig/timelock, profit-participation, registry, transparency, and reporting references.
+7. Implement public-safe projections and stale/withheld states.
+8. Implement event schemas and projection workers.
+9. Add migration adapters for v1 records.
+10. Add QA, contract validation, and production-readiness gates.
 
 ---
 
-## 32. Frontend Consumption Notes
+## Required Downstream Specs / Contract Layers
 
-### For `fuze-frontend-webapp`
-- may read public-safe Foundation policy and Foundation-action summaries where approved
-- must not infer Foundation permissibility from isolated contract transfers alone
-- must treat backend Foundation-governance responses as authoritative for structured Foundation-governance status
-- should clearly distinguish proposed, approved, executed-reference-linked, reported, paused, corrected, and superseded states when visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged approve, reject, pause, escalate, exceptional, supersede, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical Foundation-governance truth client-side
-- should present immutable Foundation-action history and correction lineage separately from current visible state
+- Foundation governance implementation contract.
+- Foundation policy database schema.
+- Foundation action classification schema.
+- Admin/control-plane authorization matrix.
+- Foundation idempotency and operation-record schema.
+- Foundation event schema catalog.
+- Foundation public-safe projection contract.
+- Foundation reporting/export contract.
+- Foundation discrepancy/remediation runbook.
+- Foundation migration plan from v1 API posture.
+- OpenAPI and AsyncAPI contract files.
 
 ---
 
-## 33. Contract Derivation Notes
+## Boundary Violation Detection / Non-Canonical API Patterns
 
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public policy/action read operations and bounded first-party-safe summary operations
-- internal Foundation-action creation, destination, approval-path, control-reference, treatment-reference, reporting-reference, and execution-reference operations
-- admin approve / reject / pause / escalate / exceptional / supersede / discrepancy operations
-- shared problem-details schema
-- Foundation-governance lifecycle events in AsyncAPI
+Forbidden patterns include:
 
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public Foundation-policy lookup helpers
-- public-safe Foundation-action summary helpers
-- typed Foundation-action, principal-sensitivity, and stewardship summary models
-- problem-error models for Foundation-governance outcomes
+1. Public route that mutates Foundation truth.
+2. Admin UI writing directly to Foundation tables.
+3. Treasury route reclassifying Foundation principal as ordinary reserve.
+4. Vault route bypassing Foundation allowed-use checks for Foundation-sensitive action.
+5. Multisig execution automatically marking Foundation action approved.
+6. Chain transaction hash treated as complete Foundation governance truth.
+7. Profit participation logic inferring Foundation inclusion/exclusion from wallet label alone.
+8. Public report overwriting Foundation action state.
+9. Cache or projection used as canonical source.
+10. Exception route without reason code or post-review requirement.
+11. Migration silently overwriting historical Foundation meaning.
+12. SDK hiding route-family distinction between public, internal, and admin APIs.
 
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+Detection SHOULD use contract tests, schema linting, audit checks, route namespace checks, owner-domain mutation checks, and projection-source validation.
+
+---
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example — Foundation Principal-Sensitive Action
+
+A proposal to move Foundation principal to a long-term approved custody or strategy destination is submitted through the internal API with policy version, principal sensitivity, destination category, allowed-use rationale, approval path, control reference, and idempotency key. It enters `under_review`, receives explicit approval, links to multisig/timelock execution, and later projects a public-safe summary after reporting review.
+
+### Canonical Example — Profit-Participation Treatment
+
+A Foundation-held balance treatment for a profit-participation cycle is recorded as an explicit Foundation treatment reference. Profit-participation APIs consume the treatment reference instead of inferring treatment from wallet labels.
+
+### Anti-Example — Foundation as Operating Treasury
+
+An admin route transfers Foundation-held assets to cover a short-term operating shortfall under a generic reason note. This is forbidden unless explicitly classified, approved, control-linked, exceptional if necessary, audited, and consistent with Foundation policy.
+
+### Anti-Example — Chain Event as Truth
+
+A contract event shows a Foundation-related transfer. A reporting surface marks the Foundation action completed without a canonical Foundation action record, approval path, or execution reference. This is forbidden.
+
+---
+
+## Acceptance Criteria
+
+1. All Foundation-governance mutation routes require idempotency keys and correlation IDs.
+2. Admin/control-plane mutation routes require privileged operator identity, reason code, and critical audit record.
+3. Public routes expose only records with public-safe publication state.
+4. Public routes never expose internal operator notes, raw control-path internals, private financial data, or unpublished drafts.
+5. Foundation-sensitive actions cannot advance to approval without policy version, principal sensitivity, use classification, and approval path.
+6. Principal-sensitive actions cannot become `ready_for_execution` without required control reference.
+7. Profit-participation treatment cannot be inferred from wallet label; it requires explicit treatment reference.
+8. Destination changes after `under_review` produce audit lineage and require explicit route authorization.
+9. Idempotent replay of the same mutation returns the original compatible response.
+10. Conflicting replay with the same idempotency key returns `FOUNDATION_IDEMPOTENCY_CONFLICT`.
+11. Chain-adjacent execution references never overwrite Foundation approval state.
+12. Public projections show stale, withheld, corrected, or superseded status when applicable.
+13. Reporting exports include source Foundation action IDs and projection timestamps.
+14. Migration adapters cannot mutate canonical records after cutover.
+15. Event emissions include schema version, aggregate ID, correlation ID, causation ID, and policy version reference.
+16. Discrepancy cases block unsafe public-final wording until resolved.
+17. Exceptional actions require post-review state before closure.
+18. SDK/OpenAPI/AsyncAPI derivation preserves public/internal/admin route-family separation.
+19. Contract tests fail if a derived view becomes the source for canonical mutation.
+20. Observability exposes projection lag, discrepancy counts, idempotency conflicts, exceptional action counts, and control-reference failures.
+
+---
+
+## Test Cases
+
+### Positive Path Tests
+
+1. Create Foundation action with valid policy version, principal sensitivity, use class, destination, and idempotency key; expect `201 Created` and audit event.
+2. Attach approval path to proposed action; expect transition to `under_review` and event emission.
+3. Approve Foundation action with privileged operator, reason code, and valid control path; expect `approved` state and critical audit record.
+4. Link multisig/timelock control reference; expect control reference recorded without marking execution complete.
+5. Link profit-participation treatment reference; expect explicit treatment record and event emission.
+6. Generate public-safe projection for published action; expect bounded fields and source lineage.
+
+### Negative Path Tests
+
+7. Create action without policy version; expect `FOUNDATION_POLICY_VERSION_REQUIRED`.
+8. Approve action without principal-sensitivity classification; expect validation failure.
+9. Approve action with ambiguous use classification; expect `FOUNDATION_USE_CLASSIFICATION_AMBIGUOUS`.
+10. Use public route to mutate Foundation action; expect method not allowed or permission denied.
+11. Internal service without scope attempts classification mutation; expect permission denied.
+12. Admin mutation without reason code; expect validation error.
+
+### Authorization / Entitlement Tests
+
+13. Public unauthenticated caller can read published public-safe policy summaries.
+14. Public unauthenticated caller cannot read unpublished action.
+15. Authenticated user without approved visibility cannot read restricted first-party view.
+16. Operator with insufficient privilege cannot declare exceptional treatment.
+17. Service identity scoped to reporting cannot mutate canonical Foundation action state.
+
+### Idempotency / Retry / Replay Tests
+
+18. Repeat identical create request with same idempotency key; expect original response.
+19. Repeat create request with same key and different payload; expect idempotency conflict.
+20. Retry after accepted projection operation; expect no duplicate projection job or audit event.
+21. Retry admin approval after network timeout; expect stable approved result and no duplicate approval record.
+
+### Conflict / Concurrency Tests
+
+22. Two services attempt conflicting destination updates after `under_review`; only authorized mutation succeeds, second returns state conflict.
+23. Supersede action while projection job is running; projection produces superseded or stale view, not false current view.
+24. Execution reference arrives before approval; API opens discrepancy or rejects linkage.
+
+### Rate Limit / Abuse-Control Tests
+
+25. Burst public reads beyond threshold; expect rate-limit response.
+26. Repeated denied admin actions trigger monitoring alert.
+27. Repeated invalid control-reference attempts are captured in audit/security telemetry.
+
+### Degraded-Mode / Failure Tests
+
+28. Projection worker fails; public view remains stale or withheld.
+29. Audit service unavailable for critical mutation; mutation fails closed or enters safe retry state according to implementation contract.
+30. Event bus unavailable after canonical write; operation records pending event emission and remediation alert fires.
+31. Control-reference service times out; action remains pending, not approved for execution.
+
+### Migration / Compatibility Tests
+
+32. Legacy Foundation action without principal sensitivity is quarantined for normalization.
+33. Legacy route redirected to v2 read adapter preserves historical ID and lineage.
+34. Legacy admin mutation route is disabled after cutover.
+35. Public read response preserves supersession lineage for migrated records.
+
+### Boundary Violation Tests
+
+36. Treasury API tries to mutate Foundation principal classification; test fails.
+37. Reporting export tries to become canonical source for Foundation action; test fails.
+38. Chain watcher tries to mark Foundation action approved without API approval; test fails.
+39. SDK generated client collapses admin and public routes; generation gate fails.
+40. Public registry label change attempts to change Foundation treatment in profit participation; test fails.
+
+---
+
+## Dependencies / Cross-Spec Links
+
+This API specification depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
+- `SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
+- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
+- `PLATFORM_ARCHITECTURE_SPEC.md`
+- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
+- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+- `GOVERNANCE_MODEL_SPEC.md`
+- `FOUNDATION_GOVERNANCE_SPEC.md`
+- `TREASURY_CONTROL_POLICY_SPEC.md`
+- `VAULT_ACTION_POLICY_SPEC.md`
+- `MULTISIG_AND_TIMELOCK_SPEC.md`
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
+- `PAYOUT_LEDGER_SPEC.md`
+- `TRANSPARENCY_MODEL_SPEC.md`
+- `TRANSPARENCY_REPORTING_SPEC.md`
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `API_ARCHITECTURE_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
+
+---
+
+## Explicitly Deferred Items
+
+- Exact Foundation policy approval authority names.
+- Exact principal-sensitivity thresholds by asset class or reserve structure.
+- Exact allowed-use matrix for every Foundation destination.
+- Exact quorum and timelock values.
+- Exact public disclosure thresholds for every Foundation-sensitive action.
+- Exact database schema names and indexes.
+- Exact OpenAPI/AsyncAPI machine-readable artifacts.
+- Exact public website presentation copy.
+- Exact external webhook activation policy, if any.
+
+Deferred items MUST NOT be implemented through ad hoc local assumptions. They require downstream contracts, runbooks, or explicit decisions.
+
+---
+
+## Final Normative Summary
+
+The Foundation Governance API is the production-grade interface-contract layer for FUZE Foundation governance. It MUST preserve the Foundation as a distinct long-horizon stewardship and protected-capital governance domain. It MUST express, not redefine, refined Foundation semantics. It MUST keep Foundation truth separate from ordinary treasury, vault, multisig/timelock, profit participation, public registry, transparency, reporting, audit, chain, and presentation truth. It MUST require explicit policy versioning, principal sensitivity, allowed-use interpretation, treatment references, approval paths, control references, idempotency, audit lineage, and correction/supersession discipline for material actions. Public views and reports MUST be bounded derived surfaces. Admin and internal APIs MUST be privileged, reason-coded, auditable, and owner-domain controlled. Chain references are evidence and execution linkage, not a replacement for Foundation governance meaning.
+
+---
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain/off-chain responsibilities are explicit where relevant.
+- [x] Accepted-state versus final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are implementation-usable.
+- [x] Failure and degraded-mode behavior is explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI, AsyncAPI, and SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design diagram uses Mermaid syntax and distinguishes canonical and derived data.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths where relevant.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

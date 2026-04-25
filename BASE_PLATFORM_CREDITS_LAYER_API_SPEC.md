@@ -1,319 +1,466 @@
-# BASE_PLATFORM_CREDITS_LAYER_API_SPEC
+# BASE_PLATFORM_CREDITS_LAYER_API_SPEC.md
 
-## 1. Title
+## Document Metadata
 
-**BASE_PLATFORM_CREDITS_LAYER_API_SPEC.md**
-
----
-
-## 2. Document Metadata
-
-- **Document Name:** BASE_PLATFORM_CREDITS_LAYER_API_SPEC.md
-- **API Classification:** internal, admin, event-driven, chain-adjacent
-- **Owning Domain:** Base Platform Credits Layer Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** Base credits accounts, Base credits balance states, Base credits issuance commitments, spend state projections, reservation/release projections, chain-synced credits-layer references, and correction-safe Base credits operational lineage in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for the FUZE Base Platform Credits layer, including Base-scoped credits issuance representation, scoped balance state coordination, reservation/spend/reversal state projection, chain-adjacent synchronization, and controlled correction-safe lifecycle management across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 2.1 API Classification Header
-
-- **API Classification:** internal | admin | event-driven | chain-adjacent
-- **Owning Domain:** Base Platform Credits Layer Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** Base credits operational-layer domain
-
----
-
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE Base Platform Credits layer operations. It translates the governing FUZE platform architecture, Base Platform Credits layer rules, Platform Credits rules, credit ledger and settlement rules, payment rails rules, subscriptions and usage billing rules, refund/reversal rules, chain architecture, and API architecture rules into an implementation-ready API contract.
-
-This API exists because FUZE treats Base as the operational chain environment for Platform Credits. The Base credits layer is therefore not a generic wallet-balance surface and not a replacement for the semantic ledger. It is the chain-adjacent operational representation of the internal consumption unit after verified value has been normalized into Platform Credits and after platform policy has determined ownership scope, credit class, and operational meaning.
-
-The Base Platform Credits layer must remain distinct from:
-
-- Ethereum FUZE token ownership truth,
-- external payment-rail verification,
-- the semantic credit ledger and settlement domain,
-- the Base payout execution layer for stablecoin profit participation,
-- and unrestricted market-transfer asset behavior.
-
-Accordingly, this specification defines how Base credits scopes, issuance commitments, operational balance states, reservation/release projections, chain-sync references, and correction lineage are represented, and how Base credits behavior remains auditable, idempotent, and architecture-consistent across FUZE.
-
----
-
-## 4. Scope
-
-This specification covers:
-
-- internal APIs for Base credits account/scope creation and lifecycle management
-- internal APIs for Base-scoped credits issuance representation and committed balance-state updates
-- internal APIs for Base reservation, spend, release, reversal, and adjustment state projection
-- internal APIs for chain-synchronization references and Base credits reconciliation
-- internal read APIs for canonical Base credits operational truth
-- admin/control-plane APIs for suspend, resync, correct, rebind_if_allowed, supersede, and discrepancy resolution
-- event emission requirements for Base credits operational lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
-
-This specification does **not** redefine:
-
-- the semantic business rules of the credit ledger in full detail
-- raw payment verification behavior in full detail
-- product billing policy in full detail
-- payout-execution or profit-participation semantics
-- token ownership truth on Ethereum
-- unrestricted public wallet transfer behavior for credits
-- final end-user product UI for balances or statements
-
-Those remain governed by their own source-of-truth specifications.
+- **Document Name:** `BASE_PLATFORM_CREDITS_LAYER_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / production-grade interface-contract specification
+- **Status:** Draft for canonical API SPEC v2 approval
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Base Platform Credits Layer Domain
+- **Approval Authority:** FUZE Platform Architecture and Specification Governance Authority; formal named approver not yet specified
+- **Review Cadence:** Quarterly and whenever Platform Credits semantics, credit-ledger posture, Base chain architecture, payment-normalization posture, billing posture, correction posture, reconciliation posture, or governance-sensitive controls materially change
+- **Governing Layer:** API contract layer derived from the refined Base Platform Credits operational layer
+- **Parent Registry:** FUZE API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend/API engineering, contracts-adapter engineering, credits/ledger engineering, billing and payments engineering, product spend-consumer teams, security, audit, finance/reconciliation, support operations, data engineering, runtime operations, OpenAPI/AsyncAPI/SDK authors, and implementation-contract authors
+- **Primary Purpose:** Define the production-grade API contract for the Base Platform Credits Layer: Base-scoped credit accounts, scope bindings, class-aware operational state, issuance commitments, reservations, spend/release/reversal/adjustment projections, chain synchronization, reconciliation, discrepancy handling, correction-safe admin operations, events, read models, audit, idempotency, and downstream derivation guardrails
+- **Primary Upstream References:**
+  - `REFINED_SYSTEM_SPEC_INDEX.md`
+  - `API_SPEC_INDEX.md`
+  - `DOCS_SPEC_INDEX.md`
+  - `SYSTEM_SPEC_INDEX.md`
+  - `BASE_PLATFORM_CREDITS_LAYER_SPEC.md`
+  - `PLATFORM_CREDITS_SPEC.md`
+  - `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md`
+  - `PAYMENT_RAILS_INTEGRATION_SPEC.md`
+  - `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
+  - `INVOICING_AND_RECEIPTS_SPEC.md`
+  - `REFUND_REVERSAL_AND_ADJUSTMENT_SPEC.md`
+  - `PRICING_AND_MONETIZATION_MODEL_SPEC.md`
+  - `AI_USAGE_METERING_SPEC.md`
+  - `ENTITLEMENT_AND_CAPABILITY_GATING_SPEC.md`
+  - `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+  - `CHAIN_ARCHITECTURE_SPEC.md`
+  - `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
+  - `SECURITY_AND_RISK_CONTROL_SPEC.md`
+  - `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`
+  - `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+  - `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`
+  - `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`
+  - `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- **Primary Downstream Dependents:**
+  - Base credits implementation contracts
+  - Base credits contracts adapters and synchronization workers
+  - Platform Credits API and Credit Ledger/Settlement API contract layers
+  - product spend-consumer APIs
+  - subscriptions, billing, usage, AI metering, refund, support, and reconciliation workflows
+  - internal admin/control-plane tooling
+  - OpenAPI, AsyncAPI, SDK, event schema, storage-contract, and QA artifacts
+  - transparency-safe reporting and analytics projections that include credits state
+- **API Surface Families Covered:** internal service APIs, first-party application read APIs, admin/control-plane APIs, event/async APIs, reporting/projection APIs, chain-adjacent adapter APIs
+- **API Surface Families Excluded:** unauthenticated public mutation APIs, unrestricted public wallet-transfer APIs, raw payment-provider webhooks as canonical credits truth, raw contract ABI specs, accounting-book APIs, payout-claim APIs, token-holder APIs
+- **Canonical System Owner(s):** Platform Credits Domain for semantic credit meaning; Credit Ledger and Settlement Domain for append-oriented mutation truth; Base Platform Credits Layer Domain for Base-side operational representation; On-Chain/Off-Chain Responsibility Domain for hybrid truth boundaries
+- **Canonical API Owner:** FUZE Base Platform Credits Layer API Owner
+- **Supersedes:** `BASE_PLATFORM_CREDITS_LAYER_API_SPEC.md` v1 draft material and any weaker API descriptions that did not preserve semantic, ledger, Base operational, payment, payout, and derived-read separation
+- **Superseded By:** Not yet known
+- **Related Decision Records:** Not yet specified
+- **Canonical Status Note:** This API specification is canonical for interface-contract expression only. Refined system specifications own semantic truth. This API MUST preserve, not redefine, Platform Credits semantics, credit-ledger mutation truth, Base operational credits truth, chain/off-chain separation, authorization boundaries, and controlled movement restrictions.
+- **Implementation Status:** Normative API design baseline; downstream endpoint, event, OpenAPI, AsyncAPI, SDK, service-contract, storage-contract, and QA work must conform
+- **Approval Status:** Drafted for API SPEC v2 approval
+- **Change Summary:** Upgraded the Base Platform Credits API from a v1 route-oriented draft into a production-grade API SPEC v2 document with explicit truth classes, surface-family boundaries, request/response/error/idempotency/audit/versioning rules, route-family models, diagrams, flow views, acceptance criteria, test cases, anti-patterns, and downstream derivation guardrails.
 
 ---
 
-## 5. Source-of-Truth Inputs
+## Purpose
 
-### Primary FUZE docs and specs used
+This API specification defines the canonical FUZE interface-contract posture for the **Base Platform Credits Layer**.
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+The Base Platform Credits Layer API expresses, at the interface layer, the refined system rule that Base is the operational chain environment for FUZE Platform Credits after approved off-chain normalization and ledger-authorized mutation. The API does not decide what a Platform Credit means, does not replace the append-oriented credit ledger, does not verify raw payment rails, does not determine accounting profit, does not execute stablecoin payout claims, and does not convert credits into an unrestricted market asset. It exposes and mutates only the Base-side operational representation of already-governed credits state.
 
-#### Primary credits / Base operational-layer sources
+The API must make downstream implementation safer by defining stable route families, resource families, lifecycle states, request and response expectations, error/result/status semantics, idempotency behavior, authorization checks, audit and observability requirements, chain-adjacent boundaries, event semantics, read-model rules, public-surface limits, and non-canonical patterns that teams MUST NOT implement.
+
+---
+
+## Scope
+
+This API specification governs:
+
+1. Base credits account and scope-binding APIs.
+2. Base class-aware operational state APIs.
+3. Base issuance-commitment, reservation, release, spend, reversal, expiry, adjustment, and approved internal rebinding projections.
+4. Base chain-synchronization and commitment-reference APIs.
+5. Reconciliation and discrepancy-case APIs.
+6. Admin/control-plane APIs for suspend, resync, correct, rebind-if-allowed, supersede, resolve discrepancy, and release containment.
+7. Internal read APIs for canonical Base operational credits truth.
+8. First-party read APIs that expose bounded balance/status views without allowing client-side truth ownership.
+9. Event and async behavior for Base credits operational lifecycle changes.
+10. Request, response, error, result, status, idempotency, versioning, compatibility, audit, traceability, observability, and migration rules.
+
+This API specification does not govern:
+
+- the semantic definition of Platform Credits, classes, issuance categories, or controlled-transfer posture;
+- the append-oriented ledger truth explaining why credits changed and how balances are derived;
+- raw payment-provider verification or payment normalization;
+- subscriptions, invoice truth, tax, accounting-book truth, or treasury-finalized meaning;
+- FUZE token participation or Ethereum holder truth;
+- snapshot/eligibility, profit participation, payout-ledger, or Base payout execution APIs;
+- unrestricted public transfer, open-market credit trading, or third-party wallet asset behavior;
+- final smart-contract ABI, storage layout, gas strategy, signer custody, or RPC/indexer details;
+- final UX copy or statement rendering.
+
+---
+
+## Design Goals
+
+1. Preserve refined Base Platform Credits semantics at the API boundary.
+2. Provide deterministic contracts for Base-scoped account, class, balance, reservation, chain-sync, reconciliation, and correction state.
+3. Keep semantic credits truth, ledger truth, Base operational truth, payment truth, entitlement truth, authorization truth, accounting truth, payout truth, and derived read-model truth separate.
+4. Prevent product teams, admin tools, chain adapters, or dashboards from becoming shadow credits owners.
+5. Support account-scoped and workspace-scoped balances without ambiguous ownership.
+6. Support frequent operational credit activity on Base while preserving auditability and reconciliation.
+7. Require idempotency and replay safety for every economically material mutation.
+8. Make sync uncertainty, chain failure, projection lag, discrepancy, and degraded mode explicit.
+9. Support OpenAPI, AsyncAPI, SDK, implementation-contract, and QA derivation without route drift or schema drift.
+10. Provide implementation-useful diagrams, flow views, acceptance criteria, and test cases.
+
+---
+
+## Non-Goals
+
+This API specification is not intended to:
+
+- create a generic wallet-balance API;
+- expose Base credits as public-market assets;
+- allow frontend clients or products to author credits truth;
+- permit direct product-local or admin-console balance rewriting;
+- collapse credit ledger entries into Base balance counters;
+- treat Base chain state as the sole business-level truth for credits;
+- treat verified payment state as equivalent to credits issuance or available balance;
+- treat credits as FUZE token, profit rights, payout rights, equity, governance, treasury assets, or stablecoin payout claims;
+- replace implementation-contract specs, database schema docs, smart-contract ABI docs, or runbooks.
+
+---
+
+## Core Principles
+
+### 1. Refined Semantics Are Upstream
+
+The API layer MUST derive from active refined system specifications. It MUST NOT redefine the meaning of Platform Credits, class semantics, ledger truth, scope ownership, chain/off-chain responsibility, or controlled movement rules.
+
+### 2. Semantic-Then-Ledger-Then-Operational
+
+Platform Credits semantic truth defines what credits mean. Credit Ledger and Settlement truth defines why and how credits changed. Base Platform Credits operational truth defines the Base-side representation and synchronization posture of approved changes. API contracts MUST preserve this sequence.
+
+### 3. Explicit Owner Scope
+
+Every mutation and canonical read MUST resolve to an explicit owner scope: account, workspace, organization if later approved, or tightly bounded platform operational subject if explicitly modeled. Contextless Base balances are forbidden.
+
+### 4. Controlled Movement
+
+Credits MAY be issued, reserved, spent, released, reversed, adjusted, expired, or internally rebound only through approved platform-controlled pathways. Unrestricted transfer behavior is non-canonical.
+
+### 5. Chain-Adjacent, Not Chain-Absolutist
+
+Base commitment state is operationally important, but it does not replace platform semantic meaning, append-oriented ledger truth, payment verification, or accounting interpretation.
+
+### 6. Derived Views Are Subordinate
+
+Product balance displays, dashboards, exports, public-safe explanations, search indexes, and analytics projections are derived views. They MUST NOT accept writes or decide semantic truth.
+
+### 7. Fail-Closed Integrity
+
+If ownership, class validity, spend authority, reservation state, chain-sync posture, or ledger linkage cannot be verified for a sensitive economic action, the API MUST fail closed or enter explicit review/reconciliation posture.
+
+### 8. Correction Lineage
+
+Corrections, discrepancy repairs, resyncs, rebindings, and supersessions MUST preserve explicit lineage. Destructive overwrites are forbidden.
+
+---
+
+## Canonical Definitions
+
+- **Base Credits Account:** Base operational subject bound to a canonical FUZE owner scope for credits representation and mutation.
+- **Owner Scope:** Account, workspace, or other approved subject that owns or controls credits.
+- **Credit Class:** Policy-defined class such as `paid`, `bonus`, `restricted`, or future approved classes.
+- **Operational Entry:** Base-layer record representing issuance, reservation, release, spend, reversal, expiry, adjustment, commitment marker, or approved rebinding/supersession.
+- **Base Balance State:** Class-aware operational state such as available, reserved, restricted, pending commitment, committed, failed, or reconciling posture.
+- **Reservation:** Provisional hold that is not final spend and must settle, release, expire, or cancel deterministically.
+- **Chain Sync Record:** Operational record linking Base commitment, contract-observed state, adapter submission, confirmation, drift, retry, or supersession state.
+- **Discrepancy Case:** Review/remediation record for mismatch, duplication, stale state, failed commitment, misbinding, unauthorized mutation attempt, projection divergence, or chain/off-chain inconsistency.
+- **Internal Rebinding:** Policy-approved correction or migration that reattaches lineage to a permitted internal scope without creating open transfer semantics.
+- **Derived Balance View:** Read model for product, support, reporting, or UX consumption derived from canonical operational and ledger sources.
+
+---
+
+## Truth Class Taxonomy
+
+The API MUST distinguish the following truth classes:
+
+1. **Semantic Truth:** Meaning of credits, classes, issuance categories, spend policy, and controlled movement. Owned by Platform Credits refined semantics.
+2. **API Contract Truth:** Allowed routes, request/response classes, result/status semantics, error families, idempotency, and compatibility rules. Owned by this document.
+3. **Policy Truth:** Class policy, spend restrictions, fraud/risk containment, admin authority, governance posture, and review rules.
+4. **Runtime Truth:** Request processing state, worker state, queue state, adapter state, retry state, and degraded-mode state.
+5. **Ledger / Storage Truth:** Append-oriented credit mutation records, settlement lineage, operational entries, chain-sync records, reconciliation records, discrepancy cases, and durable audit records.
+6. **Provider-Input Truth:** Raw payment events, chain observations, node responses, indexer events, or external provider state before FUZE normalization.
+7. **Event / Async Truth:** Post-commit events and job notifications that synchronize systems but do not independently own business truth.
+8. **Projection / Reporting Truth:** Product balances, support summaries, dashboards, exports, analytics, and public-safe views.
+9. **Presentation Truth:** UI copy, labels, statement formatting, and user-facing explanations.
+
+No API, event, worker, projection, or SDK MAY collapse these truth classes into one generic “credits state.”
+
+---
+
+## Architectural Position in the Spec Hierarchy
+
+This API specification sits below:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
 - `BASE_PLATFORM_CREDITS_LAYER_SPEC.md`
 - `PLATFORM_CREDITS_SPEC.md`
 - `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md`
-- `PAYMENT_RAILS_INTEGRATION_SPEC.md`
-- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
-- `REFUND_REVERSAL_AND_ADJUSTMENT_SPEC.md`
-- `PRICING_AND_MONETIZATION_MODEL_SPEC.md`
-- `WALLET_AWARE_USER_SPEC.md`
-- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
 - `CHAIN_ARCHITECTURE_SPEC.md`
+- identity, account, session, workspace, authorization, entitlement, security, audit, payment, billing, refund, and operations refined specs
 
-#### Core docs inputs
-- `FUZE_PLATFORM_CREDITS.md`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
+This API specification sits above:
 
-#### API and runtime sources
-- `API_ARCHITECTURE_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-
-#### Security and operations sources
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
-
-### Highest-priority interpretation applied
-
-For this file, the most important governing interpretation is:
-
-1. Base is the operational chain environment for Platform Credits and is where verified platform value is normalized into the internal consumption unit
-2. backend owns canonical Base credits operational truth and Base-side lifecycle coordination
-3. Base credits balances must remain scoped to accounts and workspaces under platform policy
-4. Base credits issuance, spend, reservation, reversal, and adjustment on the operational layer must remain linked to the semantic ledger rather than replacing it
-5. Base credits layer and Base payout execution layer remain separate even though both live on Base
-6. Platform Credits remain non-market, account-bound or workspace-bound assets with tightly controlled internal movement rules
-
-### Supporting external standards used only as guidance
-
-- HTTP semantics for internal mutation and status APIs
-- structured problem-details error design
-- general operational-ledger projection, balance-state synchronization, and correction-lineage patterns as supporting guidance
-
-External guidance does not override FUZE source-of-truth documents.
+- OpenAPI route files
+- AsyncAPI event files
+- SDK generation rules
+- Base credits service implementation contracts
+- Base credits contract-adapter implementation contracts
+- database schema migrations for this API family
+- worker, reconciliation, and support-control implementation docs
+- QA, contract validation, regression, and production-readiness test suites
 
 ---
 
-## 6. Governing Architecture and Ownership Interpretation
+## Upstream Semantic Owners
 
-This API belongs to the **Base Platform Credits Layer Domain** because it owns the canonical lifecycle of:
-
-- Base-scoped credits owner accounts,
-- Base operational issuance commitments,
-- committed available/reserved state projection,
-- Base-side reservation and release posture,
-- chain-synchronization references,
-- and correction-safe Base operational credits history.
-
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable Base credits operational truth
-- off-chain business rules and on-chain operational state must be coordinated centrally
-- products need one shared Base credits layer rather than product-specific asset models
-- reconciliation, correction, and policy enforcement must be backend-governed
-- audit generation and discrepancy handling must be centralized
-
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend only reads bounded credits state through approved surfaces
-- `fuze-frontend-admin`, because admin may correct or resync but must not own Base credits truth
-- the semantic credit-ledger domain, because that domain explains why credits changed, while this domain records the Base operational representation
-- Ethereum token domain, because Base credits are not FUZE token balances
-- Base payout execution domain, because payout execution on Base is a separate bounded economic layer
-- external payment domains, because payment verification occurs upstream of Base credits normalization
-
-### Architectural implications
-
-- one owner scope may have one or more Base credits accounts depending on purpose or class policy
-- one semantic credits mutation may project to one or more Base operational entries or state changes
-- Base available, reserved, and committed states must remain explicit
-- product consumption should share one Base credits vocabulary across products
-- internal movement rules must remain controlled and not degrade into open transfer behavior
-- corrections and supersession must preserve lineage rather than silently rewrite history
+- **Platform Credits Domain:** Owns what credits mean, class taxonomy, issuance categories, spend posture, ownership scope rules, controlled internal reassignment, expiry posture, and transfer restrictions.
+- **Credit Ledger and Settlement Domain:** Owns append-oriented mutation lineage, balance derivation, settlement state, reconciliation posture, and ledger-based correction lineage.
+- **Base Platform Credits Layer Domain:** Owns Base-side operational representation, Base credits accounts, class-aware operational entries, Base balance posture, chain-sync records, discrepancy records, correction/supersession posture, and implementation guardrails.
+- **Payment Rails Domain:** Owns raw payment verification, normalized payment records, payment scope assignment, and rail correction inputs.
+- **Billing / Pricing / Refund Domains:** Own commercial charge causes, subscription/usage decisions, invoice posture, refund/reversal causes, and pricing outputs.
+- **Authorization / Workspace Domains:** Own actor permission, workspace authority, and scoped access posture.
+- **Entitlement Domain:** Owns capability eligibility where credits and capability gates coordinate.
+- **On-Chain / Off-Chain Responsibility Domain:** Owns the hybrid truth split and prevents raw chain state from absorbing policy/accounting/product meaning.
+- **Security / Risk / Audit Domains:** Own containment, sensitive action controls, audit record governance, and observability requirements.
+- **Base Payout Execution Domain:** Owns stablecoin payout execution and MUST remain separate from Base credits.
 
 ---
 
-## 7. Domain Responsibilities
+## API Surface Families
 
-The Base Platform Credits Layer API domain is responsible for:
+### Internal Service APIs
 
-1. maintaining canonical Base credits owner scopes and Base-scoped account records
-2. representing Platform Credits issuance commitments on Base after verified normalization
-3. representing spend, reservation, release, reversal, and adjustment state on the Base operational layer
-4. recording class-aware credits state across account-scoped and workspace-scoped ownership
-5. coordinating chain-sync references and reconciliation status for Base credits operations
-6. supporting admin suspend, resync, correct, rebind_if_allowed, supersede, and discrepancy workflows
-7. emitting Base credits lifecycle events
-8. generating audit lineage for sensitive Base credits actions
-9. preserving separation between Base credits, Ethereum token balances, payment verification, and payout execution
-10. supporting one shared internal commerce layer across products
+Internal service APIs are used by backend services, credits/ledger services, billing/usage services, Base adapters, reconciliation workers, and trusted product spend-consumer services. They MAY create and mutate Base operational credits state only after upstream semantic, ledger, authorization, and policy checks pass.
 
-The domain is not responsible for:
+### First-Party Application APIs
 
-- owning semantic reason-code truth for all credit mutations
-- owning raw payment-rail verification
-- owning final billing-policy logic
-- owning payout execution or stablecoin claims
-- owning FUZE token participation semantics
-- enabling unrestricted peer-to-peer credits transfers
+First-party APIs MAY expose bounded balance, reservation, status, and statement summaries to FUZE web/mobile/product clients. They MUST be read-biased, projection-safe, permission-aware, and unable to create credits truth directly.
 
----
+### Admin / Control-Plane APIs
 
-## 8. Out of Scope
+Admin APIs MAY suspend, correct, rebind-if-allowed, resync, supersede, resolve discrepancies, or release containment only through reason-coded, policy-constrained, auditable, least-privilege routes.
 
-The following are out of scope for this API specification:
+### Event / Webhook / Async APIs
 
-- open-market transfer mechanisms for credits
-- raw payment-processor webhooks
-- full semantic invoice/subscription policy logic
-- final Base contract ABI design
-- public unauthenticated balance APIs
-- final statement/export document UX
-- third-party exchange or wallet integration specifics
-- payout/claim settlement interfaces
+Event APIs publish post-commit lifecycle signals and trigger projection refresh, reconciliation, product update, audit, analytics, and support workflows. Events are synchronization signals, not independent mutation truth.
 
-Where later detailed specs are needed, they must remain compatible with this API.
+### Reporting / Projection APIs
+
+Reporting APIs MAY expose derived operational summaries, support views, export-safe data, and transparency-safe aggregates. They MUST preserve lineage to canonical records and MUST NOT accept semantic writes.
+
+### Chain-Adjacent Adapter APIs
+
+Chain-adjacent APIs coordinate Base contract submission, sync, receipt ingestion, drift detection, and reconciliation. They MUST distinguish observed chain state, adapter execution state, and canonical Base operational credits truth.
+
+### Public APIs
+
+No unauthenticated or third-party public mutation API exists for this domain. Any future public read API MUST be separately approved and MUST expose only narrow, stable, privacy-safe, non-authoritative summaries.
 
 ---
 
-## 9. Canonical Entities and Data Ownership
+## System / API Boundaries
 
-### Durable entities
+### This API Governs
 
-#### 9.1 base_credits_accounts
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** canonical Base-scoped credits owner accounts for account or workspace scopes
-- **Nature:** source-of-truth durable entity
+- route/resource family design for Base credits operational state;
+- request fields and response classes at API contract level;
+- result/status/error semantics;
+- authorization, entitlement, policy, scope, and idempotency requirements at interface level;
+- chain-adjacent state and sync posture as API-visible contract categories;
+- audit, observability, migration, and compatibility posture for downstream implementation.
 
-#### 9.2 base_credits_balance_states
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** current and historical committed credits balance posture on Base
-- **Nature:** source-of-truth durable aggregate entity
+### Upstream Refined Specs Govern
 
-#### 9.3 base_credits_operational_entries
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** Base operational entry records corresponding to issuance, spend, reservation, release, reversal, and adjustment projections
-- **Nature:** source-of-truth durable entity
+- what credits mean;
+- who owns semantic, ledger, policy, payment, billing, authorization, chain/off-chain, payout, and audit truth;
+- lifecycle meaning of credits classes and controlled movement;
+- failure and correction posture at the system layer.
 
-#### 9.4 base_credits_entry_links
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** linkage from Base operational entries to upstream semantic ledger or billing references
-- **Nature:** source-of-truth durable lineage entity
+### Adjacent API Specs Govern
 
-#### 9.5 base_credits_class_states
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** class-aware state partitions such as paid, bonus, restricted, or future governed classes
-- **Nature:** source-of-truth durable entity
+- `PLATFORM_CREDITS_API_SPEC.md`: semantic credits API family.
+- `CREDIT_LEDGER_AND_SETTLEMENT_API_SPEC.md`: append-oriented credits mutation and settlement API family.
+- `PAYMENT_RAILS_INTEGRATION_API_SPEC.md`: verified payment normalization API family.
+- `SUBSCRIPTIONS_AND_USAGE_BILLING_API_SPEC.md`: billing and usage API family.
+- `REFUND_REVERSAL_AND_ADJUSTMENT_API_SPEC.md`: refund/reversal API family.
+- `ENTITLEMENT_AND_CAPABILITY_GATING_API_SPEC.md`: capability-gating API family.
+- `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md`: stablecoin payout execution API family on Base.
+- `CHAIN_ARCHITECTURE_API_SPEC.md`: cross-chain role and responsibility API posture.
 
-#### 9.6 base_credits_reservations
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** reservation/hold posture at the Base operational layer
-- **Nature:** source-of-truth durable entity
+### Implementation-Contract Specs Govern
 
-#### 9.7 base_credits_scope_bindings
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** explicit binding of Base credits accounts to account or workspace owner scopes
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.8 base_credits_chain_sync_records
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** chain-adjacent synchronization checkpoints and sync health lineage for Base credits state
-- **Nature:** durable operational lineage entity
-
-#### 9.9 base_credits_reconciliation_records
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** validation and reconciliation records between semantic credits truth and Base operational state
-- **Nature:** durable review/remediation entity
-
-#### 9.10 base_credits_discrepancy_cases
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** review and remediation records for failed, duplicate, stale, misbound, or inconsistent Base credits state
-- **Nature:** durable review/remediation entity
-
-#### 9.11 base_credits_mutation_actions
-- **Owner:** Base Platform Credits Layer Domain
-- **Purpose:** high-level action records for create, issue, reserve, release, reverse, adjust, resync, suspend, supersede, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.12 base_credits_audit_events
-- **Owner:** Audit / Activity domain, sourced by Base Platform Credits Layer Domain
-- **Purpose:** immutable trail for sensitive Base credits actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.13 base_credits_internal_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** trusted operational summaries for Base credits accounts and scopes
-- **Nature:** derived
-
-#### 9.14 base_credits_product_projection_views
-- **Owner:** derived read-model layer
-- **Purpose:** bounded product-facing Base credits balance views for approved first-party surfaces
-- **Nature:** derived
-
-#### 9.15 base_credits_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into failed, stale, duplicate, or inconsistent Base credits conditions
-- **Nature:** derived
+- exact service decomposition;
+- database tables and indexes;
+- exact contract ABI and adapter payloads;
+- queue names, retry policy code, RPC providers, signer custody, and indexer implementation;
+- endpoint-level OpenAPI syntax and SDK packaging.
 
 ---
 
-## 10. State Model and Lifecycle
+## Conflict Resolution Rules
 
-### 10.1 Base credits account lifecycle
+1. `REFINED_SYSTEM_SPEC_INDEX.md` wins on refined-library membership and source-of-truth routing.
+2. Active refined system specs win on semantic truth and ownership boundaries.
+3. `PLATFORM_CREDITS_SPEC.md` wins on the meaning of credits, classes, issuance categories, spend restrictions, and controlled movement.
+4. `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md` wins on append-oriented mutation lineage, settlement, balance derivation, and ledger reconciliation semantics.
+5. `BASE_PLATFORM_CREDITS_LAYER_SPEC.md` wins on Base operational representation, chain sync, discrepancy, correction, and Base-side guardrails.
+6. `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md` wins when raw chain state, contract state, provider input, policy, accounting, or reporting truth are confused.
+7. This API spec wins only on interface-contract expression that does not contradict refined semantics.
+8. If chain state, platform ledger state, and derived product view disagree, semantic meaning remains with Platform Credits, mutation lineage remains with Credit Ledger, Base operational state remains with Base Platform Credits, and derived product view MUST be corrected or marked stale.
+9. If ambiguity remains, the API MUST select the more restrictive, architecture-consistent interpretation and require explicit refinement or decision recording.
 
-Possible states:
+---
+
+## Default Decision Rules
+
+1. If a mutation cannot bind to a valid owner scope, fail closed.
+2. If actor permission cannot be evaluated, fail closed.
+3. If entitlement or capability gating is required but cannot be checked, fail closed or return `review_required` where policy allows.
+4. If ledger linkage is missing for an economically material Base operation, reject or hold in `pending_ledger_reference`.
+5. If chain sync is uncertain, do not treat sync as final; use `pending_sync`, `drift_detected`, `commitment_failed`, or `reconciling`.
+6. If raw chain state and canonical platform records differ materially, open discrepancy/reconciliation rather than trusting raw observation alone.
+7. If a correction affects previously visible or consumed state, create explicit reversal, compensating, or supersession lineage.
+8. If product-local cache disagrees with canonical state, product cache loses.
+9. If payment verification or refund posture is disputed, pause new issuance/availability effects until upstream normalization resolves.
+10. If public exposure is requested, default to no exposure unless approved by a public-read specification.
+
+---
+
+## Roles / Actors / API Consumers
+
+- **Backend service principal:** trusted internal caller for canonical mutations.
+- **Credits ledger service:** upstream authoritative mutation source for Base operational projection.
+- **Billing/usage service:** approved caller for reservation/spend/release driven by product usage.
+- **Product service:** approved spend consumer; never a semantic owner.
+- **Base contract adapter:** chain-adjacent execution/sync caller; never a semantic owner.
+- **Reconciliation worker:** compares ledger, Base operational state, chain sync, and projections.
+- **Admin/control-plane operator:** privileged human or system actor acting through reason-coded bounded routes.
+- **Support/finance reviewer:** reviewer of discrepancy, refund, adjustment, and correction cases.
+- **Security/risk operator:** may trigger containment, suspension, review, or fraud controls.
+- **First-party client:** read-only or request-initiating surface consuming bounded projections.
+- **Reporting/data pipeline:** derived consumer; not a mutation owner.
+
+---
+
+## Resource / Entity Families
+
+### Canonical API Resources
+
+- `base_credits_account`
+- `base_credits_scope_binding`
+- `base_credits_class_state`
+- `base_credits_balance_state`
+- `base_credits_operational_entry`
+- `base_credits_entry_link`
+- `base_credits_reservation`
+- `base_credits_commitment_reference`
+- `base_credits_chain_sync_record`
+- `base_credits_reconciliation_record`
+- `base_credits_discrepancy_case`
+- `base_credits_mutation_action`
+- `base_credits_supersession_link`
+
+### Derived API Resources
+
+- `base_credits_balance_summary`
+- `base_credits_statement_view`
+- `base_credits_product_projection`
+- `base_credits_support_summary`
+- `base_credits_reporting_extract`
+- `base_credits_public_safe_summary` if later approved
+
+Derived resources MUST include enough canonical references for traceability and MUST NOT accept mutation requests.
+
+---
+
+## Ownership Model
+
+- Base Platform Credits Layer Domain owns Base operational account, binding, operational-entry, class-state, balance-state, reservation, chain-sync, reconciliation, discrepancy, and supersession API resources.
+- Credit Ledger and Settlement Domain owns the authoritative economic mutation basis.
+- Platform Credits Domain owns semantic class and policy meaning.
+- Payment/Billing/Pricing/Refund domains own upstream causes and commercial interpretations.
+- Security/Risk domains may constrain, pause, or review mutation but do not become credits truth owners.
+- Audit domain owns immutable audit records, sourced by this API.
+- Product services and frontend clients consume approved contracts only.
+
+---
+
+## Authority / Decision Model
+
+Base credits mutations require a valid chain of authority:
+
+1. **Identity / service identity:** caller is authenticated as a permitted subject, service, or operator.
+2. **Authorization:** caller may act on the target owner scope and route family.
+3. **Semantic policy:** action is allowed under Platform Credits class, issuance, spend, movement, and restriction policy.
+4. **Ledger basis:** economically material changes have an approved ledger reference or explicit controlled correction basis.
+5. **Base operational validation:** target account, binding, entry, reservation, chain-sync state, and discrepancy posture allow the action.
+6. **Audit and idempotency:** mutation is reasoned, traceable, and replay-safe.
+7. **Event/projection:** downstream signals are emitted only after canonical commit.
+
+---
+
+## Authentication Model
+
+- Internal service APIs MUST use authenticated service principals with least-privilege scopes.
+- Admin APIs MUST use authenticated operator identity, privileged-session posture where required, and step-up controls for sensitive actions.
+- First-party read APIs MUST use authenticated account or workspace context.
+- Chain-adjacent adapter APIs MUST use service identity and environment-scoped permissions.
+- Event consumers MUST use authenticated subscriptions or service identities.
+- Public unauthenticated access is not allowed unless a future public-read spec approves a narrow read surface.
+
+Wallet ownership MAY provide context for future product experiences, but it MUST NOT replace canonical account identity, workspace authority, service identity, or admin authorization.
+
+---
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+- route family and caller class;
+- owner scope type and owner scope ID;
+- workspace role and permission posture where workspace-owned credits are involved;
+- service principal permissions for create, reserve, settle, release, reverse, adjust, sync, reconcile, and read;
+- operator role, case linkage, reason code, and policy authorization for admin actions;
+- security/risk containment posture;
+- whether the current resource state allows the requested transition.
+
+A subject may own credits while a specific actor lacks authority to spend them. Login alone, workspace membership alone, UI visibility alone, or wallet control alone is insufficient for mutation authority.
+
+---
+
+## Entitlement / Capability-Gating Model
+
+Credits do not replace entitlements. For actions where product access requires entitlement or capability posture:
+
+- the spend-consumer route MUST check capability eligibility separately from available balance;
+- insufficient entitlement MUST produce a distinct error from insufficient credits;
+- entitlement-denied actions MUST NOT reserve or spend credits;
+- if entitlement policy changes during an active reservation, deterministic settlement/release rules MUST apply;
+- product teams MUST NOT use available credits as a substitute for authorization or entitlement.
+
+---
+
+## API State Model
+
+### Account States
 
 - `active`
 - `restricted`
@@ -321,370 +468,428 @@ Possible states:
 - `closed`
 - `superseded`
 
-### 10.2 Base credits operational entry lifecycle
+### Scope Binding States
 
-Possible states:
+- `active`
+- `pending_review`
+- `rebound`
+- `superseded`
+- `invalidated`
+
+### Operational Entry States
 
 - `created`
+- `pending_ledger_reference`
+- `pending_commitment`
 - `committed`
-- `reserved`
-- `released`
 - `reversed`
 - `adjusted`
+- `expired`
 - `superseded`
+- `failed`
+- `reconciling`
 
-### 10.3 Base credits reservation lifecycle
-
-Possible states:
+### Reservation States
 
 - `opened`
 - `active`
+- `settling`
 - `settled`
+- `partially_settled`
 - `released`
 - `expired`
 - `cancelled`
-
-### 10.4 chain sync lifecycle
-
-Possible states:
-
-- `pending`
-- `synced`
-- `drift_detected`
 - `failed`
 - `superseded`
 
-### 10.5 discrepancy lifecycle
+### Chain Sync States
 
-Possible states:
+- `not_required`
+- `pending`
+- `submitted`
+- `synced`
+- `drift_detected`
+- `commitment_failed`
+- `replaced`
+- `reconciling`
+- `superseded`
+
+### Discrepancy States
 
 - `opened`
 - `under_review`
+- `containment_applied`
 - `resolved`
 - `failed`
 - `closed`
-
-Lifecycle notes:
-- Base credits balance state is derived from committed operational entries and active reservations
-- reservations and releases must remain explicit
-- sync success and semantic correctness are separate concepts and must both be represented
-- corrections and supersession must preserve immutable lineage
+- `superseded`
 
 ---
 
-## 11. API Surface Overview
+## Lifecycle / Workflow Model
 
-The API surface is divided into three families:
+1. Upstream payment, billing, product, or adjustment flow produces an approved semantic/ledger basis.
+2. Base Platform Credits API receives an internal mutation request with owner scope, class, amount, upstream reference, idempotency key, and correlation ID.
+3. API authenticates caller and authorizes target scope and action.
+4. API validates class policy, account/binding state, restriction posture, available/reserved posture, and ledger linkage.
+5. API creates or updates Base operational entry, reservation, or sync record in canonical storage.
+6. If chain-adjacent commitment is required, API creates commitment/sync records and emits work for adapter submission.
+7. API returns terminal success or accepted-state response with operation reference.
+8. Async workers submit, observe, reconcile, and update chain-sync state.
+9. Post-commit events refresh projections and notify consumers.
+10. If mismatch or failure occurs, API opens discrepancy/reconciliation state rather than silently mutating or trusting raw input.
+11. Admin/control-plane routes may pause, correct, resync, supersede, rebind-if-allowed, or resolve discrepancies with reason-coded audit.
 
-### 11.1 Internal service APIs
-Used by trusted internal services for:
-- creating Base credits accounts
-- projecting issuance/spend/reservation/release/reversal/adjustment state to Base layer
-- recording class-aware balance state
-- refreshing chain-sync and reconciliation state
-- reading canonical Base credits operational truth
-
-### 11.2 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- suspend, resync, correct, rebind_if_allowed, supersede, and discrepancy actions
-- operational repair and visibility-safe correction workflows
-
-### 11.3 Event-driven interfaces
-Used for downstream side effects:
-- product consumption enforcement
-- first-party balance/status projection updates
-- audit generation
-- anomaly detection and operational review
-- transparency and reporting linkage triggers where applicable
-
-No general unauthenticated public mutation surface exists for this domain.
+Accepted-state responses MUST NOT be represented as final chain sync or final business outcome unless the relevant final state is reached.
 
 ---
 
-## 12. Authentication and Authorization Model
+## Architecture Diagram — Mermaid flowchart
 
-### 12.1 Authentication posture by route family
+```mermaid
+flowchart TD
+    subgraph Consumers["API Consumers"]
+        FP["First-party products / webapp"]
+        PS["Product spend services"]
+        BILL["Billing / usage / pricing services"]
+        LEDGER["Credit ledger service"]
+        ADMIN["Admin / support / finance / security operators"]
+        DATA["Reporting / analytics / support views"]
+    end
 
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create Base credits accounts
-- write operational entries
-- create or settle reservations
-- refresh sync and reconciliation state
-- read canonical truth
+    subgraph Surface["Base Platform Credits API Surface"]
+        READ["First-party read APIs"]
+        INT["Internal service mutation APIs"]
+        CTRL["Admin/control-plane APIs"]
+        EVT["Event / Async APIs"]
+        REP["Reporting/projection APIs"]
+        ADAPT["Chain-adjacent adapter APIs"]
+    end
 
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- suspend or resync accounts
-- correct or supersede operational state
-- rebind_if_allowed scope ownership under controlled policy
-- resolve discrepancy cases
+    subgraph OwnerDomains["Canonical Owner Domains"]
+        PC["Platform Credits semantics"]
+        CLS["Credit Ledger and Settlement truth"]
+        BPC["Base Platform Credits operational truth"]
+        AUTHZ["Identity / workspace / authz"]
+        ENT["Entitlement / capability gates"]
+        RISK["Security / risk / containment"]
+        AUD["Audit / traceability"]
+    end
 
-### 12.2 Authorization checkpoints
+    subgraph Storage["Canonical and Derived Stores"]
+        ACC["Base credits accounts and scope bindings"]
+        ENTRIES["Operational entries / class states / reservations"]
+        SYNC["Commitment / chain-sync / reconciliation records"]
+        DISC["Discrepancy and supersession lineage"]
+        PROJ["Derived balance, product, support, and reporting views"]
+        IDEMP["Idempotency records"]
+    end
 
-Authorization must evaluate:
-- caller service identity
-- allowed owner scope and credits-layer purpose
-- whether the caller has issue/reserve/release/reverse/read/resync privilege
-- whether admin/operator role is present for privileged actions
-- whether current account, entry, or reservation state allows requested mutation
+    subgraph Chain["Base Chain-Adjacent Layer"]
+        WORKER["Submission / sync / reconciliation workers"]
+        CONTRACT["Base credits contract or commitment adapter"]
+        OBS["Chain observation / indexer input"]
+    end
 
-### 12.3 Sensitive action rules
+    FP --> READ
+    PS --> INT
+    BILL --> INT
+    LEDGER --> INT
+    ADMIN --> CTRL
+    DATA --> REP
 
-The following require heightened checks:
-- class-aware issuance commitment
-- reservation or release affecting available balance
-- rebind_if_allowed or scope ownership repair
-- manual correction or supersession
-- suspend or resync actions
-- discrepancy-resolution actions
+    READ --> PROJ
+    INT --> AUTHZ
+    CTRL --> AUTHZ
+    INT --> PC
+    INT --> CLS
+    INT --> ENT
+    INT --> RISK
+    CTRL --> RISK
+
+    INT --> BPC
+    CTRL --> BPC
+    BPC --> ACC
+    BPC --> ENTRIES
+    BPC --> SYNC
+    BPC --> DISC
+    INT --> IDEMP
+    CTRL --> IDEMP
+
+    BPC --> EVT
+    EVT --> PROJ
+    EVT --> AUD
+    REP --> PROJ
+
+    ADAPT --> WORKER
+    WORKER --> CONTRACT
+    CONTRACT --> OBS
+    OBS --> ADAPT
+    ADAPT --> SYNC
+    SYNC --> DISC
+
+    PROJ -. derived only .-> FP
+    PROJ -. derived only .-> DATA
+```
 
 ---
 
-## 13. API Endpoints / Interface Contracts
+## Data Design — Mermaid Diagram
 
-## 13.1 Internal Service APIs
+```mermaid
+erDiagram
+    BASE_CREDITS_ACCOUNT ||--o{ BASE_CREDITS_SCOPE_BINDING : binds
+    BASE_CREDITS_ACCOUNT ||--o{ BASE_CREDITS_CLASS_STATE : partitions
+    BASE_CREDITS_ACCOUNT ||--o{ BASE_CREDITS_BALANCE_STATE : has
+    BASE_CREDITS_ACCOUNT ||--o{ BASE_CREDITS_OPERATIONAL_ENTRY : records
+    BASE_CREDITS_OPERATIONAL_ENTRY ||--o{ BASE_CREDITS_ENTRY_LINK : references
+    BASE_CREDITS_OPERATIONAL_ENTRY ||--o{ BASE_CREDITS_COMMITMENT_REFERENCE : commits
+    BASE_CREDITS_OPERATIONAL_ENTRY ||--o{ BASE_CREDITS_SUPERSESSION_LINK : supersedes
+    BASE_CREDITS_ACCOUNT ||--o{ BASE_CREDITS_RESERVATION : holds
+    BASE_CREDITS_RESERVATION ||--o{ BASE_CREDITS_OPERATIONAL_ENTRY : settles_or_releases
+    BASE_CREDITS_ACCOUNT ||--o{ BASE_CREDITS_CHAIN_SYNC_RECORD : syncs
+    BASE_CREDITS_CHAIN_SYNC_RECORD ||--o{ BASE_CREDITS_RECONCILIATION_RECORD : reconciles
+    BASE_CREDITS_RECONCILIATION_RECORD ||--o{ BASE_CREDITS_DISCREPANCY_CASE : opens
+    BASE_CREDITS_MUTATION_ACTION ||--o{ BASE_CREDITS_OPERATIONAL_ENTRY : caused
+    BASE_CREDITS_MUTATION_ACTION ||--o{ BASE_CREDITS_AUDIT_REFERENCE : audited_by
+    BASE_CREDITS_MUTATION_ACTION ||--o{ BASE_CREDITS_IDEMPOTENCY_RECORD : guarded_by
+    BASE_CREDITS_ACCOUNT ||--o{ DERIVED_BALANCE_VIEW : projects
+    BASE_CREDITS_ACCOUNT ||--o{ PRODUCT_BALANCE_PROJECTION : projects
+    BASE_CREDITS_ACCOUNT ||--o{ SUPPORT_REPORTING_VIEW : projects
 
-### 13.1.1 `POST /internal/v1/base-platform-credits/accounts`
-**Purpose:** create or locate Base credits account for an owner scope  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
+    BASE_CREDITS_ACCOUNT {
+      string base_credits_account_id PK
+      string owner_scope_type
+      string owner_scope_id
+      string state
+      datetime created_at
+      datetime updated_at
+    }
+
+    BASE_CREDITS_OPERATIONAL_ENTRY {
+      string entry_id PK
+      string entry_type
+      string credit_class
+      decimal credit_units
+      string state
+      string upstream_reference_type
+      string upstream_reference_id
+    }
+
+    BASE_CREDITS_CHAIN_SYNC_RECORD {
+      string sync_record_id PK
+      string sync_state
+      string chain_reference
+      string adapter_reference
+      string reconciliation_posture
+    }
+
+    DERIVED_BALANCE_VIEW {
+      string view_id PK
+      string account_id FK
+      string projection_version
+      boolean canonical
+    }
+```
+
+Derived views in this diagram are explicitly non-canonical and MUST be refreshable from canonical account, entry, reservation, sync, reconciliation, and ledger-linked records.
+
+---
+
+## Flow View
+
+### Main Synchronous Mutation Flow
+
+1. Caller submits mutation with `Idempotency-Key`, `X-Correlation-Id`, owner scope, class, amount, action type, upstream reference, and policy/version references where required.
+2. API authenticates caller and resolves caller class.
+3. API evaluates owner-scope authority, workspace permission, service permission, entitlement requirement, and risk restrictions.
+4. API checks idempotency record.
+5. API validates resource state, class policy, available/reserved balance, ledger linkage, and chain-sync constraints.
+6. API writes canonical operational mutation record and mutation action.
+7. API records audit reference and emits post-commit event.
+8. API returns `200`, `201`, or `202` depending on terminal or accepted async state.
+
+### Reservation / Settlement Flow
+
+1. Product requests reservation with expected cost and target reference.
+2. API validates balance, class, authority, and entitlement.
+3. API creates reservation and reduces available operational posture.
+4. Product completes, fails, cancels, or returns final cost.
+5. API settles all or part of reservation into spend, releases remainder, or releases full reservation.
+6. API emits reservation and settlement events.
+7. Projection refresh is asynchronous and must not be treated as canonical enforcement state.
+
+### Chain Sync Flow
+
+1. Canonical mutation requires Base commitment.
+2. API creates commitment reference and sync record in `pending`.
+3. Worker submits adapter operation and records attempt/receipt references.
+4. Observed chain state is normalized into sync result.
+5. API updates sync state to `synced`, `commitment_failed`, `drift_detected`, `replaced`, or `reconciling`.
+6. Reconciliation worker compares ledger, Base operational state, and chain observation.
+7. Discrepancy case opens on unresolved mismatch.
+
+### Admin / Correction Flow
+
+1. Operator opens privileged route with reason code, operator note, correlation ID, and idempotency key.
+2. API verifies privileged identity, role, case linkage, and policy authorization.
+3. API applies suspension, resync, correction, rebinding, supersession, or discrepancy resolution through canonical mutation action.
+4. API preserves original records and writes compensating or superseding lineage.
+5. Audit record is critical severity.
+6. Downstream projections update after canonical commit.
+
+### Failure and Degraded Mode
+
+- Chain unavailable: mutation may remain `pending_commitment` only if policy allows; otherwise fail with dependency error.
+- Projection lag: sensitive spends must revalidate canonical state.
+- Duplicate request: idempotent replay returns original result; semantic mismatch with same key returns conflict.
+- Scope ambiguity: fail closed.
+- Discrepancy: open review, optionally restrict account, and do not optimistic-finalize.
+- Admin override requested after public/reporting exposure: require heightened approval and explicit supersession lineage.
+
+---
+
+## Data Flows — Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Product as Product/Service Caller
+    participant API as Base Platform Credits API
+    participant Auth as AuthZ/Entitlement/Risk
+    participant Idem as Idempotency Store
+    participant Ledger as Credit Ledger Service
+    participant Store as Base Credits Store
+    participant Audit as Audit Service
+    participant Event as Event Bus
+    participant Worker as Base Sync Worker
+    participant Chain as Base Contract/Adapter
+    participant Projection as Derived Views
+
+    Product->>API: POST mutation/reservation/sync request
+    API->>Auth: authenticate + authorize + policy + entitlement checks
+    Auth-->>API: allow/deny/review
+    API->>Idem: check Idempotency-Key + request hash
+    Idem-->>API: new or matching replay
+    API->>Ledger: validate upstream ledger reference where required
+    Ledger-->>API: valid ledger basis / rejected
+    API->>Store: write operational entry/reservation/sync action
+    Store-->>API: canonical resource state
+    API->>Audit: record mutation/audit lineage
+    API->>Event: publish post-commit lifecycle event
+    API-->>Product: 201/202 with canonical IDs and operation reference
+
+    alt Base commitment required
+        Event->>Worker: enqueue sync/commitment task
+        Worker->>Chain: submit or observe Base commitment
+        Chain-->>Worker: receipt / failure / observed state
+        Worker->>API: POST sync result / receipt
+        API->>Store: update sync/reconciliation state
+        API->>Audit: record sync/reconciliation lineage
+        API->>Event: publish synced/drift/failed/reconciling event
+    end
+
+    Event->>Projection: refresh balance/support/reporting views
+    Projection-->>Product: derived read view only
+```
+
+---
+
+## Request Model
+
+### Required Headers for Mutations
+
+- `Authorization`
+- `Content-Type: application/json`
+- `Idempotency-Key`
+- `X-Correlation-Id`
+- `X-Request-Source`
+- `X-Actor-Context` for on-behalf-of service calls where actor authority matters
+- `X-Policy-Version` where policy-sensitive class, issuance, spend, correction, or rebinding posture applies
+
+### Common Request Fields
+
 - `owner_scope_type`
 - `owner_scope_id`
-- optional `account_purpose`
-- optional `default_credit_class`
-- `idempotency_key`
-**Response Summary:** Base credits account summary and current balance-state summary
-**Side Effects:** creates account and scope binding if absent
-**Idempotency Behavior:** required
-**Audit Requirements:** account creation audit where sensitivity requires
-**Emitted Events:** `base_platform_credits.account_created`
-
-### 13.1.2 `POST /internal/v1/base-platform-credits/accounts/{base_credits_account_id}/entries`
-**Purpose:** record Base operational issuance, spend, adjustment, or reversal entry  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `entry_type`
+- `base_credits_account_id` where account already exists
 - `credit_class`
 - `credit_units`
+- `action_type`
 - `upstream_reference_type`
 - `upstream_reference_id`
-- optional `entry_summary`
-- `idempotency_key`
-**Response Summary:** Base operational entry summary and updated balance-state summary
-**Side Effects:** creates operational entry, link record, class-state update, and balance-state refresh
-**Idempotency Behavior:** required
-**Audit Requirements:** credits operational-entry audit
-**Emitted Events:** `base_platform_credits.entry_committed`
+- `reason_code`
+- `target_reference_type`
+- `target_reference_id`
+- `policy_version`
+- `expected_state` where optimistic conflict protection is needed
+- `operator_note` for privileged actions
+- `related_case_id` for support/finance/security corrections
+- `client_operation_reference` only as non-authoritative correlation input
 
-### 13.1.3 `POST /internal/v1/base-platform-credits/accounts/{base_credits_account_id}/reservations`
-**Purpose:** create Base-layer reservation against available credits  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
+### Request Rules
+
+- Client-authored balances are forbidden.
+- Frontend-authored class semantics are forbidden.
+- Upstream references are mandatory for economically material mutation.
+- Admin actions require reason codes and operator notes.
+- Amounts MUST use deterministic decimal/integer representation.
+- Workspace-scoped requests MUST include enough context to evaluate workspace authority.
+- Requests that cross scope, class, or correction boundaries MUST include explicit policy version or approved migration reference.
+
+---
+
+## Response Model
+
+### Common Success Fields
+
+- `resource_id`
+- `resource_type`
+- `state`
+- `owner_scope_type`
+- `owner_scope_id`
 - `credit_class`
 - `credit_units`
-- `reservation_reason_code`
-- optional `target_reference`
-- `idempotency_key`
-**Response Summary:** reservation summary and updated available-balance summary
-**Side Effects:** creates reservation and reservation-linked operational posture
-**Idempotency Behavior:** required
-**Audit Requirements:** reservation audit
-**Emitted Events:** `base_platform_credits.reservation_opened`
+- `available_balance_summary`
+- `reserved_balance_summary`
+- `restriction_summary`
+- `sync_state`
+- `reconciliation_posture`
+- `upstream_references`
+- `operation_reference`
+- `correlation_id`
+- `created_at`
+- `updated_at`
 
-### 13.1.4 `POST /internal/v1/base-platform-credits/reservations/{base_credits_reservation_id}/settle`
-**Purpose:** settle active reservation into committed spend state  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `settlement_summary`
-- `idempotency_key`
-**Response Summary:** settled reservation summary and updated balance-state summary
-**Side Effects:** reservation moves to settled; linked Base operational entry state is finalized
-**Idempotency Behavior:** required
-**Audit Requirements:** reservation settlement audit
-**Emitted Events:** `base_platform_credits.reservation_settled`
+### Response Classes
 
-### 13.1.5 `POST /internal/v1/base-platform-credits/reservations/{base_credits_reservation_id}/release`
-**Purpose:** release active reservation under policy  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `release_reason_code`
-- `idempotency_key`
-**Response Summary:** released reservation summary and updated available-balance summary
-**Side Effects:** reservation moves to released and available balance refreshes
-**Idempotency Behavior:** required
-**Audit Requirements:** reservation release audit
-**Emitted Events:** `base_platform_credits.reservation_released`
+- `created`: canonical resource created.
+- `updated`: canonical resource transitioned.
+- `accepted`: async work accepted; final outcome pending.
+- `no_effect_replay`: idempotent replay returned original effect.
+- `review_required`: request is not denied but requires explicit review before effect.
+- `derived_view`: read result is non-canonical and must identify canonical lineage.
 
-### 13.1.6 `POST /internal/v1/base-platform-credits/accounts/{base_credits_account_id}/sync`
-**Purpose:** record chain-sync checkpoint for Base credits account state  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `sync_reference`
-- `sync_summary`
-- `idempotency_key`
-**Response Summary:** chain-sync summary and reconciliation posture
-**Side Effects:** creates sync record and may refresh reconciliation state
-**Idempotency Behavior:** required
-**Audit Requirements:** sync audit where sensitivity requires
-**Emitted Events:** `base_platform_credits.synced`
+### Async-Accepted Responses
 
-### 13.1.7 `GET /internal/v1/base-platform-credits/accounts/{base_credits_account_id}`
-**Purpose:** retrieve canonical Base credits account truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full account, scope bindings, class states, balance states, reservations, sync, reconciliation, and discrepancy lineage
-**Side Effects:** none
+Accepted responses MUST include:
 
-## 13.2 Admin / Control-Plane APIs
+- operation ID;
+- accepted state;
+- finalization condition;
+- polling/status route if applicable;
+- whether balance availability is affected immediately;
+- whether chain sync or projection refresh is pending.
 
-### 13.2.1 `POST /admin/v1/base-platform-credits/accounts/{base_credits_account_id}/suspend`
-**Purpose:** suspend Base credits account under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** suspended account summary
-**Side Effects:** account moves to suspended or restricted state
-**Audit Requirements:** critical audit
-**Emitted Events:** `base_platform_credits.account_suspended`
-
-### 13.2.2 `POST /admin/v1/base-platform-credits/corrections`
-**Purpose:** apply controlled correction or superseding Base operational state change  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `correction_type`
-- `correction_summary`
-- `reason_code`
-- `operator_note`
-- optional `related_case_id`
-- `idempotency_key`
-**Response Summary:** correction summary and updated balance-state summary
-**Side Effects:** creates corrected or superseding Base operational lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `base_platform_credits.corrected`
-
-### 13.2.3 `POST /admin/v1/base-platform-credits/accounts/{base_credits_account_id}/rebind`
-**Purpose:** rebind Base credits account ownership scope if policy allows  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `new_owner_scope_type`
-- `new_owner_scope_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** rebinding summary
-**Side Effects:** creates superseding scope-binding lineage without erasing prior binding history
-**Audit Requirements:** critical audit
-**Emitted Events:** `base_platform_credits.rebound`
-
-### 13.2.4 `POST /admin/v1/base-platform-credits/accounts/{base_credits_account_id}/resync`
-**Purpose:** force resync and reconciliation of Base credits account state under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `resync_profile`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** resync summary and updated reconciliation posture
-**Side Effects:** creates new chain-sync and reconciliation lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `base_platform_credits.resynced`
-
-### 13.2.5 `POST /admin/v1/base-platform-credits/discrepancies`
-**Purpose:** resolve Base credits discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, resync, suspend, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `base_platform_credits.discrepancy_resolved`
+Accepted state MUST NOT be represented as final chain commitment, final ledger settlement, or final business success.
 
 ---
 
-## 14. Request Rules
+## Error / Result / Status Model
 
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive Base credits mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored credits truth as authoritative input
+Errors MUST follow structured problem-details style.
 
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- account creation for workspace or sensitive scopes
-- credits issuance commitments
-- reservation settlement or release
-- scope rebinding or superseding corrections
-- forced resync
-- discrepancy-resolution actions
+### Required Error Fields
 
-Heightened validation may include:
-- owner-scope integrity checks
-- upstream semantic-ledger reference checks
-- class-state validation
-- available-balance and reservation-state checks
-- operator role confirmation
-- finance/support/security case linkage for sensitive actions
-
-### 14.3 Scope integrity rule
-Base Platform Credits mutations must target valid and authorized accounts, bindings, entries, reservations, sync records, and discrepancy records. Services and operators must not mutate unrelated or unauthorized Base credits state.
-
-### 14.4 Layer-separation rule
-The Base Platform Credits layer must represent the on-chain operational credits economy, but must not collapse semantic ledger reasoning, payment verification, or payout execution semantics into one ambiguous object.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- account, entry, reservation, or sync summaries where relevant
-- class-state and balance-state summaries where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If resync, reconciliation refresh, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target account, entry, reservation, sync record, or discrepancy
-- mutation type
-- resulting state
-- correction, rebinding, suspension, or resync effects where relevant
-- whether downstream product or first-party surfaces may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal Base operational truth
-- current balance-state summary
-- reserved versus available posture
-- chain-sync and reconciliation posture
-- linkage to upstream semantic references rather than replacing them
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
 - `type`
 - `title`
 - `status`
@@ -692,704 +897,783 @@ The API uses structured problem-details style error responses.
 - `detail`
 - `instance`
 - `correlation_id`
+- `resource_reference` where safe
+- `retryable`
+- `safe_user_message` where first-party display is allowed
 
-### 16.2 Common error codes
+### Error Families
 
-#### Authorization / permission errors
+#### Authentication / Authorization
+
+- `BASE_PLATFORM_CREDITS_AUTHENTICATION_REQUIRED`
 - `BASE_PLATFORM_CREDITS_PERMISSION_DENIED`
-- `BASE_PLATFORM_CREDITS_OPERATOR_PERMISSION_DENIED`
 - `BASE_PLATFORM_CREDITS_SERVICE_PERMISSION_DENIED`
+- `BASE_PLATFORM_CREDITS_OPERATOR_PERMISSION_DENIED`
+- `BASE_PLATFORM_CREDITS_WORKSPACE_PERMISSION_DENIED`
 
-#### State conflict errors
+#### Scope / Class / Policy
+
+- `BASE_PLATFORM_CREDITS_SCOPE_REQUIRED`
+- `BASE_PLATFORM_CREDITS_SCOPE_BINDING_INVALID`
+- `BASE_PLATFORM_CREDITS_CLASS_INVALID`
+- `BASE_PLATFORM_CREDITS_CLASS_RESTRICTED`
+- `BASE_PLATFORM_CREDITS_POLICY_DENIED`
+- `BASE_PLATFORM_CREDITS_REBINDING_NOT_ALLOWED`
+
+#### State / Conflict
+
 - `BASE_PLATFORM_CREDITS_ACCOUNT_STATE_INVALID`
 - `BASE_PLATFORM_CREDITS_ENTRY_STATE_INVALID`
 - `BASE_PLATFORM_CREDITS_RESERVATION_STATE_INVALID`
 - `BASE_PLATFORM_CREDITS_SYNC_STATE_INVALID`
-- `BASE_PLATFORM_CREDITS_RESYNC_CONFLICT`
+- `BASE_PLATFORM_CREDITS_DISCREPANCY_OPEN`
+- `BASE_PLATFORM_CREDITS_CONFLICT`
 
-#### Policy / safety errors
-- `BASE_PLATFORM_CREDITS_SCOPE_BINDING_INVALID`
+#### Economic Safety
+
 - `BASE_PLATFORM_CREDITS_UPSTREAM_REFERENCE_REQUIRED`
+- `BASE_PLATFORM_CREDITS_LEDGER_REFERENCE_INVALID`
 - `BASE_PLATFORM_CREDITS_INSUFFICIENT_AVAILABLE_BALANCE`
-- `BASE_PLATFORM_CREDITS_REBINDING_NOT_ALLOWED`
 - `BASE_PLATFORM_CREDITS_DUPLICATE_ENTRY`
+- `BASE_PLATFORM_CREDITS_COMMITMENT_REQUIRED`
+- `BASE_PLATFORM_CREDITS_COMMITMENT_FAILED`
 
-#### Request integrity errors
+#### Request Integrity
+
 - `BASE_PLATFORM_CREDITS_IDEMPOTENCY_KEY_REQUIRED`
+- `BASE_PLATFORM_CREDITS_IDEMPOTENCY_CONFLICT`
 - `BASE_PLATFORM_CREDITS_REQUEST_INVALID`
 - `BASE_PLATFORM_CREDITS_REQUEST_UNPROCESSABLE`
+- `BASE_PLATFORM_CREDITS_AMOUNT_INVALID`
 
-#### Dependency or provider errors
+#### Dependency / Runtime
+
 - `BASE_PLATFORM_CREDITS_CHAIN_UNAVAILABLE`
 - `BASE_PLATFORM_CREDITS_STORAGE_UNAVAILABLE`
 - `BASE_PLATFORM_CREDITS_RECONCILIATION_UNAVAILABLE`
+- `BASE_PLATFORM_CREDITS_PROJECTION_STALE`
+- `BASE_PLATFORM_CREDITS_RATE_LIMITED`
 
-### 16.3 Error handling rules
-- do not expose hidden internal finance/security detail in low-privilege contexts
-- do not imply semantic billing or payment truth from Base operational state alone
-- distinguish insufficient available balance from account suspension
-- distinguish upstream-reference-required from generic invalid state
-- include retry guidance only where safe
+Error responses MUST distinguish permission denial, insufficient balance, invalid class, suspended account, open discrepancy, upstream missing reference, chain unavailable, and projection stale conditions.
 
 ---
 
-## 17. Idempotency and Mutation Safety
+## Idempotency / Retry / Replay Model
 
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- Base credits account creation
-- operational entry commitment
-- reservation creation
-- reservation settlement
-- reservation release
-- chain sync recording
-- suspend
-- correction
-- rebind_if_allowed
-- resync
-- discrepancy resolution
+### Required Idempotency
 
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
+Every mutation route MUST be idempotent, including:
 
-### 17.3 Mutation safety rules
-- one canonical active Base credits account per current owner scope and purpose under current lineage unless explicit supersession exists
-- operational entries must maintain referential integrity to upstream semantic references
-- reservation settlement and release must not double-consume or double-release credits
-- resync and correction flows must preserve prior lineage
-- rebinding and supersession must preserve immutable history rather than rewrite prior records
+- account creation;
+- scope binding creation or rebinding;
+- issuance commitment;
+- operational entry creation;
+- reservation creation;
+- reservation settlement;
+- reservation release;
+- reversal, expiry, adjustment, and correction;
+- chain-sync recording;
+- resync;
+- suspension;
+- supersession;
+- discrepancy resolution.
 
----
+### Idempotency Record Requirements
 
-## 18. Versioning and Compatibility Rules
+The idempotency store MUST record:
 
-### 18.1 Versioning
-This API family is versioned under `/internal/v1` and `/admin/v1` route families.
+- idempotency key;
+- route family;
+- actor/service identity;
+- owner scope;
+- request hash;
+- upstream reference;
+- resulting resource IDs;
+- terminal or accepted result;
+- timestamps;
+- replay count;
+- conflict state where same key is reused with different semantic request.
 
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to committed, reserved, released, reversed, adjusted, suspended, or superseded states
-- new credit classes, owner-scope purposes, or sync-reference types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
+### Retry Rules
 
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of Base operational balance state
-- changing reservation or release lifecycle semantics incompatibly
-- removing critical owner-scope or upstream-reference fields
-- changing correction, rebinding, or supersession semantics incompatibly
-
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for internal consumers
+- Retrying same semantic request returns the original result.
+- Retrying same key with changed semantic request returns conflict.
+- Worker retries MUST preserve operation references.
+- Chain retries MUST create attempt/sync lineage, not duplicate business effect.
+- Duplicate provider events or duplicate ledger references MUST NOT double-issue or double-spend.
+- Replay after correction/supersession MUST return the original historical result plus current supersession reference where safe.
 
 ---
 
-## 19. Event Emission and Webhook Behavior
+## Rate Limit / Abuse-Control Model
 
-This domain is event-capable.
+The API MUST enforce:
 
-### 19.1 Internal events
-The Base Platform Credits Layer domain must emit canonical internal events such as:
+- per-service and per-operator mutation limits;
+- stricter admin/control-plane limits;
+- anomaly detection for repeated failed reservations, duplicate keys, suspicious rebinding, repeated chain-sync failures, and high-risk adjustment attempts;
+- fail-closed throttling for economically material mutation during active incident or containment posture;
+- safe retry-after hints only where they do not leak internal security posture.
+
+Rate limits MUST NOT cause hidden partial economic effects. If the system accepts work before throttling, it must preserve operation references.
+
+---
+
+## Endpoint / Route Family Model
+
+This section defines route families, not final OpenAPI schemas.
+
+### Internal Service Routes
+
+#### `POST /internal/v1/base-platform-credits/accounts`
+
+Create or locate Base credits account for owner scope.
+
+Required: owner scope, purpose, idempotency key.  
+Result: account summary, scope binding, state, balance summary.  
+Forbidden: creating contextless accounts.
+
+#### `POST /internal/v1/base-platform-credits/accounts/{account_id}/entries`
+
+Create Base operational entry for issuance, spend, reversal, adjustment, expiry, or commitment marker.
+
+Required: entry type, credit class, units, upstream ledger/reference, policy version, idempotency key.  
+Result: operational entry, updated balance/class posture, chain-sync requirement.
+
+#### `POST /internal/v1/base-platform-credits/accounts/{account_id}/reservations`
+
+Create reservation against available Base operational credits.
+
+Required: credit class, units, reservation reason, target reference, idempotency key.  
+Result: reservation resource and updated available/reserved posture.
+
+#### `POST /internal/v1/base-platform-credits/reservations/{reservation_id}/settle`
+
+Finalize active reservation into spend.
+
+Required: settlement amount or finalization basis, idempotency key.  
+Result: settled or partially settled reservation, spend entry, released remainder if applicable.
+
+#### `POST /internal/v1/base-platform-credits/reservations/{reservation_id}/release`
+
+Release an active reservation.
+
+Required: release reason, idempotency key.  
+Result: released reservation and refreshed balance posture.
+
+#### `POST /internal/v1/base-platform-credits/accounts/{account_id}/chain-sync-records`
+
+Create or refresh chain-sync record.
+
+Required: commitment reference, observed state or submission reference, idempotency key.  
+Result: sync state and reconciliation posture.
+
+#### `POST /internal/v1/base-platform-credits/reconciliation`
+
+Start or record reconciliation pass.
+
+Required: target reference, reconciliation profile, idempotency key.  
+Result: reconciliation record, discrepancy state if mismatch remains.
+
+#### `GET /internal/v1/base-platform-credits/accounts/{account_id}`
+
+Retrieve canonical internal operational truth.
+
+Result: account, scope bindings, class states, balance states, reservations, entries, sync records, reconciliation, discrepancy, and supersession lineage.
+
+### First-Party Read Routes
+
+#### `GET /v1/credits/base/balance-summary`
+
+Return bounded authenticated subject balance summary.
+
+Must be permission-aware and projection-labeled. Sensitive enforcement decisions MUST revalidate canonical state.
+
+#### `GET /v1/credits/base/reservations/{reservation_id}`
+
+Return subject-visible reservation status where authorized.
+
+#### `GET /v1/credits/base/activity`
+
+Return statement-like derived activity, excluding protected internal notes and unsafe correction detail.
+
+### Admin / Control-Plane Routes
+
+#### `POST /admin/v1/base-platform-credits/accounts/{account_id}/suspend`
+
+Suspend or restrict account under policy.
+
+Required: reason code, operator note, case reference, idempotency key.
+
+#### `POST /admin/v1/base-platform-credits/accounts/{account_id}/resync`
+
+Force resync/reconciliation.
+
+Required: resync profile, reason code, operator note, idempotency key.
+
+#### `POST /admin/v1/base-platform-credits/corrections`
+
+Apply controlled correction, reversal, adjustment, or supersession.
+
+Required: target reference, correction type, reason code, operator note, case reference, idempotency key.
+
+#### `POST /admin/v1/base-platform-credits/accounts/{account_id}/rebind`
+
+Policy-approved internal rebinding.
+
+Required: old scope, new scope, approval reference, reason code, operator note, idempotency key.  
+Forbidden: using rebinding to create open transfer behavior.
+
+#### `POST /admin/v1/base-platform-credits/discrepancies/{case_id}/resolve`
+
+Resolve discrepancy with explicit remediation.
+
+Required: resolution code, remediation references, operator note, idempotency key.
+
+### Event Families
+
 - `base_platform_credits.account_created`
+- `base_platform_credits.scope_bound`
 - `base_platform_credits.entry_committed`
 - `base_platform_credits.reservation_opened`
 - `base_platform_credits.reservation_settled`
 - `base_platform_credits.reservation_released`
+- `base_platform_credits.reversal_committed`
+- `base_platform_credits.adjustment_committed`
+- `base_platform_credits.expiry_committed`
+- `base_platform_credits.sync_submitted`
 - `base_platform_credits.synced`
+- `base_platform_credits.drift_detected`
+- `base_platform_credits.discrepancy_opened`
+- `base_platform_credits.discrepancy_resolved`
 - `base_platform_credits.account_suspended`
 - `base_platform_credits.corrected`
 - `base_platform_credits.rebound`
-- `base_platform_credits.resynced`
-- `base_platform_credits.discrepancy_resolved`
+- `base_platform_credits.superseded`
 
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- Base credits account or reservation reference
-- upstream semantic reference where relevant
-- owner scope summary
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound Base credits webhooks by default. Any future outbound credits-status webhook surface must be narrow, security-reviewed, and governed by a separate contract.
+Events MUST carry stable IDs, owner scope, action type, state, policy version, upstream references, audit reference, correlation ID, and idempotency reference where relevant.
 
 ---
 
-## 20. Audit and Activity Requirements
+## Public API Considerations
 
-The following actions must generate durable audit events:
+No public mutation API is allowed. Public read exposure, if later approved, MUST:
 
-- Base credits account creation for sensitive scopes
-- operational entry commitments for issuance, reversal, or adjustment
-- reservation settlement or release
-- account suspension, rebinding, correction, and resync actions
-- discrepancy-resolution actions
-- other sensitive Base credits mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target account / entry / reservation / sync / discrepancy reference as applicable
-- action type
-- before/after summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
-User-facing activity may show selected credits-layer milestones only through bounded downstream surfaces, but canonical internal audit truth remains durable and immutable.
+- be read-only;
+- be privacy-safe;
+- expose only stable non-sensitive summaries;
+- distinguish chain-visible state from platform interpretation;
+- exclude internal correction notes, fraud/security posture, signer/provider details, payment details, workspace-private data, and raw ledger internals;
+- identify derived status where applicable;
+- remain subordinate to a future public-read/public-trust API spec.
 
 ---
 
-## 21. Data Model and Database Schema View
+## First-Party Application API Considerations
 
-### 21.1 `base_credits_accounts`
-- `id` PK
-- `account_purpose`
-- `state`
-- `default_credit_class`
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
+First-party apps MAY show balances, class posture, reservations, activity, and user-safe failure reasons. They MUST NOT:
 
-**Constraints:**
-- index on `state`
-
-### 21.2 `base_credits_scope_bindings`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `owner_scope_type`
-- `owner_scope_id`
-- `state`
-- `created_at`
-- `superseded_at` nullable
-
-**Constraints:**
-- unique (`base_credits_account_id`, `owner_scope_type`, `owner_scope_id`, `state`)
-- index on `base_credits_account_id`
-
-### 21.3 `base_credits_balance_states`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `total_committed_units`
-- `available_units`
-- `reserved_units`
-- `computed_at`
-- `superseded_at` nullable
-
-**Constraints:**
-- index on `base_credits_account_id`
-- index on `computed_at`
-
-### 21.4 `base_credits_operational_entries`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `entry_type`
-- `credit_class`
-- `credit_units`
-- `state`
-- `created_at`
-- `committed_at` nullable
-- `superseded_at` nullable
-
-**Constraints:**
-- index on `base_credits_account_id`
-- index on `state`
-
-### 21.5 `base_credits_entry_links`
-- `id` PK
-- `base_credits_operational_entry_id` FK -> `base_credits_operational_entries.id`
-- `upstream_reference_type`
-- `upstream_reference_id`
-- `created_at`
-
-**Constraints:**
-- unique (`base_credits_operational_entry_id`, `upstream_reference_type`, `upstream_reference_id`)
-- index on `base_credits_operational_entry_id`
-
-### 21.6 `base_credits_class_states`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `credit_class`
-- `available_units`
-- `reserved_units`
-- `computed_at`
-- `superseded_at` nullable
-
-**Constraints:**
-- index on `base_credits_account_id`
-- index on `credit_class`
-
-### 21.7 `base_credits_reservations`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `credit_class`
-- `credit_units`
-- `reservation_reason_code`
-- `target_reference` nullable
-- `state`
-- `created_at`
-- `settled_at` nullable
-- `released_at` nullable
-
-**Constraints:**
-- index on `base_credits_account_id`
-- index on `state`
-
-### 21.8 `base_credits_chain_sync_records`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `sync_reference`
-- `sync_summary_json`
-- `state`
-- `created_at`
-
-**Constraints:**
-- index on `base_credits_account_id`
-- index on `state`
-
-### 21.9 `base_credits_reconciliation_records`
-- `id` PK
-- `base_credits_account_id` FK -> `base_credits_accounts.id`
-- `state`
-- `reconciliation_summary_json`
-- `created_at`
-- `closed_at` nullable
-
-### 21.10 `base_credits_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.11 `base_credits_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.12 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.13 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical Base credits operational truth stays in accounts, bindings, balance states, operational entries, reservations, sync records, and discrepancy records
-- semantic credit-ledger truth remains external and referenced
-- product-facing balance views must derive from canonical Base operational truth through controlled projections
-- Base payout execution and profit-participation states remain separate domains and are not embedded into Base credits state
-
-### Reconciliation notes
-- one active account should reconcile to one current owner-scope binding under current lineage
-- total, available, and reserved state must reconcile to committed entries and active reservations
-- sync records must reconcile to Base operational-layer visibility and internal semantic references
-- discrepancy cases must preserve review lineage for failed or conflicting Base credits conditions
+- calculate balances client-side;
+- treat stale projection as spend authority;
+- allow UI-only role checks to authorize spending;
+- expose internal audit or operator notes;
+- imply credits are token, stablecoin, payout, or public-market asset;
+- hide reservation, restriction, or pending sync state where user-facing action depends on it.
 
 ---
 
-## 22. Architecture Diagram — Mermaid flowchart
+## Internal Service API Considerations
 
-```mermaid
-flowchart LR
-    InternalSvc[Internal FUZE Services]
-    AdminUI[fuze-frontend-admin]
-    BCAPI[Base Platform Credits Layer API<br/>fuze-backend-api]
-    AccountStore[(base_credits_accounts)]
-    BalanceStore[(base_credits_balance_states)]
-    EntryStore[(base_credits_operational_entries)]
-    ReservationStore[(base_credits_reservations)]
-    SyncStore[(base_credits_chain_sync_records)]
-    ReconcileStore[(base_credits_reconciliation_records)]
+Internal services MUST:
 
-    InternalSvc --> BCAPI
-    AdminUI --> BCAPI
-
-    BCAPI --> AccountStore
-    BCAPI --> BalanceStore
-    BCAPI --> EntryStore
-    BCAPI --> ReservationStore
-    BCAPI --> SyncStore
-    BCAPI --> ReconcileStore
-```
+- use service-to-service auth;
+- preserve actor-on-behalf-of context where spend authority matters;
+- pass deterministic idempotency keys;
+- include upstream references;
+- validate class, entitlement, scope, permission, and risk posture before mutating;
+- never write derived views directly as source of truth;
+- never use chain adapter success as a substitute for canonical API commit.
 
 ---
 
-## 23. Data Design — Mermaid Diagram
+## Admin / Control-Plane API Considerations
 
-```mermaid
-erDiagram
-    base_credits_accounts ||--o{ base_credits_scope_bindings : binds
-    base_credits_accounts ||--o{ base_credits_balance_states : summarizes
-    base_credits_accounts ||--o{ base_credits_operational_entries : records
-    base_credits_accounts ||--o{ base_credits_class_states : classifies
-    base_credits_accounts ||--o{ base_credits_reservations : reserves
-    base_credits_accounts ||--o{ base_credits_chain_sync_records : syncs
-    base_credits_accounts ||--o{ base_credits_mutation_actions : tracks
-    base_credits_operational_entries ||--o{ base_credits_entry_links : links
+Admin/control-plane APIs MUST be:
 
-    base_credits_accounts {
-        uuid id PK
-        string account_purpose
-        string state
-        string default_credit_class
-        datetime created_at
-        datetime updated_at
-        datetime closed_at
-    }
+- separated from ordinary application routes;
+- least-privilege;
+- reason-coded;
+- case-linked for sensitive remediation;
+- step-up protected where required;
+- audit-critical;
+- idempotent;
+- lineage-preserving.
 
-    base_credits_scope_bindings {
-        uuid id PK
-        uuid base_credits_account_id FK
-        string owner_scope_type
-        string owner_scope_id
-        string state
-        datetime created_at
-        datetime superseded_at
-    }
-
-    base_credits_balance_states {
-        uuid id PK
-        uuid base_credits_account_id FK
-        decimal total_committed_units
-        decimal available_units
-        decimal reserved_units
-        datetime computed_at
-        datetime superseded_at
-    }
-
-    base_credits_operational_entries {
-        uuid id PK
-        uuid base_credits_account_id FK
-        string entry_type
-        string credit_class
-        decimal credit_units
-        string state
-        datetime created_at
-        datetime committed_at
-        datetime superseded_at
-    }
-
-    base_credits_entry_links {
-        uuid id PK
-        uuid base_credits_operational_entry_id FK
-        string upstream_reference_type
-        string upstream_reference_id
-        datetime created_at
-    }
-
-    base_credits_reservations {
-        uuid id PK
-        uuid base_credits_account_id FK
-        string credit_class
-        decimal credit_units
-        string reservation_reason_code
-        string state
-        datetime created_at
-        datetime settled_at
-        datetime released_at
-    }
-```
+Admin tools MUST NOT mint, rewrite, rebind, resync, or correct credits through ad hoc scripts outside this API or approved implementation-contract pathways.
 
 ---
 
-## 24. Flow View
+## Event / Webhook / Async API Considerations
 
-### 24.1 Happy path — issue and commit Base credits
-1. internal service creates or locates Base credits account for an owner scope
-2. verified upstream semantic credits event is provided
-3. Base operational entry is committed with class-aware units
-4. Base balance state and class state refresh
-5. product projections may consume updated available balance
+Events:
 
-### 24.2 Happy path — reserve and settle
-1. product requests reservation against available Base credits
-2. backend validates owner scope, class, and available units
-3. reservation becomes active and available balance decreases
-4. later settlement converts reservation into committed spend posture
-5. balance-state summaries refresh and downstream product enforcement continues
+- are emitted after canonical commit;
+- MUST NOT be accepted as independent mutation authority;
+- MUST include stable references and policy/correlation context;
+- MAY trigger projections and downstream workflows;
+- MUST be replay-safe;
+- MUST distinguish accepted async intent from final sync or final settlement state.
 
-### 24.3 Alternate path — reserve and release
-1. reservation is created for a potentially variable-cost action
-2. action completes below reserved amount or is cancelled
-3. reservation is released under policy
-4. available balance refreshes
-5. history preserves explicit reservation and release lineage
-
-### 24.4 Failure path — invalid scope, duplicate entry, or insufficient balance
-1. service attempts to commit or reserve credits
-2. backend detects invalid scope binding, duplicate operational entry, or insufficient available balance
-3. request is rejected
-4. no effective duplicate or invalid Base operational state is created
-
-### 24.5 Failure and remediation path — drift or binding anomaly
-1. chain-adjacent state and semantic ledger state diverge or ownership binding is incorrect
-2. admin opens correction, rebinding, resync, or discrepancy flow
-3. backend preserves prior lineage
-4. corrected or superseding Base operational state is created
-5. discrepancy closes with preserved history
-
-### 24.6 Suspend path
-1. account enters restricted or suspicious posture
-2. admin suspends Base credits account
-3. new operational writes are blocked or limited under policy
-4. downstream product projections reflect restricted posture without rewriting history
-
-### 24.7 Retry behavior
-- duplicate account creation returns same canonical Base credits account result
-- duplicate entry commitment returns same canonical result or duplicate-safe conflict
-- duplicate reservation settlement or release returns same terminal result
-- duplicate correction, rebinding, resync, or discrepancy actions return same terminal action result
+External webhooks from payment providers are outside this API and must terminate in payment normalization before affecting credits.
 
 ---
 
-## 25. Data Flows — Mermaid sequenceDiagram
+## Chain-Adjacent API Considerations
 
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Base Platform Credits Layer API
-    participant ACC as Account Store
-    participant ENT as Entry Store
-    participant RES as Reservation Store
-    participant BAL as Balance State Store
-    participant SYN as Sync Store
+Chain-adjacent behavior MUST distinguish:
 
-    S->>API: POST /internal/v1/base-platform-credits/accounts
-    API->>ACC: Create or locate Base credits account
-    API-->>S: account summary
+- Base operational truth;
+- contract-visible commitment state;
+- adapter submission state;
+- chain observation/input state;
+- reconciliation state;
+- derived reporting state.
 
-    S->>API: POST /internal/v1/base-platform-credits/accounts/{account_id}/entries
-    API->>ENT: Create operational entry
-    API->>BAL: Refresh balance and class states
-    API-->>S: entry and balance summary
+Raw chain events MUST NOT directly mutate unrelated business truth. Chain event ingestion must normalize into sync or reconciliation records under this API before projections or status surfaces update.
 
-    S->>API: POST /internal/v1/base-platform-credits/accounts/{account_id}/reservations
-    API->>RES: Create reservation
-    API->>BAL: Refresh available balance
-    API-->>S: reservation summary
-
-    S->>API: POST /internal/v1/base-platform-credits/accounts/{account_id}/sync
-    API->>SYN: Create sync record
-    API-->>S: sync summary
-```
+Signer references, provider credentials, RPC details, queue internals, and operational secrets MUST NOT appear in public or first-party responses.
 
 ---
 
-## 26. Security and Risk Controls
+## Data Model / Storage Support Implications
 
-1. **Base credits truth is backend-owned**  
-   Frontends and informal operational surfaces may not authoritatively define Base credits truth.
+Storage implementation MUST preserve:
 
-2. **Layer separation is mandatory**  
-   The API must keep Base credits separate from Ethereum token truth, payment verification, semantic ledger explanation, and Base payout execution.
+- stable IDs for all canonical resources;
+- owner-scope fields on accounts, entries, reservations, and actions;
+- class-aware balance partitions;
+- append-style operational entry history;
+- explicit link to ledger/upstream references;
+- explicit chain-sync and reconciliation records;
+- explicit discrepancy and supersession lineage;
+- idempotency records;
+- audit references;
+- projection refresh lineage.
 
-3. **Normalization-before-issuance**  
-   Base credits issuance commitments must rely on verified upstream normalization rather than raw payment or raw UI events.
-
-4. **Scoped ownership integrity**  
-   Base credits accounts must preserve explicit account-scoped or workspace-scoped ownership.
-
-5. **Least privilege**  
-   Internal write and admin suspend/correct/rebind/resync routes must be limited to authorized services and operators.
-
-6. **Immutable lineage for economic changes**  
-   Corrections, supersession, rebinding, and discrepancy actions must preserve historical lineage rather than erase prior state.
-
-7. **Non-market posture enforcement**  
-   The API must not enable default unrestricted peer-to-peer or open-market credits transfer semantics.
-
-8. **Problem-details discipline**  
-   Error bodies must be structured and safe, without exposing hidden internal-only details.
-
-9. **Audit immutability**  
-   Sensitive Base credits actions require durable immutable audit lineage.
-
-10. **Reservation integrity**  
-    Reservation and release flows must not overstate available balance or imply final semantic settlement beyond allowed layer meaning.
+Mutable balance counters MAY exist for performance, but they MUST be derivable or reconcilable from canonical records and MUST NOT become independent truth.
 
 ---
 
-## 27. Operational Considerations
+## Read Model / Projection / Reporting Rules
 
-- Base credits account and balance reads for trusted systems should be highly available
-- operational entry commitment, reservation handling, and sync/reconciliation flows are correctness-sensitive and must preserve commerce integrity
-- sync drift, duplicate-entry anomalies, insufficient-balance incidents, and scope-binding issues should surface clearly to ops views
-- resync and correction workflows should be observable and retryable
-- monitoring should alert on:
-  - duplicate operational-entry attempts
-  - repeated reservation failures
-  - chain-sync drift
-  - unusual rebinding or suspension volume
-  - reconciliation mismatches between Base operational state and semantic ledger state
-  - downstream product projection inconsistency versus canonical Base credits truth
+- Product projections MAY support UX but are not enforcement truth for sensitive actions.
+- Support summaries MAY show operational posture but must preserve links to canonical records.
+- Reporting extracts MAY aggregate but must not obscure scope/class distinctions where material.
+- Public-safe summaries MAY exist only under approved public-read governance.
+- Projection lag MUST be surfaced where it affects user action or enforcement.
+- Derived views MUST be refreshable from canonical operational and ledger-linked records.
+- Caches MUST NOT permit spending against revoked, suspended, restricted, or exhausted credits.
 
 ---
 
-## 28. Acceptance Criteria
+## Security / Risk / Privacy Controls
 
-1. The API preserves the distinction between Base Platform Credits operational truth, semantic credit-ledger truth, payment verification truth, Ethereum token truth, and Base payout execution truth.
-2. Only `fuze-backend-api` owns canonical Base credits account, operational-entry, reservation, and sync truth.
-3. Base credits accounts, bindings, balance states, operational entries, reservations, sync records, and discrepancy records are durable and backend-owned.
-4. Base credits remain explicit account-scoped or workspace-scoped operational balances.
-5. Issuance and spend projections require valid upstream semantic references and policy checks.
-6. Reservation, release, correction, rebinding, and resync actions preserve immutable lineage.
-7. Base credits entry, reservation, correction, and discrepancy actions are idempotent and auditable.
-8. Internal and admin Base Platform Credits routes are least-privilege and backend-only.
-9. Admin routes require reason-coded privileged authorization.
-10. Event emissions exist for major Base credits mutations.
-11. Response and error semantics are stable and machine-readable.
-12. Database schema separates accounts, bindings, balance states, entries, reservations, sync, reconciliation, and discrepancy layers.
-13. Downstream systems can consume canonical Base credits operational outputs without redefining Base credits truth.
-14. Discrepancy handling is supported and safely replayable.
-15. Mermaid diagrams remain consistent with prose and data model.
+The API MUST enforce:
+
+- least privilege for service and operator routes;
+- separation of ordinary product requests and privileged admin controls;
+- containment for fraud, chargeback, duplicate submission, chain drift, wrong-scope binding, or suspicious adjustment patterns;
+- redaction of sensitive internal details;
+- workspace privacy for workspace-owned credits and activity;
+- no exposure of signer/provider/secrets details;
+- explicit review posture for high-risk rebinding, correction, and discrepancy closure;
+- alerting for anomalous issuance, spend, correction, duplicate idempotency conflicts, repeated chain failures, and open discrepancies.
 
 ---
 
-## 29. Test Cases
+## Audit / Traceability / Observability Requirements
 
-### 29.1 Positive cases
-1. Internal service creates or locates Base credits account successfully.
-2. Internal service commits Base operational entry successfully.
-3. Internal service creates reservation successfully.
-4. Internal service settles reservation successfully.
-5. Internal service releases reservation successfully.
-6. Internal service records sync checkpoint successfully.
-7. Admin suspends Base credits account successfully.
-8. Admin forces resync successfully.
+Every mutation MUST trace:
 
-### 29.2 Negative cases
-9. Unauthorized service cannot create or mutate Base credits state.
-10. Entry commit without valid upstream reference returns `BASE_PLATFORM_CREDITS_UPSTREAM_REFERENCE_REQUIRED`.
-11. Reservation exceeding available balance returns `BASE_PLATFORM_CREDITS_INSUFFICIENT_AVAILABLE_BALANCE`.
-12. Duplicate entry commitment returns `BASE_PLATFORM_CREDITS_DUPLICATE_ENTRY`.
-13. Rebinding on ineligible account/scope returns `BASE_PLATFORM_CREDITS_REBINDING_NOT_ALLOWED`.
-14. Resync on incompatible state returns `BASE_PLATFORM_CREDITS_RESYNC_CONFLICT`.
+- caller identity or service principal;
+- actor-on-behalf-of context where relevant;
+- owner scope;
+- affected resource IDs;
+- action type;
+- credit class and units;
+- upstream reference;
+- policy version;
+- idempotency key;
+- correlation ID;
+- reason code for sensitive/admin actions;
+- prior and resulting state;
+- event IDs;
+- chain-sync or reconciliation references where applicable.
 
-### 29.3 Authorization cases
-15. Ordinary user cannot call Base Platform Credits admin APIs.
-16. Internal service without reservation privilege cannot create reservation.
-17. Operator without suspension privilege cannot suspend Base credits account.
-18. Base credits balance state does not imply semantic billing-policy truth or payout rights by itself.
-
-### 29.4 Idempotency and replay cases
-19. Repeating account creation with same idempotency key returns original account result.
-20. Repeating operational entry commitment with same idempotency key returns original entry result.
-21. Repeating reservation settlement with same idempotency key returns original terminal settlement result.
-22. Repeating correction or discrepancy resolution with same idempotency key returns original terminal action result.
-
-### 29.5 Concurrency cases
-23. Concurrent entry commitments for same upstream reference preserve one canonical operational lineage and one duplicate-safe outcome where appropriate.
-24. Concurrent reservation and release actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent rebinding and suspension actions preserve explicit owner-state lineage without ambiguity.
-
-### 29.6 Recovery / admin cases
-26. Drift between semantic ledger and Base operational state can be corrected under controlled policy with explicit lineage.
-27. Corrected Base credits state remains historically linked to original state.
-28. Discrepancy resolution closes scope-binding or sync conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful Base credits account creation emits `base_platform_credits.account_created`.
-30. Successful entry commitment emits `base_platform_credits.entry_committed`.
-31. Successful reservation release emits `base_platform_credits.reservation_released`.
-32. Successful resync emits `base_platform_credits.resynced`.
-33. Successful discrepancy resolution emits `base_platform_credits.discrepancy_resolved` with critical audit lineage.
+Observability MUST include metrics for mutation volume, reservation aging, sync lag, projection lag, discrepancy count, retry count, idempotency conflicts, failed authorization, and admin corrections.
 
 ---
 
-## 30. Open Questions or Explicit Deferred Decisions
+## Failure Handling / Edge Cases
 
-1. Exact Base contract/state representation pattern for credits accounts is deferred.
-2. Exact class-priority spend ordering policy at the Base layer is deferred.
-3. Exact internal movement/rebinding rules between account and workspace scopes are deferred.
-4. Exact sync and reconciliation cadence policy is deferred.
-5. Exact drift-tolerance thresholds for auto-resync versus manual intervention are deferred.
-6. Exact discrepancy taxonomy for Base credits sync and binding conflicts is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  base-platform-credits/
-  credit-ledger-settlement/
-  commerce-billing/
-  payout-ledger/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep account identity, scope binding, operational entry commitment, reservation handling, class-state projection, and sync/reconciliation handling in one canonical domain service
-- perform scope-integrity, upstream-reference, duplicate-entry, reservation-state, and sync-state checks inside the commit boundary
-- keep suspend, correct, rebind_if_allowed, resync, and discrepancy actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish downstream product-facing balance views from canonical Base credits truth; do not let derived views mutate Base credits state
+- **Wrong scope:** reject or open controlled rebinding case; never silently move.
+- **Insufficient balance:** reject reservation/spend with deterministic error.
+- **Class restricted:** reject or require review depending on policy.
+- **Duplicate ledger reference:** idempotent replay or duplicate-entry error; no duplicate effect.
+- **Reservation timeout:** expire or release by deterministic policy.
+- **Partial settlement:** record consumed and released portions explicitly.
+- **Chain unavailable:** hold in pending state or reject based on policy; never mark synced.
+- **Chain drift:** open discrepancy/reconciliation case.
+- **Projection stale:** sensitive routes revalidate canonical state.
+- **Admin correction after visibility:** require supersession lineage and audit.
+- **Chargeback/refund after spend:** route through reversal/adjustment policy, not direct balance rewrite.
+- **Concurrent spend:** lock or compare-and-swap at canonical state boundary; one succeeds, conflicts re-evaluate.
+- **Open discrepancy:** restrict affected actions until resolved where material.
 
 ---
 
-## 32. Frontend Consumption Notes
+## Migration / Versioning / Compatibility / Deprecation Rules
 
-### For `fuze-frontend-webapp`
-- no direct public mutation surface is expected from this domain
-- product-facing credits balances should consume bounded downstream projections rather than raw Base operational state directly
-- frontend must not infer semantic billing meaning or payout meaning from Base credits balances alone
-- frontend should distinguish available versus reserved Base credits when surfaced through approved projections
-
-### For `fuze-frontend-admin`
-- may trigger privileged suspend, correction, rebinding, resync, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical Base credits truth client-side
-- should present immutable Base operational lineage and sync history separately from current status summaries
+- Route families use `/internal/v1`, `/admin/v1`, and approved first-party `/v1` read routes.
+- Additive fields are preferred.
+- State names MUST NOT silently change meaning.
+- Deprecated fields require compatibility windows and migration notes.
+- New credit classes require Platform Credits semantic approval and downstream compatibility review.
+- New owner scope types require refined system and API approval.
+- New public surfaces require public-read governance.
+- Existing idempotency behavior MUST remain backward-compatible.
+- Projections may evolve, but canonical resource IDs and lineage semantics MUST remain stable.
+- Migration MUST include reconciliation checks before and after cutover.
 
 ---
 
-## 33. Contract Derivation Notes
+## OpenAPI / AsyncAPI / SDK Derivation Rules
 
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- internal account, entry, reservation, settlement, release, sync, and canonical read operations
-- admin suspend / correction / rebinding / resync / discrepancy operations
-- shared problem-details schema
-- Base Platform Credits lifecycle events in AsyncAPI
+OpenAPI artifacts MUST preserve:
 
-### Future `fuze-sdk`
-Future `fuze-sdk` packages are unlikely to expose raw Base Platform Credits mutation surfaces publicly. Any internal tooling helpers derived from this contract must remain secondary artifacts and must not become the source of truth over this narrative specification.
+- route-family separation;
+- required idempotency and correlation headers;
+- structured errors;
+- canonical vs derived response labels;
+- accepted vs final status distinction;
+- admin route separation;
+- sensitive field redaction;
+- stable enum definitions for states and error codes.
+
+AsyncAPI artifacts MUST preserve:
+
+- post-commit event semantics;
+- event version;
+- trace/correlation references;
+- resource IDs and owner scope;
+- replay safety;
+- no event-as-truth reinterpretation.
+
+SDKs MUST NOT:
+
+- compute canonical balances locally;
+- hide accepted vs final distinction;
+- collapse insufficient balance, permission denial, restriction, and projection stale errors;
+- expose admin routes in ordinary client SDKs;
+- encourage direct retries without idempotency keys.
+
+---
+
+## Implementation-Contract Guardrails
+
+Implementation contracts MUST specify:
+
+- service boundaries;
+- database tables and indexes;
+- transaction boundaries;
+- lock/concurrency strategy;
+- idempotency store behavior;
+- projection refresh mechanics;
+- queue and worker retry rules;
+- chain adapter normalization;
+- audit sink integration;
+- alert thresholds;
+- migration plan;
+- contract tests.
+
+They MUST NOT reinterpret credit semantics, ledger ownership, Base operational truth, or chain/off-chain boundaries.
+
+---
+
+## Downstream Execution Staging
+
+Recommended staging:
+
+1. Canonical account/binding read and creation routes.
+2. Operational entry and balance-state mutation routes.
+3. Reservation/settlement/release routes.
+4. Chain-sync and reconciliation routes.
+5. Admin suspension/correction/discrepancy routes.
+6. Event and projection refresh integration.
+7. First-party read projections.
+8. Migration and compatibility gates.
+9. Public-read consideration only after separate approval.
+
+---
+
+## Required Downstream Specs / Contract Layers
+
+- Base credits service implementation contract.
+- Base credits storage/schema contract.
+- Base credits event contract.
+- Base credits chain adapter contract.
+- Base credits reconciliation worker contract.
+- Base credits admin/control-plane contract.
+- Base credits first-party read-model contract.
+- Base credits OpenAPI and AsyncAPI artifacts.
+- Base credits contract validation and production readiness test suite.
+
+---
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+The following are forbidden unless a higher-order approved exception explicitly permits them:
+
+1. Treating Base balances as the full semantic truth for Platform Credits.
+2. Treating raw payment success as available credits.
+3. Treating ledger projection counters as mutation truth.
+4. Treating chain adapter success as final business settlement.
+5. Allowing products to keep private credits balances for shared platform commerce.
+6. Allowing frontend clients to author credits class, balance, or scope truth.
+7. Allowing support/admin scripts to mint, rewrite, or rebind credits outside controlled APIs.
+8. Using Base credits identifiers as payout-execution identifiers.
+9. Treating credits as FUZE token, stablecoin payout, profit right, governance right, equity, or public-market asset.
+10. Exposing unrestricted transfer routes.
+11. Hiding accepted vs final sync status.
+12. Letting reporting views repair canonical records.
+13. Silently rewriting historical entries instead of superseding or compensating.
+14. Publishing unsafe public balance, correction, fraud, provider, or signer detail.
+
+---
+
+## Canonical Examples / Anti-Examples
+
+### Example: Valid Paid-Credits Issuance Projection
+
+A verified payment is normalized by Payment Rails, Platform Credits approves class and issuance semantics, Credit Ledger records issuance, and Base Platform Credits API creates a class-aware operational entry with ledger linkage and pending/synced commitment state.
+
+### Anti-Example: Payment Webhook Directly Creates Base Balance
+
+A Stripe or stablecoin webhook directly mutates Base credits account balance. This is invalid because raw provider input must be normalized and ledger-authorized before Base operational representation.
+
+### Example: Workspace Reservation for AI Job
+
+A workspace-authorized service reserves credits for a long-running AI task, settles actual consumed amount after completion, and releases the remainder. Reservation and settlement are separate events and auditable.
+
+### Anti-Example: Product Cache Authorizes Spend
+
+A product reads a cached balance and charges without canonical revalidation for a sensitive action. This is invalid because projections are subordinate to canonical state.
+
+### Example: Controlled Rebinding
+
+A support-approved enterprise migration rebinds credits lineage from a wrong workspace to the correct workspace with reason code, approval reference, audit, and supersession link.
+
+### Anti-Example: User-Initiated Transfer
+
+A user transfers credits freely to another wallet or account through a public route. This is invalid because Base credits are controlled internal consumption units, not unrestricted market assets.
+
+---
+
+## Acceptance Criteria
+
+1. Every mutation route requires authentication, authorization, idempotency key, and correlation ID.
+2. Every economically material mutation requires a valid owner scope.
+3. Every issuance, spend, reversal, adjustment, expiry, or commitment marker carries upstream semantic/ledger reference or approved correction basis.
+4. Account, workspace, class, reservation, chain-sync, and discrepancy states are represented explicitly.
+5. Internal, first-party, admin, event, projection, and chain-adjacent surfaces are separated.
+6. First-party clients cannot create credits truth.
+7. Admin/control-plane routes require reason codes, operator notes, and critical audit.
+8. Rebinding cannot be used to create open transfer behavior.
+9. Reservation is not final spend and can settle, partially settle, release, expire, or cancel deterministically.
+10. Duplicate requests do not create duplicate economic effects.
+11. Chain submission, chain observation, and canonical Base operational truth remain distinct.
+12. Chain drift opens discrepancy/reconciliation rather than silently finalizing.
+13. Derived projections identify themselves as derived and are refreshable from canonical records.
+14. Public mutation routes do not exist.
+15. Error responses distinguish permission, scope, class, balance, policy, idempotency, sync, and dependency failures.
+16. Events are emitted after canonical commit and are replay-safe.
+17. Projection lag cannot authorize sensitive spend.
+18. Suspended/restricted accounts fail or require review according to policy.
+19. Migration/deprecation changes preserve state meaning and compatibility windows.
+20. OpenAPI, AsyncAPI, and SDK artifacts preserve accepted vs final state distinction and canonical vs derived labels.
+21. Audit records can reconstruct who/what/why/when/how for every sensitive mutation.
+22. Boundary violations listed in this document are detectable by implementation tests or operational controls.
+
+---
+
+## Test Cases
+
+### Positive Path
+
+1. Create account-scoped Base credits account with valid owner scope and idempotency key.
+2. Replay same account-creation request with same idempotency key and receive same account.
+3. Create paid issuance operational entry with valid ledger reference.
+4. Create workspace-scoped reservation after workspace authorization succeeds.
+5. Settle reservation fully into spend.
+6. Partially settle reservation and release remainder.
+7. Record chain-sync success after pending commitment.
+8. Generate derived first-party balance summary from canonical records.
+9. Admin suspends account with reason code and audit.
+10. Admin resolves discrepancy with supersession lineage.
+
+### Negative / Boundary Tests
+
+1. Mutation without owner scope fails.
+2. Mutation with invalid workspace authority fails.
+3. Frontend client attempts to create balance and is denied.
+4. Raw payment reference without normalized/ledger basis is rejected.
+5. Product-local cache attempts to authorize spend without canonical validation and is rejected by contract test.
+6. Rebind request without approval reference fails.
+7. Public unauthenticated mutation route is absent.
+8. Base payout execution ID used as Base credits account ID fails validation.
+9. Open-market transfer request is rejected as non-canonical.
+10. Admin correction without reason code fails.
+
+### Authorization / Entitlement Tests
+
+1. Account owner reads personal balance projection.
+2. Workspace member without spend permission cannot reserve workspace credits.
+3. Workspace owner with spend permission can reserve when entitlement and balance are valid.
+4. Valid credits but missing product entitlement returns entitlement-specific denial and does not reserve.
+5. Service principal without route scope cannot create operational entry.
+
+### Idempotency / Retry / Replay Tests
+
+1. Same idempotency key and same request returns original terminal result.
+2. Same idempotency key with different amount returns conflict.
+3. Duplicate ledger reference does not double-issue.
+4. Worker retry after chain timeout records attempt lineage without duplicate business effect.
+5. Receipt replay does not duplicate sync finalization.
+
+### Conflict / Concurrency Tests
+
+1. Concurrent reservations against same available balance allow only valid amount.
+2. Reservation settle after release fails.
+3. Correction against superseded entry returns supersession-aware conflict.
+4. Open discrepancy blocks high-risk spend.
+5. Projection stale error is returned for sensitive read-backed enforcement.
+
+### Rate Limit / Abuse Tests
+
+1. Repeated invalid admin corrections trigger rate limit and alert.
+2. Repeated duplicate idempotency conflicts trigger anomaly event.
+3. High-frequency reservation attempts by product service are throttled without partial effects.
+4. Suspicious rebinding pattern opens security review.
+
+### Chain / Degraded Mode Tests
+
+1. Chain unavailable returns dependency error or accepted pending state only where policy permits.
+2. Chain observation mismatch opens discrepancy case.
+3. Sync success does not erase ledger linkage.
+4. Chain event alone cannot create operational entry.
+5. Reconciliation repairs projection, not canonical ledger truth.
+
+### Audit / Observability Tests
+
+1. Every mutation emits audit record with actor/service, owner scope, action, amount, policy version, idempotency key, and correlation ID.
+2. Admin suspension is critical-audit severity.
+3. Metrics record reservation aging and sync lag.
+4. Discrepancy open/resolve emits observable events.
+5. Audit trail reconstructs correction lineage after supersession.
+
+### Migration / Compatibility Tests
+
+1. Existing v1 state maps to v2 state enum without semantic loss.
+2. Deprecated field remains readable during compatibility window.
+3. New credit class is rejected until Platform Credits semantics approve it.
+4. SDK exposes accepted vs final status distinctly.
+5. AsyncAPI consumer replay does not mutate canonical state.
+
+---
+
+## Dependencies / Cross-Spec Links
+
+This API depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `BASE_PLATFORM_CREDITS_LAYER_SPEC.md`
+- `PLATFORM_CREDITS_SPEC.md`
+- `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md`
+- `PAYMENT_RAILS_INTEGRATION_SPEC.md`
+- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
+- `REFUND_REVERSAL_AND_ADJUSTMENT_SPEC.md`
+- `ENTITLEMENT_AND_CAPABILITY_GATING_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`
+- identity, account, session, workspace, role, permission, and scoped authorization specs
+- `API_ARCHITECTURE_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+
+Downstream implementation MUST also coordinate with storage, event, worker, adapter, admin, reporting, and QA contracts.
+
+---
+
+## Explicitly Deferred Items
+
+- Exact OpenAPI schemas.
+- Exact AsyncAPI payload definitions.
+- Exact database table DDL and index design.
+- Exact smart-contract ABI and adapter payload format.
+- Exact signer custody, RPC, indexer, queue, and retry implementation.
+- Exact public-read exposure, if any.
+- Exact user-facing statement/receipt UI.
+- Exact accounting/revenue recognition treatment.
+- Exact fraud threshold configuration.
+- Named approval authority and decision-record IDs.
+
+Deferred items MUST NOT be filled by implementation in ways that contradict this API spec or upstream refined semantics.
+
+---
+
+## Final Normative Summary
+
+The Base Platform Credits Layer API is the canonical API contract for FUZE’s Base-side operational representation of Platform Credits. It exists to expose and mutate Base operational credits state only after semantic credits meaning, ledger mutation basis, owner scope, authorization, entitlement, policy, and risk posture have been validated. It MUST preserve strict separation among Platform Credits semantic truth, credit-ledger truth, Base operational truth, payment truth, entitlement truth, authorization truth, chain/off-chain responsibility, payout execution truth, and derived read-model truth.
+
+The API MUST be idempotent, auditable, traceable, conflict-aware, projection-safe, chain-adjacent, and admin-bounded. It MUST reject contextless balances, unrestricted transfer behavior, product-local balance ownership, frontend-authored credits truth, raw payment-to-balance mutation, chain-event-as-business-truth shortcuts, and destructive correction patterns. Downstream OpenAPI, AsyncAPI, SDK, service, storage, worker, adapter, reporting, admin, and QA artifacts MUST preserve the boundaries and guardrails defined here.
+
+---
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain/off-chain responsibilities are explicit.
+- [x] Accepted-state vs final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behaviors are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI, AsyncAPI, and SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart`.
+- [x] Architecture Diagram clarifies consumers, surfaces, domains, stores, event systems, workers, chain-adjacent systems, and derived consumers.
+- [x] Data Design diagram uses Mermaid syntax.
+- [x] Data Design distinguishes canonical data from derived/projected/reporting data.
+- [x] Flow View includes synchronous, async, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram`.
+- [x] Data Flows distinguish accepted-state response, chain sync, canonical mutation, and derived projections.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases include positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation coverage.

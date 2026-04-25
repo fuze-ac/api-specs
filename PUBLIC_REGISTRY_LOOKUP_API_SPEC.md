@@ -1,690 +1,745 @@
-# PUBLIC_REGISTRY_LOOKUP_API_SPEC
+# PUBLIC_REGISTRY_LOOKUP_API_SPEC.md
 
-## 1. Title
+## Document Metadata
 
-**PUBLIC_REGISTRY_LOOKUP_API_SPEC.md**
-
----
-
-## 2. Document Metadata
-
-- **Document Name:** PUBLIC_REGISTRY_LOOKUP_API_SPEC.md
-- **API Classification:** public-read, authenticated-read, internal, event-driven
-- **Owning Domain:** Public Registry Lookup Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** public registry records, registry publication states, registry family profiles, registry artifact link records, lookup index records, correction-safe public registry lineage, and bounded actor-aware registry enrichments in `fuze-backend-api`
+- **Document Name:** `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / production-grade interface-contract specification
 - **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE public registry lookup, including public contract and wallet registry discovery, public registry publication, lookup-safe indexability, artifact linkage, correction-safe registry lineage, and stable public-read registry surfaces across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Public Registry Lookup API Domain; named individual owner not explicitly specified in retrieved governing materials
+- **Approval Authority:** Not explicitly specified; approval remains governed by FUZE refined-spec and API-spec approval workflow
+- **Review Cadence:** SHOULD be reviewed quarterly and whenever public registry semantics, public API posture, chain architecture, transparency posture, public metadata posture, wallet/contract registry governance, or external verification requirements materially change
+- **Governing Layer:** API contract layer / public-read and public-trust companion API layer
+- **Parent Registry:** FUZE API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Backend API engineers, platform architects, public API authors, registry/public-trust service owners, frontend engineers, partner-integration authors, security, audit, compliance, operations, implementation-contract authors, OpenAPI/SDK authors
+- **Primary Purpose:** Define the production-grade API contract for FUZE public registry lookup, including public registry list/detail/lookup surfaces, bounded authenticated enrichments, internal publication support APIs, admin/control-plane publication and correction operations, registry events, auditability, idempotency, derived read-model boundaries, and downstream contract guardrails.
+- **Primary Upstream References:** `REFINED_SYSTEM_SPEC_INDEX.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`, `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `PUBLIC_METADATA_API_SPEC.md`, `PUBLIC_TRANSPARENCY_API_SPEC.md`, `CHAIN_ARCHITECTURE_SPEC.md`, `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`, `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`, `SEARCH_INDEXING_AND_DISCOVERY_SPEC.md`, `FILE_OBJECT_AND_ARTIFACT_STORAGE_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- **Primary Downstream Dependents:** Public registry lookup service implementation, public web registry pages, public metadata surfaces, transparency/public-trust pages, partner/exchange verification integrations, OpenAPI and SDK artifacts, public search/discovery indexes, admin registry tools, registry publication events, audit/reconciliation tooling, implementation-contract specs
+- **API Surface Families Covered:** public-read, authenticated-read, partner-read where explicitly approved, internal service, admin/control-plane, event/async, reporting/export, public-read projection
+- **API Surface Families Excluded:** arbitrary public writes, private signer/custody control APIs, wallet-link mutation APIs, governance/treasury execution APIs, raw chain indexer APIs, internal security investigation APIs, unrestricted partner bulk export, smart-contract ABI/execution APIs
+- **Canonical System Owner(s):** Public Contract and Wallet Registry Domain owns registry publication semantics; API Architecture governs interface posture; Public API governs public exposure posture; Chain Architecture and On-Chain/Off-Chain Responsibility govern chain boundary interpretation
+- **Canonical API Owner:** Public Registry Lookup API Domain in coordination with Platform API Architecture
+- **Supersedes:** Earlier v1 `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md` interpretations that were less explicit about refined-system precedence, truth classes, public/internal/admin separation, derived read-model limits, idempotency, audit, OpenAPI/AsyncAPI guardrails, and production-grade testability
+- **Superseded By:** None currently defined
+- **Related Decision Records:** Not explicitly specified in retrieved governing materials
+- **Canonical Status Note:** This document is an API SPEC v2 contract. It derives from refined system semantics and MUST NOT redefine the semantic truth owned by `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` or adjacent refined system specs.
+- **Implementation Status:** Ready for implementation planning and downstream contract derivation; concrete route schemas, database migrations, and generated OpenAPI/AsyncAPI files remain downstream artifacts
+- **Approval Status:** Draft pending FUZE approval workflow
+- **Change Summary:** Upgraded public registry lookup into a production-grade API SPEC v2 document with explicit public/read/admin/event boundaries, truth-class taxonomy, conflict rules, request/response/error/idempotency/audit/versioning rules, diagrams, flow views, acceptance criteria, test cases, and implementation-contract guardrails.
 
----
+## Purpose
 
-## 2.1 API Classification Header
+This specification defines the canonical FUZE API contract for public registry lookup. The API exists to expose a stable, public-safe verification and discovery surface for FUZE official contracts, designated public wallets, public network references, public role bindings, lookup-safe registry indexes, and registry-linked public trust artifacts.
 
-- **API Classification:** public-read | authenticated-read | internal | event-driven
-- **Owning Domain:** Public Registry Lookup Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** public registry lookup and publication domain
+The Public Registry Lookup API MUST remain a bounded public-read and public-trust interface. It is not a raw dump of internal deployment state, wallet inventories, treasury controls, signer topology, governance decisions, payout internals, or audit evidence. It exposes deliberately published registry records and lookup projections that are derived from canonical registry publication truth.
 
----
+This API owns interface-contract expression only. The upstream refined system specifications own semantic truth.
 
-## 3. Purpose
+## Scope
 
-This document defines the canonical API specification for FUZE public registry lookup operations. It translates the governing FUZE platform architecture, public API rules, public contract and wallet registry rules, transparency and public trust rules, chain architecture, and API architecture rules into an implementation-ready API contract.
+This specification governs:
 
-This API exists because FUZE requires a stable public lookup surface for contracts, wallets, network references, public role bindings, registry-linked artifacts, and status-oriented public discovery that is narrower than internal system truth and more structured than ad hoc document publication. Public registry lookup must therefore remain a deliberate public-read layer that supports external verification, ecosystem integration, public chain-role legibility, and transparency-first discovery without leaking unsafe internal control detail or silently redefining canonical owned domain truth.
+1. Public-read registry list, detail, lookup, and network-scope APIs.
+2. Bounded authenticated registry enrichment APIs where policy permits actor-aware context.
+3. Partner-safe lookup behavior when explicitly approved by a narrower partner contract.
+4. Internal service APIs for creating draft registry lookup records, linking artifacts, maintaining lookup indexes, and attaching bounded enrichments.
+5. Admin/control-plane APIs for publishing, withdrawing, restricting, superseding, correcting, and resolving registry lookup discrepancies.
+6. Event and async behavior for registry publication, supersession, withdrawal, index refresh, and discrepancy remediation.
+7. Request, response, error, status, idempotency, retry, rate-limit, audit, migration, and compatibility posture for this API family.
+8. Derived read-model, cache, export, search, and public presentation boundaries for public registry lookup.
+9. OpenAPI, AsyncAPI, SDK, implementation-contract, and test derivation guardrails.
 
-Public registry lookup must preserve explicit distinction between:
-- canonical registry-owned public records,
-- linked public trust artifacts,
-- and derived public discovery views.
+## Out of Scope
 
-Accordingly, this specification defines how public registry records, registry families, publication states, network references, artifact links, lookup indexes, and correction lineage are represented, and how public registry behavior remains auditable, idempotent, and architecture-consistent across FUZE.
+This specification does not govern:
 
----
+1. Smart-contract deployment, ABI, contract execution, or chain-native state.
+2. Private wallet custody, signer inventory, hot/cold wallet operation, key management, or signer-control topology.
+3. Account-to-wallet linking, user proof-of-control, or wallet-aware user lifecycle.
+4. Treasury approval, vault action policy, multisig/timelock execution, or governance decision truth.
+5. Profit participation, eligibility calculation, payout ledger truth, payout execution truth, or holder-specific claim truth.
+6. Transparency report authoring, investor/community reporting, or public metadata publication beyond registry-linked artifact references.
+7. Raw search-engine ranking internals, storage bucket/key layouts, static site implementation, or partner onboarding procedures.
+8. Generic public write APIs for external users to create official registry truth.
 
-## 4. Scope
+## Design Goals
 
-This specification covers:
+1. Provide a stable public verification and discovery surface for official FUZE contract and wallet registry records.
+2. Preserve the refined public registry rule that registry lookup is public publication truth, not chain-native truth, wallet-link truth, or control truth.
+3. Keep public read, authenticated read, internal service, admin/control, event, reporting/export, and derived projection surfaces explicit.
+4. Prevent frontend, partner, docs, or cache layers from becoming shadow registry owners.
+5. Require idempotency, audit lineage, reason codes, correlation IDs, and policy checks for every sensitive mutation.
+6. Support OpenAPI/SDK generation without allowing generated clients to imply broader authority than this API allows.
+7. Make public registry correction and supersession historically intelligible instead of silent overwrite.
+8. Support abuse-resistant public lookup behavior while preserving external usability.
+9. Make acceptance criteria and tests concrete enough for implementation QA and production-readiness review.
 
-- public-read APIs for public contract lookup, public wallet lookup, public network-role lookup, registry-family discovery, and registry-linked trust-surface discovery
-- authenticated read APIs for bounded actor-aware registry enrichments where policy allows
-- internal APIs for public registry record creation, artifact linkage, publication, correction, supersession, and withdrawal
-- publication-state handling for registry records, registry status views, and derived public lookup summaries
-- event emission requirements for public registry lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+## Non-Goals
 
-This specification does **not** redefine:
+1. This API does not prove live chain state, balances, contract safety, or signer control.
+2. This API does not expose all wallets or contracts FUZE may use internally.
+3. This API does not authorize treasury, governance, payout, or operational actions.
+4. This API does not replace transparency reports, public metadata, public payout status, or chain architecture APIs.
+5. This API does not allow public callers to publish, claim, correct, or mutate official registry state directly.
+6. This API does not provide raw internal evidence, private audit details, security posture, or incident information.
 
-- chain deployment ownership in full detail
-- multisig/timelock ownership in full detail
-- transparency-report authoring in full detail
-- public metadata ownership in full detail
-- governance, treasury, or payout mutation flows
-- low-level explorer integration implementation
-- website rendering implementation
-- SDK generation strategy in full detail
+## Core Principles
 
-Those remain governed by their own source-of-truth specifications.
+### 1. Refined-Semantics-First Principle
 
----
+API behavior MUST derive from refined system semantics. If an API convenience conflicts with refined public registry semantics, the API design is wrong.
 
-## 5. Source-of-Truth Inputs
+### 2. Public Registry Lookup Is a Publication Layer
 
-### Primary FUZE docs and specs used
+Public registry lookup communicates FUZE-approved public designation and lookup metadata. It does not replace chain-native facts, wallet-link facts, control-plane facts, treasury facts, governance facts, payout facts, or transparency-report facts.
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+### 3. Public Read Does Not Mean Public Write
 
-#### Primary registry / public-read / chain-surface sources
+Unauthenticated callers MAY read intentionally published public registry records. They MUST NOT create, correct, publish, withdraw, supersede, or otherwise mutate registry truth.
+
+### 4. Derived Lookup Discipline
+
+Lookup indexes, public search projections, cached views, partner exports, and website renderings are derived from canonical registry publication records. They MUST NOT become canonical mutation owners.
+
+### 5. Explicit Visibility and Lifecycle
+
+Every registry lookup record MUST carry explicit publication, visibility, classification, supersession, and correction state. Silent overwrite is forbidden.
+
+### 6. Chain-Adjacent Boundary
+
+Addresses, contract references, and network references may be chain-adjacent inputs or links. They are not sufficient to establish official registry truth until normalized, verified, classified, approved, and published by the registry domain.
+
+### 7. Admin Actions Are Bounded
+
+Operator/admin actions MUST be separate from public and ordinary application APIs, reason-coded, policy-constrained, idempotent, audited, observable, and reversible or supersession-safe where applicable.
+
+### 8. Public-Safe Minimization
+
+Public responses MUST expose the minimum stable public-safe information needed for verification and discovery. Private signer topology, security controls, internal notes, and raw evidence remain non-public unless an approved publication artifact explicitly exposes them.
+
+## Canonical Definitions
+
+- **Public Registry Lookup Record:** API-facing resource representing a published or publication-managed registry entry or lookup target.
+- **Registry Publication Truth:** Canonical off-chain truth about whether FUZE publicly designates a contract, wallet, network reference, or role binding.
+- **Lookup Index:** Derived, normalized, queryable representation of canonical registry records for address, label, network, role, alias, or artifact discovery.
+- **Registry Family:** Classification family such as `contract`, `wallet`, `network_reference`, `role_binding`, `artifact_reference`, or another approved family.
+- **Registry Role:** Public-safe role label such as token contract, payout wallet, reserve wallet, foundation address, multisig, timelock, product contract, or network role where approved.
+- **Network Reference:** Public-safe network identifier and chain/context binding, such as Ethereum mainnet or Base, represented without implying ownership of chain-native truth.
+- **Artifact Link:** Public-safe link to a transparency artifact, metadata record, public documentation, report, explorer page, or public status record.
+- **Supersession:** Historical lineage indicating that one public registry record replaces or corrects another without erasing prior public meaning.
+- **Withdrawal:** Visibility reduction for a registry record that should no longer appear as active public designation, while preserving audit and lineage.
+- **Discrepancy Case:** Review/remediation object for stale, inconsistent, contested, incomplete, or unsafe registry lookup state.
+- **Actor-Aware Enrichment:** Authenticated-only bounded information layered on top of a public registry lookup response where policy allows.
+
+## Truth Class Taxonomy
+
+The API MUST distinguish the following truth classes:
+
+1. **Semantic truth:** Owned by refined system specs, especially Public Contract and Wallet Registry.
+2. **API contract truth:** Owned by this specification; route families, request/response/error/status behavior, idempotency, versioning, and interface obligations.
+3. **Registry publication truth:** Canonical off-chain public designation and visibility state.
+4. **Chain-native truth:** Contract state, balances, transaction history, on-chain roles, and chain events.
+5. **Wallet-link truth:** Account-to-wallet linkage, proof-of-control, and user wallet lifecycle.
+6. **Governance/treasury/control truth:** Approval, vault action, multisig, timelock, treasury, and foundation control semantics.
+7. **Verification-input truth:** Evidence and observations considered before registry publication.
+8. **Runtime truth:** In-flight requests, jobs, retries, and propagation state.
+9. **Event/async truth:** Durable registry lifecycle events and asynchronous index/projection updates.
+10. **Projection/reporting truth:** Public lookup indexes, public search results, partner exports, public status summaries, and derived caches.
+11. **Public metadata truth:** Broader public metadata publication records that may link to registry records but do not own registry semantics.
+12. **Presentation truth:** Labels, formatting, summaries, website cards, and SDK convenience views.
+13. **Audit truth:** Immutable activity/evidence records for sensitive registry actions.
+
+These truth classes MUST NOT be collapsed.
+
+## Architectural Position in the Spec Hierarchy
+
+This API spec sits below:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
 - `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
 - `API_ARCHITECTURE_SPEC.md`
-
-#### Supporting runtime and control sources
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
 - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
 - `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
 
-### Highest-priority interpretation applied
+It is adjacent to:
 
-For this file, the most important governing interpretation is:
+- `PUBLIC_METADATA_API_SPEC.md`
+- `PUBLIC_TRANSPARENCY_API_SPEC.md`
+- `PUBLIC_PAYOUT_STATUS_API_SPEC.md`
+- `PUBLIC_PRODUCT_CATALOG_API_SPEC.md`
+- `PUBLIC_CHAIN_REFERENCE_API_SPEC.md`
+- `PUBLIC_PLATFORM_STATUS_API_SPEC.md`
 
-1. public registry lookup is a deliberate public verification and discovery surface and not a convenience export of internal contract data
-2. backend owns canonical public registry publication truth
-3. public registry lookup must remain explicitly separate from raw deployment truth, internal signer/control truth, and broader governance truth
-4. contract addresses, wallet addresses, network roles, public labels, public registry statuses, and linked trust artifacts are suitable public lookup surfaces when intentionally designed
-5. unsafe internal signer relationships, control-plane mutation capabilities, and private operational bindings must remain non-public
-6. registry publication corrections and supersession must preserve historical intelligibility rather than silently rewriting public meaning
+It sits above downstream OpenAPI, AsyncAPI, SDK, implementation-contract, storage, route-handler, read-model, dashboard, and QA artifacts for public registry lookup.
 
-### Supporting external standards used only as guidance
+## Upstream Semantic Owners
 
-- HTTP semantics for public-read and bounded authenticated-read APIs
-- structured problem-details error design
-- general registry-lookup, searchable-public-catalog, and public verification-surface patterns as supporting guidance
+1. `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` owns public registry publication semantics, registry roles, verification, supersession, visibility, and public trust-safe registry meaning.
+2. `API_ARCHITECTURE_SPEC.md` owns shared API surface-family posture, owner-domain mutation discipline, accepted-state semantics, and derived-read discipline.
+3. `PUBLIC_API_SPEC.md` owns public exposure posture, public compatibility expectations, abuse controls, and public API safety.
+4. `CHAIN_ARCHITECTURE_SPEC.md` and `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md` own chain/native vs off-chain/publication boundary meaning.
+5. `PUBLIC_METADATA_API_SPEC.md` owns broader public metadata API contract behavior; it may reference registry records but does not own registry lookup semantics.
+6. `SECURITY_AND_RISK_CONTROL_SPEC.md`, `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`, and `AUDIT_LOG_AND_ACTIVITY_SPEC.md` own cross-cutting security, disclosure, classification, and audit requirements.
 
-External guidance does not override FUZE source-of-truth documents.
+## API Surface Families
 
----
+### Public-Read Surface
 
-## 6. Governing Architecture and Ownership Interpretation
+Unauthenticated, intentionally public lookup endpoints for published registry data. This surface MUST be read-only and public-safe.
 
-This API belongs to the **Public Registry Lookup Domain** because it owns the canonical lifecycle of:
+### Authenticated-Read Surface
 
-- public registry records,
-- registry family classification,
-- public network references,
-- contract and wallet lookup publication,
-- public role-label visibility,
-- public-safe artifact linkage,
-- and correction-safe public registry history.
+Bounded read endpoints for actor-aware registry enrichments. This surface MAY expose additional context only when authorization, scope, and classification permit.
 
-This API is implemented primarily in `fuze-backend-api` because:
+### Partner-Read Surface
 
-- backend owns durable public registry publication truth
-- registry lookup must be built from canonical chain- and registry-owned domains without becoming a shadow owner of unrelated truth
-- multiple trust-sensitive public verification surfaces require one stable public registry layer
-- public trust requires structured, versionable registry outputs beyond ad hoc docs or explorer links
-- audit generation and correction lineage must be centralized
+Optional and explicitly approved partner read feeds or filtered lookup contracts. Partner access MUST remain narrower than internal service access and MUST NOT imply admin power.
 
-This API is **not** owned by:
+### Internal Service Surface
 
-- `fuze-frontend-webapp`, because frontend may render registry lookup but must not own canonical registry publication truth
-- `fuze-frontend-admin`, because admin may publish or supersede registry artifacts but must not own registry truth
-- chain deployment domains, because deployment truth is one linked source but not the full public registry lookup layer
-- transparency domain, because transparency artifacts may reference registry entries but do not own registry publication truth
-- multisig/timelock domain, because public wallet labels may reference control roles without exposing full control mechanics
-- public metadata domain, because metadata is a broader publication/discovery layer while registry lookup owns registry-specific verification semantics
+Service-to-service routes for draft creation, index management, artifact linkage, enrichment linkage, and canonical internal reads. These routes require service identity and least privilege.
 
-### Architectural implications
+### Admin / Control-Plane Surface
 
-- every public registry record must declare what registry surface it is
-- every public registry record must preserve whether it is a primary registry record, supporting artifact, or derived public lookup summary
-- public registry lookup may link to transparency reports, docs, chain references, or public artifacts without owning their deeper truth
-- registry corrections, supersession, and withdrawal must preserve historical lineage rather than silently rewriting public meaning
-- authenticated enrichments must remain bounded and must not turn registry lookup surfaces into hidden control interfaces
+Privileged operator routes for publish, restrict, withdraw, supersede, correct, and resolve discrepancies. These routes require operator authorization, reason codes, idempotency, audit, and policy evaluation.
 
----
+### Event / Async Surface
 
-## 7. Domain Responsibilities
+Internal events and async jobs for record publication, index refresh, propagation, discrepancy remediation, and downstream projection updates. External webhooks are not enabled by default.
 
-The Public Registry Lookup API domain is responsible for:
+### Reporting / Export Surface
 
-1. maintaining canonical public registry records and registry-family profiles
-2. classifying registry records as primary public registry records, supporting artifacts, or derived lookup summaries
-3. publishing stable public-read contract, wallet, network-role, and registry discovery surfaces
-4. preserving explicit publication, withdrawal, and supersession state
-5. linking registry records to transparency artifacts, public docs, public reports, and public chain references
-6. exposing bounded authenticated-read registry enrichments where actor context is relevant
-7. emitting public registry lifecycle events
-8. generating audit lineage for sensitive publication and correction actions
-9. preserving separation between public registry artifacts and private canonical domain truth
-10. supporting public-safe degraded modes and trust-preserving registry behavior
+Derived public-safe and partner-safe exports generated from canonical registry records. Exports MUST remain subordinate to canonical registry truth.
 
-The domain is not responsible for:
+## System / API Boundaries
 
-- owning raw deployment truth
-- owning governance truth
-- owning treasury or payout truth
-- exposing arbitrary internal signer or operational control mappings publicly
-- replacing domain-specific public APIs where richer contracts are needed
-- performing canonical on-chain reconciliation as its source-of-truth function
+1. Public lookup APIs read public-safe registry projections and, where needed, canonical registry records filtered by publication policy.
+2. Internal service APIs may create or prepare registry records but MUST NOT bypass canonical registry publication rules.
+3. Admin APIs may transition publication state only with explicit reason code, policy version, idempotency key, audit lineage, and actor identity.
+4. Event handlers and index workers may project or refresh lookup state but MUST NOT invent registry meaning.
+5. Search and discovery systems may index approved public-safe registry representations only.
+6. Frontend and website systems may render registry lookup output but MUST NOT own registry truth.
+7. Public metadata and transparency APIs may link registry records but MUST NOT reinterpret official designation or registry lifecycle state.
 
----
+## Adjacent API Boundaries
 
-## 8. Out of Scope
+- **Public Metadata API:** broader metadata/public discovery layer; may embed registry references but does not own registry lookup semantics.
+- **Public Transparency API:** exposes transparency artifacts and reporting windows; may link registry records but does not own registry publication truth.
+- **Public Payout Status API:** exposes payout-status summaries; may link payout wallets/contracts but does not own registry roles.
+- **Public Chain Reference API:** exposes public chain/network reference metadata; must not treat all chain observations as official registry records.
+- **Governance/Treasury/Vault/Multisig APIs:** own control and execution semantics; public registry lookup may publish public-safe references only.
+- **Wallet-Aware User APIs:** own account-wallet linkage; public registry wallet records do not become user-wallet truth.
+- **Search/Discovery APIs:** may surface approved registry records; search rank and snippets are derived.
 
-The following are out of scope for this API specification:
+## Conflict Resolution Rules
 
-- arbitrary public write APIs
-- address claim ownership mutation APIs
-- signer-management APIs
-- private control-graph APIs
-- governance-, treasury-, or payout mutation flows
-- end-user address management UX
-- low-level static site generation
-- internal audit investigation workflows
+When conflicts arise:
 
----
+1. `REFINED_SYSTEM_SPEC_INDEX.md` wins on refined registry membership and refined-over-legacy precedence.
+2. Higher-order boundary and ownership specs win on platform-wide ownership and plane separation.
+3. `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` wins on registry publication semantics.
+4. `API_ARCHITECTURE_SPEC.md` wins on API surface-family and interface-boundary posture.
+5. `PUBLIC_API_SPEC.md` wins on public exposure, public compatibility, and public abuse-control posture within its scope.
+6. Chain architecture and on-chain/off-chain specs win on chain-native versus off-chain publication boundaries.
+7. Security, data classification, and audit specs win where stricter handling, disclosure, or evidence controls are required.
+8. This API spec wins on public registry lookup route-family, request/response/error/idempotency/versioning/audit contract behavior.
+9. Public sites, SDKs, caches, exports, and partner integrations never win over canonical registry publication truth.
+10. Where ambiguity remains, FUZE MUST choose the more restrictive, public-trust-preserving, architecture-consistent interpretation and escalate for recorded decision work.
 
-## 9. Canonical Entities and Data Ownership
+## Default Decision Rules
 
-### Durable entities
+1. A contract or wallet is not official-public by default.
+2. Ambiguous address or role classification defaults to unpublished or restricted.
+3. Public lookup defaults to a minimum safe representation.
+4. Internal evidence defaults to non-public.
+5. Signer, custody, risk, and operational control details default to non-public.
+6. Deprecated, superseded, withdrawn, or revoked entries default to preserved historical lineage rather than silent deletion.
+7. Search, index, cache, and export records default to derived status.
+8. Chain observations default to provider/chain input until normalized and validated by the appropriate owner domain.
+9. Authenticated enrichments default to denied unless policy explicitly permits them.
+10. Admin mutation requests without reason code, idempotency key, and audit context MUST be rejected.
 
-#### 9.1 public_registry_records
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** canonical public registry records
-- **Nature:** source-of-truth durable entity
+## Roles / Actors / API Consumers
 
-#### 9.2 registry_family_profiles
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** profiles for registry families such as contracts, wallets, network references, public role bindings, and supporting artifacts
-- **Nature:** source-of-truth durable entity
+- Public users and community observers
+- Holders and ecosystem participants
+- Partners, exchanges, auditors, and external verifiers
+- Authenticated FUZE users with bounded registry context
+- First-party web and mobile clients
+- Public website/rendering systems
+- Registry service and public API gateway
+- Internal platform services
+- Admin/control-plane tools
+- Indexing/search/projection workers
+- Event bus and async job workers
+- Audit, monitoring, and security systems
+- OpenAPI/SDK consumers
 
-#### 9.3 registry_classifications
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** classification of registry records as primary registry record, supporting artifact, or derived summary
-- **Nature:** source-of-truth durable entity
+## Resource / Entity Families
 
-#### 9.4 registry_publication_states
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** publication, visibility, withdrawal, and lifecycle state of registry records
-- **Nature:** source-of-truth durable entity
+### Canonical API Resources
 
-#### 9.5 registry_network_references
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** explicit linkage from public registry records to public chain/network identities and role scopes
-- **Nature:** source-of-truth durable lineage entity
+- `PublicRegistryRecord`
+- `RegistryFamilyProfile`
+- `RegistryClassification`
+- `RegistryPublicationState`
+- `RegistryNetworkReference`
+- `RegistryLookupKey`
+- `RegistryArtifactLink`
+- `RegistryScopeEnrichment`
+- `RegistrySupersessionLink`
+- `RegistryDiscrepancyCase`
+- `RegistryMutationAction`
+- `RegistryOperationReference`
+- `RegistryAuditReference`
+- `RegistryIdempotencyRecord`
 
-#### 9.6 registry_lookup_indexes
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** normalized public lookup keys for address, label, contract family, and network-role discovery
-- **Nature:** source-of-truth durable entity
+### Derived Resources
 
-#### 9.7 registry_artifact_links
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** links to transparency reports, public docs, explorer-safe refs, and supporting public artifacts
-- **Nature:** source-of-truth durable lineage entity
+- `PublicRegistryIndexView`
+- `PublicRegistryLookupResult`
+- `RegistryNetworkSummaryView`
+- `RegistryPartnerExportView`
+- `RegistrySearchProjection`
+- `RegistryPresentationCard`
 
-#### 9.8 registry_scope_enrichments
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** bounded authenticated-read enrichment rules by actor or scope
-- **Nature:** durable lineage entity
+Derived resources MUST include fields or documentation sufficient to avoid being mistaken for canonical owner-domain mutation targets.
 
-#### 9.9 registry_supersession_links
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** supersession and correction lineage between registry records
-- **Nature:** durable lineage entity
+## Ownership Model
 
-#### 9.10 registry_discrepancy_cases
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** review and remediation records for stale, incorrect, incomplete, or inconsistent public registry data
-- **Nature:** durable review/remediation entity
+The Public Registry Lookup API owns:
 
-#### 9.11 registry_mutation_actions
-- **Owner:** Public Registry Lookup Domain
-- **Purpose:** high-level action records for create, publish, withdraw, correct, supersede, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
+1. Route-family contract posture for public registry lookup.
+2. Request and response envelopes for registry lookup operations.
+3. Error/status/result semantics for this API domain.
+4. API-level idempotency and retry requirements for mutation-capable routes.
+5. API-level audit, correlation, and observability requirements.
+6. Public-read and authenticated-read exposure rules for registry lookup resources.
+7. Downstream OpenAPI/AsyncAPI/SDK derivation guardrails.
 
-#### 9.12 registry_audit_events
-- **Owner:** Audit / Activity domain, sourced by Public Registry Lookup Domain
-- **Purpose:** immutable trail for sensitive registry actions
-- **Nature:** durable audit records
+The Public Registry Lookup API does not own:
 
-### Derived or cached entities
+1. Registry semantic truth.
+2. Chain-native truth.
+3. Wallet-link truth.
+4. Governance, treasury, vault, multisig, or timelock truth.
+5. Payout, eligibility, or profit-participation truth.
+6. Transparency-report truth.
+7. Public metadata truth beyond registry references.
+8. Search ranking truth or frontend presentation truth.
 
-#### 9.13 registry_index_views
-- **Owner:** derived read-model layer
-- **Purpose:** list/index projections for registry discovery surfaces
-- **Nature:** derived
+## Authority / Decision Model
 
-#### 9.14 registry_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe registry summaries and bounded authenticated enrichments
-- **Nature:** derived
+1. Registry semantic authority belongs to the Public Contract and Wallet Registry Domain.
+2. API contract authority belongs to the Public Registry Lookup API Domain under Platform API Architecture governance.
+3. Public exposure authority is constrained by Public API, Data Classification, Security, and Audit requirements.
+4. Chain authority remains with chain-native systems for chain facts; FUZE registry publication authority decides official public designation.
+5. Admin/control-plane authority may approve publication or correction, but only through bounded, audited, policy-constrained actions.
+6. Partner authority is contractual and never equivalent to internal service or admin authority.
 
-#### 9.15 registry_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into stale or inconsistent registry conditions
-- **Nature:** derived
+## Authentication Model
 
----
+### Public Reads
 
-## 10. State Model and Lifecycle
+Public-read endpoints MAY be unauthenticated when all returned fields are intentionally public.
 
-### 10.1 registry record lifecycle
+### Authenticated Reads
 
-Possible states:
+Actor-aware enrichment endpoints MUST require valid user/session authentication and must evaluate account, workspace, entitlement, and policy constraints where relevant.
 
-- `draft`
+### Partner Reads
+
+Partner-read endpoints MUST require client credentials or equivalent partner identity and scope. They MUST be separately rate-limited and auditable.
+
+### Internal Service Calls
+
+Internal mutation/read routes MUST require service-to-service identity, explicit service permissions, and correlation IDs.
+
+### Admin / Control-Plane Calls
+
+Admin routes MUST require privileged operator identity, policy evaluation, reason code, idempotency key, correlation ID, and audit logging.
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+1. Route family.
+2. Caller identity and authentication posture.
+3. Registry record publication state and visibility target.
+4. Registry family and classification.
+5. Actor/workspace/partner scope where relevant.
+6. Service privilege for internal writes.
+7. Operator privilege and policy version for admin actions.
+8. Current lifecycle state and allowed transition.
+9. Data classification and public-safe handling.
+10. Rate-limit and abuse-control posture.
+
+Public-read authorization must never imply mutation authority.
+
+## Entitlement / Capability-Gating Model
+
+Public registry lookup is generally public-read and does not require product entitlement for published public records. However:
+
+1. Authenticated enrichments MAY require capability or workspace entitlement.
+2. Partner exports MAY require contractual capability gating.
+3. Bulk lookup, high-volume exports, and enriched registry feeds MAY require partner scope, rate-limit tier, or explicit integration approval.
+4. Entitlement does not override visibility, classification, security, or registry publication state.
+
+## API State Model
+
+The API MUST distinguish:
+
+- `received`
+- `authenticated_or_public`
+- `authorized`
+- `validated`
+- `accepted`
+- `queued`
+- `applied`
+- `previously_applied`
 - `published`
 - `restricted`
-- `deprecated`
-- `superseded`
-- `archived`
-
-### 10.2 publication-state lifecycle
-
-Possible states:
-
-- `unpublished`
-- `published_public`
-- `published_authenticated`
-- `restricted`
 - `withdrawn`
-
-### 10.3 lookup-index lifecycle
-
-Possible states:
-
-- `active`
-- `restricted`
 - `superseded`
-- `archived`
+- `conflicted`
+- `failed_retryable`
+- `failed_terminal`
+- `rejected`
 
-### 10.4 discrepancy lifecycle
+`accepted` is not final business success. Projection refresh completion is not the same as canonical registry mutation success.
 
-Possible states:
+## Lifecycle / Workflow Model
 
-- `opened`
-- `under_review`
-- `resolved`
-- `failed`
-- `closed`
+1. A registry candidate is prepared from authorized internal source material.
+2. Internal service creates a draft registry record with classification, network reference, lookup keys, and source lineage.
+3. Registry owner validates classification, visibility, public-safety, and supporting evidence.
+4. Admin/control-plane actor publishes, restricts, withdraws, supersedes, or corrects with reason code and idempotency key.
+5. Canonical registry state changes terminate in the registry owner domain.
+6. Events are emitted for downstream projection and audit.
+7. Lookup indexes and public views refresh asynchronously.
+8. Public reads expose only approved published views.
+9. Discrepancies open review/remediation cases.
+10. Supersession and withdrawal preserve public historical intelligibility.
 
-Lifecycle notes:
-- published does not imply ownership of linked chain or deployment domains
-- public-safe and authenticated-only visibility must remain explicit
-- lookup indexes are bounded discovery aids and not the same thing as internal ownership truth
-- supersession must preserve historical public intelligibility
-- withdrawn or restricted states must not silently erase audit lineage
+## Architecture Diagram — Mermaid flowchart
 
----
+```mermaid
+flowchart TB
+  subgraph Consumers
+    Public[Public users / community]
+    Partner[Partner or exchange verifier]
+    User[Authenticated FUZE user]
+    Frontend[First-party public web]
+    Admin[Admin / control-plane operator]
+  end
 
-## 11. API Surface Overview
+  subgraph API[Public Registry Lookup API Surfaces]
+    PublicAPI[Public-read lookup routes]
+    AuthAPI[Authenticated enrichment routes]
+    PartnerAPI[Partner-safe lookup/export routes]
+    InternalAPI[Internal service routes]
+    AdminAPI[Admin/control-plane routes]
+  end
 
-The API surface is divided into three families:
+  subgraph Owners[Canonical Owner Domains]
+    Registry[Public Contract and Wallet Registry Domain]
+    Chain[Chain Architecture / On-chain boundary]
+    Metadata[Public Metadata Domain]
+    Transparency[Transparency/Public Trust Domains]
+    Audit[Audit and Activity Domain]
+  end
 
-### 11.1 Public-read APIs
-Used by public users, holders, community observers, and integrators for:
-- registry index retrieval
-- registry detail retrieval
-- contract and wallet lookup
-- network-role public visibility
-- registry-linked trust-surface discovery
+  subgraph Runtime[Runtime and Projection]
+    EventBus[Event bus]
+    Workers[Index and projection workers]
+    Search[Public search/discovery index]
+    Cache[Public read cache]
+    Observability[Logs / metrics / traces]
+  end
 
-### 11.2 Authenticated read APIs
-Used by authenticated users and approved clients for:
-- bounded registry enrichment
-- actor- or scope-sensitive registry visibility where policy allows
-- authenticated access to registry references not broadly public but safe within actor scope
+  subgraph Stores[Stores]
+    RegistryStore[(Canonical registry publication store)]
+    IdemStore[(Idempotency records)]
+    ProjectionStore[(Lookup projections)]
+    AuditStore[(Audit log)]
+  end
 
-### 11.3 Internal service and admin APIs
-Used by trusted internal services and privileged operators for:
-- creating and updating registry records
-- publishing, correcting, superseding, restricting, or withdrawing records
-- linking artifacts and maintaining correction lineage
-- resolving registry discrepancies
+  Public --> PublicAPI
+  Frontend --> PublicAPI
+  User --> AuthAPI
+  Partner --> PartnerAPI
+  Admin --> AdminAPI
+  InternalAPI --> Registry
+  AdminAPI --> Registry
+  PublicAPI --> ProjectionStore
+  AuthAPI --> ProjectionStore
+  PartnerAPI --> ProjectionStore
+  Registry --> RegistryStore
+  Registry --> EventBus
+  Registry --> Audit
+  InternalAPI --> IdemStore
+  AdminAPI --> IdemStore
+  EventBus --> Workers
+  Workers --> ProjectionStore
+  Workers --> Search
+  Workers --> Cache
+  PublicAPI --> Observability
+  AuthAPI --> Observability
+  PartnerAPI --> Observability
+  InternalAPI --> Observability
+  AdminAPI --> Observability
+  Audit --> AuditStore
+  Registry -. references .-> Chain
+  Registry -. links .-> Metadata
+  Registry -. links .-> Transparency
+```
 
----
+## Data Design — Mermaid Diagram
 
-## 12. Authentication and Authorization Model
+```mermaid
+erDiagram
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_LOOKUP_KEY : has
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_ARTIFACT_LINK : links
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_NETWORK_REFERENCE : binds
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_SCOPE_ENRICHMENT : enriches
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_PUBLICATION_STATE : transitions
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_SUPERSESSION_LINK : supersedes
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_MUTATION_ACTION : records
+  PUBLIC_REGISTRY_RECORD ||--o{ REGISTRY_DISCREPANCY_CASE : may_have
+  REGISTRY_FAMILY_PROFILE ||--o{ PUBLIC_REGISTRY_RECORD : classifies
+  REGISTRY_MUTATION_ACTION ||--|| IDEMPOTENCY_RECORD : protected_by
+  REGISTRY_MUTATION_ACTION ||--o{ AUDIT_LOG_ENTRY : emits
+  PUBLIC_REGISTRY_RECORD ||--o{ PUBLIC_REGISTRY_INDEX_VIEW : projects_to
 
-### 12.1 Authentication posture by route family
+  PUBLIC_REGISTRY_RECORD {
+    string id PK
+    string registry_family
+    string classification
+    string title
+    string summary
+    string lifecycle_state
+    datetime created_at
+    datetime updated_at
+  }
+  REGISTRY_PUBLICATION_STATE {
+    string id PK
+    string public_registry_id FK
+    string publication_state
+    string visibility_target
+    datetime published_at
+    datetime withdrawn_at
+  }
+  REGISTRY_LOOKUP_KEY {
+    string id PK
+    string public_registry_id FK
+    string key_type
+    string normalized_value
+    string network_ref
+    boolean public_indexable
+  }
+  REGISTRY_NETWORK_REFERENCE {
+    string id PK
+    string public_registry_id FK
+    string network_ref
+    string address
+    string chain_role
+    string verification_state
+  }
+  REGISTRY_ARTIFACT_LINK {
+    string id PK
+    string public_registry_id FK
+    string artifact_type
+    string artifact_reference
+    string visibility
+  }
+  PUBLIC_REGISTRY_INDEX_VIEW {
+    string id PK
+    string public_registry_id FK
+    string projection_state
+    string public_summary_json
+  }
+```
 
-#### Public-read routes
-No authentication required:
-- list registry records
-- retrieve registry detail
-- read public contract/wallet/network lookup where published
+## Flow View
 
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded authenticated-only registry
-- read actor- or workspace-scoped registry enrichments where allowed
+### Main Public Lookup Flow
 
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create and update registry records
-- attach artifact links
-- refresh publication states
-- read canonical truth
+1. Caller submits lookup query by address, network, label, registry family, public role, or registry ID.
+2. API classifies request as public-read, authenticated-read, or partner-read.
+3. API validates query shape, normalization, pagination, and rate-limit posture.
+4. API applies visibility and classification filters.
+5. API reads from public-safe projection store or canonical registry store through a policy-filtered read path.
+6. API returns registry lookup results with publication state, supersession guidance, artifact links, and public-safe metadata.
+7. API records access logs/metrics and correlation references appropriate to route sensitivity.
 
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- publish, withdraw, restrict, supersede, and resolve discrepancy cases
+### Admin Publication Flow
 
-### 12.2 Authorization checkpoints
+1. Admin submits publish/restrict/withdraw/supersede/correct action.
+2. API authenticates operator and checks policy, role, reason code, idempotency key, and lifecycle transition.
+3. Idempotency layer checks existing request hash and terminal result.
+4. Registry owner domain applies mutation or rejects with explicit conflict/status.
+5. Audit record is written with before/after summary and reason code.
+6. Event is emitted.
+7. Projection/index refresh is accepted asynchronously.
+8. Response distinguishes applied registry mutation from later public projection refresh.
 
-Authorization must evaluate:
-- caller identity and route family
-- whether registry record is public, authenticated-only, or internal-only
-- whether actor has scope visibility for authenticated enrichments
-- whether service has create/publish/link/read privilege
-- whether operator role is present for publication or correction actions
-- whether current registry state allows requested mutation
+### Failure / Retry Flow
 
-### 12.3 Sensitive action rules
+1. Validation or authorization failure returns terminal structured error.
+2. Retryable dependency failure returns retry-safe error code and correlation ID.
+3. Idempotency replay returns prior outcome when request hash matches.
+4. Same key with different payload returns conflict.
+5. Projection failure opens discrepancy or retry job without rolling back already-applied canonical mutation unless policy requires compensation.
 
-The following require heightened checks:
-- publication of new public registry records
-- publication of contracts, wallets, or public role bindings tied to trust-sensitive surfaces
-- withdrawal or restriction of already public registry artifacts
-- supersession of trust-sensitive published registry records
-- discrepancy-resolution actions
+## Data Flows — Mermaid sequenceDiagram
 
----
+```mermaid
+sequenceDiagram
+  autonumber
+  participant C as Public Caller
+  participant G as API Gateway
+  participant A as Public Registry Lookup API
+  participant P as Policy/Visibility Filter
+  participant R as Registry Projection Store
+  participant O as Observability
 
-## 13. API Endpoints / Interface Contracts
+  C->>G: GET /v1/public-registry/lookup?address=...
+  G->>A: Forward request with correlation_id
+  A->>A: Normalize query and validate pagination
+  A->>P: Evaluate public visibility and classification filters
+  P-->>A: Allowed public projection fields
+  A->>R: Read lookup projection
+  R-->>A: Public-safe lookup results
+  A->>O: Emit metric/log with correlation_id
+  A-->>C: 200 registry lookup response
+```
 
-## 13.1 Public-Read APIs
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Admin as Operator
+  participant API as Admin Registry API
+  participant Auth as AuthZ/Policy
+  participant Idem as Idempotency Store
+  participant Reg as Registry Owner Domain
+  participant Audit as Audit Domain
+  participant Bus as Event Bus
+  participant Worker as Projection Worker
+  participant View as Public Projection Store
 
-### 13.1.1 `GET /v1/public-registry`
-**Purpose:** list published public registry records  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `registry_family`
-- optional `classification`
-- optional `network`
-- optional `status`
-- pagination
-**Response Summary:**
-- registry record summaries
-- family and classification labels
-- publication state
-- network summary
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
+  Admin->>API: POST /admin/v1/public-registry/{id}/publish
+  API->>Auth: Authenticate, authorize, evaluate policy
+  Auth-->>API: Allowed with policy_version
+  API->>Idem: Check Idempotency-Key and request_hash
+  Idem-->>API: New request
+  API->>Reg: Apply publication transition
+  Reg-->>API: Applied publication state
+  API->>Audit: Write critical audit event
+  API->>Bus: Emit public_registry.record_published
+  Bus-->>Worker: Deliver event
+  Worker->>View: Refresh public lookup projection
+  API->>Idem: Store terminal result
+  API-->>Admin: 200 applied + projection_refresh=accepted
+```
 
-### 13.1.2 `GET /v1/public-registry/{public_registry_id}`
-**Purpose:** retrieve one public registry record  
-**Caller Type:** public  
-**Response Summary:**
-- registry detail
-- classification and visibility information
-- network reference
-- lookup keys
-- artifact links
-- supersession guidance where relevant
-- public-safe status references
-**Side Effects:** none
+## Request Model
 
-### 13.1.3 `GET /v1/public-registry/lookup`
-**Purpose:** look up one or more public registry records by normalized public query fields  
-**Caller Type:** public  
-**Query Parameters Summary:**
-- optional `address`
-- optional `label`
-- optional `contract_family`
-- optional `network`
-- optional `public_role`
-**Response Summary:**
-- normalized lookup results
-- matched public registry summaries
-- lookup confidence and status hints where relevant
-**Side Effects:** none
+### Required Common Headers
 
-### 13.1.4 `GET /v1/public-registry/networks/{network_ref}`
-**Purpose:** retrieve public registry summary for one network scope  
-**Caller Type:** public  
-**Response Summary:**
-- network summary
-- linked public registry records
-- role-grouped discovery view
-**Side Effects:** none
+- `X-Correlation-ID` SHOULD be provided by clients and MUST be generated if absent.
+- `Idempotency-Key` MUST be required on mutation-capable internal/admin routes.
+- `Authorization` MUST be required for authenticated, partner, internal, and admin surfaces.
+- `X-FUZE-Client` SHOULD identify first-party, partner, or SDK clients where applicable.
 
-## 13.2 Authenticated Read APIs
+### Public Query Parameters
 
-### 13.2.1 `GET /v1/public-registry/me`
-**Purpose:** retrieve bounded actor-aware registry enrichments where policy allows  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `registry_family`
-- pagination
-**Response Summary:**
-- registry summary list
-- actor-safe enrichment data
-- scoped references where allowed
-**Side Effects:** none
+Public lookup endpoints MAY support:
 
-### 13.2.2 `GET /v1/public-registry/me/{public_registry_id}`
-**Purpose:** retrieve one bounded actor-aware registry detail  
-**Caller Type:** authenticated user  
-**Response Summary:**
-- base public registry detail
-- bounded authenticated enrichment
-- scoped artifact references where allowed
-**Side Effects:** none
-
-## 13.3 Internal Service APIs
-
-### 13.3.1 `POST /internal/v1/public-registry`
-**Purpose:** create draft public registry record  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
+- `address`
+- `network`
 - `registry_family`
 - `classification`
-- `title`
-- optional `summary`
-- `network_reference`
-- optional `lookup_keys`
-- `idempotency_key`
-**Response Summary:** registry record summary
-**Side Effects:** creates draft registry record
-**Idempotency Behavior:** required
-**Audit Requirements:** registry creation audit
-**Emitted Events:** `public_registry.record_created`
-
-### 13.3.2 `POST /internal/v1/public-registry/{public_registry_id}/artifact-links`
-**Purpose:** attach artifact links to one registry record  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
+- `public_role`
+- `label`
 - `artifact_type`
-- `artifact_reference`
-- optional `artifact_summary`
-- `idempotency_key`
-**Response Summary:** artifact-link summary
-**Side Effects:** creates artifact-link lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** artifact-link audit
-**Emitted Events:** `public_registry.artifact_linked`
+- `status`
+- `q`
+- `page_size`
+- `page_token`
 
-### 13.3.3 `POST /internal/v1/public-registry/{public_registry_id}/scope-enrichments`
-**Purpose:** attach bounded authenticated enrichment rules to one registry record  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `scope_type`
-- `scope_reference`
-- `enrichment_profile`
-- `idempotency_key`
-**Response Summary:** scope-enrichment summary
-**Side Effects:** creates enrichment lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** enrichment audit
-**Emitted Events:** `public_registry.scope_enrichment_linked`
+Every query parameter MUST be normalized and validated before lookup. Address matching MUST be network-aware. Ambiguous queries MUST return explicit ambiguity/status hints rather than fabricated certainty.
 
-### 13.3.4 `GET /internal/v1/public-registry/{public_registry_id}`
-**Purpose:** retrieve canonical public registry truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full registry record, classification, network references, lookup indexes, publication state, artifact links, enrichments, supersession lineage, and discrepancy lineage
-**Side Effects:** none
+### Mutation Request Requirements
 
-## 13.4 Admin / Control-Plane APIs
+Internal/admin mutation requests MUST include:
 
-### 13.4.1 `POST /admin/v1/public-registry/{public_registry_id}/publish`
-**Purpose:** publish public registry record under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `visibility_target`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** published registry summary
-**Side Effects:** publication state changes to published_public or published_authenticated
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_registry.record_published`
+- target resource identifier or creation fields
+- registry family and classification where relevant
+- network/address/role binding where relevant
+- visibility target
+- reason code for admin actions
+- operator note for sensitive admin actions
+- idempotency key
+- correlation ID
+- policy version or policy evaluation reference where available
 
-### 13.4.2 `POST /admin/v1/public-registry/{public_registry_id}/withdraw`
-**Purpose:** withdraw or restrict public registry visibility under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `withdrawal_mode`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** withdrawn registry summary
-**Side Effects:** publication state changes to restricted or withdrawn
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_registry.record_withdrawn`
+## Response Model
 
-### 13.4.3 `POST /admin/v1/public-registry/{public_registry_id}/supersede`
-**Purpose:** supersede one public registry record with another under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_public_registry_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates supersession linkage and updates visible preference
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_registry.record_superseded`
+### Public Read Response Requirements
 
-### 13.4.4 `POST /admin/v1/public-registry/discrepancies`
-**Purpose:** resolve public registry discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, restrict, withdraw, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_registry.discrepancy_resolved`
+Public responses MUST include:
 
----
+- stable public resource ID
+- registry family and classification
+- publication state
+- public lifecycle state
+- network/address/reference summary where applicable
+- public role label where applicable
+- artifact links where approved
+- supersession/replacement guidance where applicable
+- `canonicality` or equivalent indication distinguishing public registry record vs derived lookup result
+- timestamps suitable for public interpretation
+- pagination metadata for list responses
 
-## 14. Request Rules
+Public responses MUST NOT expose:
 
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive public registry mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored public registry truth as authoritative input
+- private signer topology
+- private custody details
+- internal risk notes
+- raw verification evidence unless separately published
+- internal audit record contents
+- admin/operator notes
+- private incident or security posture
 
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- publication of new public registry records
-- publication of contracts, wallets, or public role bindings tied to trust-sensitive surfaces
-- withdrawal or restriction of already public registry records
-- supersession of trust-sensitive published registry artifacts
-- discrepancy-resolution actions
+### Mutation Response Requirements
 
-Heightened validation may include:
-- family/classification consistency checks
-- network and lookup-key validation
-- public-safe versus authenticated-only visibility checks
-- operator role confirmation
-- registry or reporting case linkage for sensitive actions
+Mutation responses MUST include:
 
-### 14.3 Scope integrity rule
-Public registry mutations must target valid and authorized records, artifact links, enrichment records, lookup-index records, and discrepancy records. Services and operators must not mutate unrelated or unauthorized registry state.
+- operation/action ID
+- target registry record ID
+- resulting lifecycle/publication state
+- whether mutation was newly applied or previously applied
+- projection refresh status when asynchronous
+- correlation ID
+- audit reference for internal/admin routes where safe
 
-### 14.4 Layer-separation rule
-Public registry domain must remain the public verification-and-lookup layer. It must not collapse:
-- deployment ownership,
-- multisig/control ownership,
-- transparency ownership,
-- metadata ownership,
-- or internal orchestration state
-into one ambiguous registry object.
+## Error / Result / Status Model
 
----
+The API MUST use structured problem-details compatible errors.
 
-## 15. Response Rules
+Required fields:
 
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- family and classification summaries
-- network and lookup-key summaries where relevant
-- artifact-link and publication-state summaries where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If publication propagation, withdrawal, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target registry record or discrepancy
-- mutation type
-- resulting publication state
-- withdrawal, supersession, or restriction effects where relevant
-- whether public-safe views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal registry truth
-- primary public registry records
-- supporting artifacts
-- derived public lookup summaries
-- actor-scoped enrichment versus ordinary public registry lookup
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
 - `type`
 - `title`
 - `status`
@@ -692,691 +747,537 @@ The API uses structured problem-details style error responses.
 - `detail`
 - `instance`
 - `correlation_id`
+- `retryable`
+- `safe_to_retry`
 
-### 16.2 Common error codes
+Common error codes:
 
-#### Authorization / permission errors
+- `PUBLIC_REGISTRY_REQUEST_INVALID`
+- `PUBLIC_REGISTRY_LOOKUP_AMBIGUOUS`
+- `PUBLIC_REGISTRY_RECORD_NOT_FOUND`
+- `PUBLIC_REGISTRY_NOT_PUBLIC`
 - `PUBLIC_REGISTRY_PERMISSION_DENIED`
+- `PUBLIC_REGISTRY_AUTHENTICATION_REQUIRED`
+- `PUBLIC_REGISTRY_PARTNER_SCOPE_DENIED`
 - `PUBLIC_REGISTRY_OPERATOR_PERMISSION_DENIED`
 - `PUBLIC_REGISTRY_SERVICE_PERMISSION_DENIED`
-- `PUBLIC_REGISTRY_AUDIENCE_PERMISSION_DENIED`
-
-#### State conflict errors
-- `PUBLIC_REGISTRY_RECORD_STATE_INVALID`
-- `PUBLIC_REGISTRY_PUBLICATION_STATE_INVALID`
-- `PUBLIC_REGISTRY_SUPERSESSION_CONFLICT`
-- `PUBLIC_REGISTRY_VISIBILITY_CONFLICT`
-
-#### Policy / safety errors
 - `PUBLIC_REGISTRY_CLASSIFICATION_REQUIRED`
 - `PUBLIC_REGISTRY_NETWORK_REFERENCE_REQUIRED`
-- `PUBLIC_REGISTRY_VISIBILITY_NOT_ALLOWED`
 - `PUBLIC_REGISTRY_PUBLICATION_NOT_ALLOWED`
-- `PUBLIC_REGISTRY_WITHDRAWAL_NOT_ALLOWED`
-
-#### Request integrity errors
+- `PUBLIC_REGISTRY_VISIBILITY_NOT_ALLOWED`
+- `PUBLIC_REGISTRY_STATE_CONFLICT`
+- `PUBLIC_REGISTRY_SUPERSESSION_CONFLICT`
 - `PUBLIC_REGISTRY_IDEMPOTENCY_KEY_REQUIRED`
-- `PUBLIC_REGISTRY_REQUEST_INVALID`
-- `PUBLIC_REGISTRY_REQUEST_UNPROCESSABLE`
+- `PUBLIC_REGISTRY_IDEMPOTENCY_CONFLICT`
+- `PUBLIC_REGISTRY_RATE_LIMITED`
+- `PUBLIC_REGISTRY_ABUSE_BLOCKED`
+- `PUBLIC_REGISTRY_PROJECTION_STALE`
+- `PUBLIC_REGISTRY_DEPENDENCY_UNAVAILABLE`
 
-#### Dependency or provider errors
-- `PUBLIC_REGISTRY_STORAGE_UNAVAILABLE`
-- `PUBLIC_REGISTRY_CHAIN_REFERENCE_UNAVAILABLE`
-- `PUBLIC_REGISTRY_REPORTING_UNAVAILABLE`
+## Idempotency / Retry / Replay Model
 
-### 16.3 Error handling rules
-- do not expose hidden internal governance, treasury, security, or audit detail in public or low-privilege responses
-- do not imply canonical ownership of linked chain or deployment truth from registry publication alone
-- distinguish classification/visibility failure from generic invalid state
-- distinguish missing network reference from generic invalid request
-- include retry guidance only where safe
+Idempotency is required for:
 
----
+1. Draft record creation.
+2. Artifact-link attachment.
+3. Lookup-key creation or refresh request.
+4. Scope-enrichment attachment.
+5. Publish, restrict, withdraw, supersede, correct, and discrepancy resolution.
+6. Partner export generation where accepted asynchronously.
 
-## 17. Idempotency and Mutation Safety
+Rules:
 
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- registry record creation
-- artifact-link attachment
-- scope-enrichment attachment
-- publish
-- withdraw
-- supersede
-- discrepancy resolution
+1. Idempotency scope MUST include actor/service, route family, target resource, request hash, and operation type.
+2. Replay with identical semantic request MUST return the original terminal outcome.
+3. Replay with same key and different semantic request MUST fail with `PUBLIC_REGISTRY_IDEMPOTENCY_CONFLICT`.
+4. Public GETs are safe and idempotent by HTTP semantics but may be rate-limited.
+5. Retryable failures MUST be clearly distinguishable from terminal denials.
+6. Projection refresh retry MUST not duplicate canonical registry mutations.
 
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
+## Rate Limit / Abuse-Control Model
 
-### 17.3 Mutation safety rules
-- one canonical visible registry record per current registry lineage unless explicit supersession exists
-- artifact and enrichment links must remain referentially consistent with registry family and classification
-- public publication and authenticated publication must remain explicitly distinct
-- corrections and supersession must preserve prior registry lineage
-- withdrawal and restriction must preserve auditability and public explanation where appropriate
+Public lookup endpoints MUST enforce abuse controls appropriate to public trust surfaces:
 
----
+1. IP/client/user-agent rate limits for unauthenticated reads.
+2. Stricter limits for broad search and bulk-like queries.
+3. Partner-specific quotas and API-key/client-credential attribution.
+4. Bot and scraping controls where needed.
+5. Query normalization to prevent wildcard enumeration of non-public state.
+6. No leakage of unpublished records through timing, errors, or partial matches.
+7. Backoff metadata where safe.
 
-## 18. Versioning and Compatibility Rules
+## Endpoint / Route Family Model
 
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
+### Public-Read Routes
 
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to registry family, classification, network reference, or visibility meaning
-- new registry families, lookup key types, and artifact-link types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
+- `GET /v1/public-registry`
+- `GET /v1/public-registry/{public_registry_id}`
+- `GET /v1/public-registry/lookup`
+- `GET /v1/public-registry/networks/{network_ref}`
+- `GET /v1/public-registry/families/{registry_family}`
+- `GET /v1/public-registry/artifacts/{artifact_ref}` where explicitly approved
 
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of primary public registry record versus supporting artifact versus derived summary
-- changing visibility semantics incompatibly
-- removing critical network-reference, lookup-key, or artifact-link fields
-- changing supersession or withdrawal semantics incompatibly
+### Authenticated Read Routes
 
-Such changes require explicit migration planning and version evolution.
+- `GET /v1/public-registry/me`
+- `GET /v1/public-registry/me/{public_registry_id}`
+- `GET /v1/public-registry/me/lookup`
 
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
+### Partner Routes
 
----
+- `GET /partner/v1/public-registry/lookup`
+- `GET /partner/v1/public-registry/export-status/{operation_id}`
+- `POST /partner/v1/public-registry/exports` where explicitly approved
 
-## 19. Event Emission and Webhook Behavior
+### Internal Service Routes
 
-This domain is event-capable.
+- `POST /internal/v1/public-registry`
+- `PATCH /internal/v1/public-registry/{public_registry_id}`
+- `POST /internal/v1/public-registry/{public_registry_id}/artifact-links`
+- `POST /internal/v1/public-registry/{public_registry_id}/lookup-keys`
+- `POST /internal/v1/public-registry/{public_registry_id}/scope-enrichments`
+- `GET /internal/v1/public-registry/{public_registry_id}`
 
-### 19.1 Internal events
-The Public Registry Lookup domain must emit canonical internal events such as:
+### Admin / Control-Plane Routes
+
+- `POST /admin/v1/public-registry/{public_registry_id}/publish`
+- `POST /admin/v1/public-registry/{public_registry_id}/restrict`
+- `POST /admin/v1/public-registry/{public_registry_id}/withdraw`
+- `POST /admin/v1/public-registry/{public_registry_id}/supersede`
+- `POST /admin/v1/public-registry/{public_registry_id}/correct`
+- `POST /admin/v1/public-registry/discrepancies`
+- `GET /admin/v1/public-registry/discrepancies`
+
+## Public API Considerations
+
+1. Public routes MUST be stable, narrow, versioned, and safe for external use.
+2. Public route publication creates compatibility obligations.
+3. Public responses MUST identify whether results are current, superseded, deprecated, withdrawn, or restricted.
+4. Public lookup MUST not imply endorsement beyond explicit registry role/classification.
+5. Public route behavior MUST avoid leaking private state through error messages, filtering, sorting, or result counts.
+
+## First-Party Application API Considerations
+
+First-party clients may use public routes for public pages and authenticated routes for bounded enrichments. They MUST NOT use internal/admin routes through client-visible code. Frontend convenience MUST NOT justify adding broad public fields that violate registry publication boundaries.
+
+## Internal Service API Considerations
+
+Internal services may prepare and update registry records only through owner-approved contracts. Internal APIs MUST preserve least privilege and MUST NOT provide hidden broad-write shortcuts. Internal callers must treat registry creation as draft/preparation unless publication has been explicitly approved.
+
+## Admin / Control-Plane API Considerations
+
+Admin routes MUST be:
+
+- separate from public and first-party routes
+- protected by privileged authentication and authorization
+- reason-coded
+- policy-versioned where possible
+- idempotent
+- audited
+- observable
+- guarded against unsafe state transitions
+- designed to preserve correction/supersession lineage
+
+## Event / Webhook / Async API Considerations
+
+Internal events SHOULD include:
+
 - `public_registry.record_created`
+- `public_registry.lookup_key_added`
 - `public_registry.artifact_linked`
 - `public_registry.scope_enrichment_linked`
 - `public_registry.record_published`
+- `public_registry.record_restricted`
 - `public_registry.record_withdrawn`
 - `public_registry.record_superseded`
+- `public_registry.record_corrected`
+- `public_registry.discrepancy_opened`
 - `public_registry.discrepancy_resolved`
+- `public_registry.projection_refresh_requested`
+- `public_registry.projection_refreshed`
 
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- public registry ID
-- registry family
-- classification
-- publication state
-- actor type
-- correlation ID
-- reason code where applicable
+External webhooks are not enabled by default. If introduced, they MUST be narrower than internal events, versioned separately, public-safe, signed, retry-safe, and governed by AsyncAPI contracts.
 
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound public registry webhooks by default. Any future outbound registry publication webhook surface must be narrow, security-reviewed, and governed by a separate contract.
+## Chain-Adjacent API Considerations
 
----
+1. Chain addresses and network references are public lookup keys only when publication-approved.
+2. Chain-native state is not registry publication truth.
+3. Registry lookup may include explorer links or chain references, but those are public-safe references, not FUZE guarantees of live state.
+4. Chain observations must cross normalization and owner-domain validation before influencing registry publication.
+5. Base/Ethereum roles must remain explicit and must not be collapsed into generic chain labels.
 
-## 20. Audit and Activity Requirements
+## Data Model / Storage Support Implications
 
-The following actions must generate durable audit events:
+Required storage-support records include:
 
-- registry record creation
-- artifact-link attachment
-- publish, withdraw, supersede, and discrepancy actions
-- scope-enrichment linkage where sensitivity requires
-- other sensitive public registry mutations
+- public registry records
+- registry family profiles
+- classifications
+- publication states
+- network references
+- lookup keys
+- artifact links
+- scope enrichments
+- supersession links
+- discrepancy cases
+- mutation action records
+- idempotency records
+- audit references
+- projection/index records
 
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target registry record / artifact link / discrepancy reference as applicable
+Storage keys and database layouts are implementation details. They MUST NOT become semantic truth.
+
+## Read Model / Projection / Reporting Rules
+
+1. Public lookup projections are derived from canonical registry records.
+2. Projection lag MUST be observable and, where relevant, surfaced as `projection_status` to internal/admin callers.
+3. Public views MUST not show unpublished records.
+4. Superseded records SHOULD provide replacement guidance where public trust requires continuity.
+5. Cache invalidation MUST occur on publication, withdrawal, restriction, supersession, correction, and classification changes.
+6. Search snippets MUST be classification-safe and public-safe.
+7. Exports MUST include generation time, source version, and lineage references.
+
+## Security / Risk / Privacy Controls
+
+1. Public responses must be information-minimized.
+2. Sensitive operator notes, audit evidence, private source evidence, and internal risk indicators must be suppressed from public responses.
+3. Admin routes must require MFA or equivalent elevated control where FUZE policy requires it.
+4. Partner and authenticated routes must be scope-limited and rate-limited.
+5. Bulk/lookup enumeration must be constrained.
+6. Logs and traces must not contain secrets, raw private evidence, or sensitive internal-only details.
+7. Public metadata and artifact links must be screened for classification and storage-delivery safety.
+
+## Audit / Traceability / Observability Requirements
+
+Audit is mandatory for:
+
+- internal registry creation/update
+- artifact-link changes
+- lookup-key changes
+- publication
+- withdrawal
+- restriction
+- supersession
+- correction
+- discrepancy opening/resolution
+- partner export generation
+- privileged reads where policy requires
+
+Required audit references:
+
+- actor type and ID
+- service/client identity
+- target resource
 - action type
-- before/after summary where applicable
 - reason code
+- policy version/reference
+- before/after summary
+- idempotency key hash
 - correlation ID
-- operator note if operator action
-- occurred_at
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `public_registry_records`
-- `id` PK
-- `registry_family`
-- `classification`
-- `title`
-- `summary`
-- `state`
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-**Constraints:**
-- index on (`registry_family`, `classification`)
-- index on `state`
-
-### 21.2 `registry_family_profiles`
-- `id` PK
-- `registry_family`
-- `allowed_classifications_json`
-- `lookup_profile_json`
-- `visibility_profile_json`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- unique `registry_family`
-
-### 21.3 `registry_classifications`
-- `id` PK
-- `public_registry_record_id` FK -> `public_registry_records.id`
-- `classification`
-- `canonical_owner_reference`
-- `created_at`
-
-**Constraints:**
-- index on `public_registry_record_id`
-
-### 21.4 `registry_publication_states`
-- `id` PK
-- `public_registry_record_id` FK -> `public_registry_records.id`
-- `publication_state`
-- `published_at` nullable
-- `restricted_at` nullable
-- `withdrawn_at` nullable
-- `created_at`
-
-**Constraints:**
-- index on `public_registry_record_id`
-- index on `publication_state`
-
-### 21.5 `registry_network_references`
-- `id` PK
-- `public_registry_record_id` FK -> `public_registry_records.id`
-- `network_reference`
-- `public_role`
-- `created_at`
-
-**Constraints:**
-- index on `public_registry_record_id`
-
-### 21.6 `registry_lookup_indexes`
-- `id` PK
-- `public_registry_record_id` FK -> `public_registry_records.id`
-- `lookup_key_type`
-- `lookup_key_value_normalized`
-- `created_at`
-
-**Constraints:**
-- index on `public_registry_record_id`
-- index on (`lookup_key_type`, `lookup_key_value_normalized`)
-
-### 21.7 `registry_artifact_links`
-- `id` PK
-- `public_registry_record_id` FK -> `public_registry_records.id`
-- `artifact_type`
-- `artifact_reference`
-- `artifact_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `public_registry_record_id`
-
-### 21.8 `registry_scope_enrichments`
-- `id` PK
-- `public_registry_record_id` FK -> `public_registry_records.id`
-- `scope_type`
-- `scope_reference`
-- `enrichment_profile_json`
-- `created_at`
-
-**Constraints:**
-- index on `public_registry_record_id`
-
-### 21.9 `registry_supersession_links`
-- `id` PK
-- `from_public_registry_id` FK -> `public_registry_records.id`
-- `to_public_registry_id` FK -> `public_registry_records.id`
-- `reason_code`
-- `created_at`
-
-**Constraints:**
-- unique (`from_public_registry_id`, `to_public_registry_id`)
-
-### 21.10 `registry_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.11 `registry_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.12 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.13 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical public registry truth stays in registry records, family profiles, classifications, publication states, network references, lookup indexes, artifact links, enrichments, supersession links, and discrepancy records
-- deployment, transparency, metadata, and control canonical truths remain external and are referenced rather than duplicated
-- public-safe views must derive from canonical public registry truth filtered by publication state and visibility class
-- actor-scoped enrichments remain bounded overlays rather than new canonical registry owners
-
-### Reconciliation notes
-- one visible public registry record should reconcile to one current registry lineage under current preference
-- publication state must reconcile with allowed family/classification combinations
-- network references and lookup indexes must reconcile to linked public registry truth
-- discrepancy cases must preserve review lineage for stale or conflicting public registry conditions
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    PRAPI[Public Registry Lookup API<br/>fuze-backend-api]
-    RecordStore[(public_registry_records)]
-    FamilyStore[(registry_family_profiles)]
-    NetworkStore[(registry_network_references)]
-    LookupStore[(registry_lookup_indexes)]
-    PubStore[(registry_publication_states)]
-    ArtifactStore[(registry_artifact_links)]
-    EnrichStore[(registry_scope_enrichments)]
-    InternalSvc[Internal FUZE Services]
-
-    PublicUser --> PRAPI
-    AuthUser --> WebApp
-    WebApp --> PRAPI
-    AdminUI --> PRAPI
-    InternalSvc --> PRAPI
-
-    PRAPI --> RecordStore
-    PRAPI --> FamilyStore
-    PRAPI --> NetworkStore
-    PRAPI --> LookupStore
-    PRAPI --> PubStore
-    PRAPI --> ArtifactStore
-    PRAPI --> EnrichStore
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    public_registry_records ||--o{ registry_classifications : classifies
-    public_registry_records ||--o{ registry_publication_states : publishes
-    public_registry_records ||--o{ registry_network_references : references
-    public_registry_records ||--o{ registry_lookup_indexes : indexes
-    public_registry_records ||--o{ registry_artifact_links : links
-    public_registry_records ||--o{ registry_scope_enrichments : enriches
-    public_registry_records ||--o{ registry_mutation_actions : tracks
-
-    public_registry_records {
-        uuid id PK
-        string registry_family
-        string classification
-        string title
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime closed_at
-    }
-
-    registry_publication_states {
-        uuid id PK
-        uuid public_registry_record_id FK
-        string publication_state
-        datetime published_at
-        datetime restricted_at
-        datetime withdrawn_at
-        datetime created_at
-    }
-
-    registry_network_references {
-        uuid id PK
-        uuid public_registry_record_id FK
-        string network_reference
-        string public_role
-        datetime created_at
-    }
-
-    registry_lookup_indexes {
-        uuid id PK
-        uuid public_registry_record_id FK
-        string lookup_key_type
-        string lookup_key_value_normalized
-        datetime created_at
-    }
-
-    registry_artifact_links {
-        uuid id PK
-        uuid public_registry_record_id FK
-        string artifact_type
-        string artifact_reference
-        datetime created_at
-    }
-
-    registry_scope_enrichments {
-        uuid id PK
-        uuid public_registry_record_id FK
-        string scope_type
-        string scope_reference
-        datetime created_at
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path — publish primary public registry record
-1. internal service creates draft registry record
-2. network reference, lookup indexes, and artifact links are attached to docs, reports, or other public artifacts
-3. operator validates family/classification and publication intent
-4. admin publishes record publicly
-5. public index, lookup, network, and detail surfaces become available
-6. external readers can discover the record as primary registry record, supporting artifact, or derived summary
-
-### 24.2 Happy path — authenticated enrichment
-1. registry record is already published or authenticated-visible
-2. bounded actor/scope enrichment is linked internally
-3. authenticated actor requests the registry artifact
-4. backend returns base public registry plus scoped enrichment where policy allows
-5. actor sees additional safe context without gaining hidden control access
-
-### 24.3 Alternate path — superseding an older registry publication
-1. older registry record must be replaced or corrected
-2. replacement record is created and validated
-3. admin supersedes the older record
-4. previous record remains historically linked and interpretable
-5. new record becomes current visible preference
-
-### 24.4 Failure path — invalid classification or publication posture
-1. registry record is created or modified
-2. backend detects missing classification, invalid family/classification combination, or disallowed visibility posture
-3. request is rejected or record remains unpublished
-4. no unsafe public registry surface is produced
-
-### 24.5 Failure and remediation path — stale or incorrect public registry
-1. linked network ref, role label, or public artifact changes or registry record becomes stale/inconsistent
-2. admin opens discrepancy-resolution flow
-3. backend preserves existing lineage
-4. corrected or superseding registry record is created
-5. discrepancy closes with preserved history
-
-### 24.6 Degraded-mode path
-1. linked explorer-safe reference, doc, or trust artifact is delayed or degraded
-2. public registry surface stays available where safe
-3. backend communicates freshness or visibility degradation explicitly
-4. canonical truth mutation is not implied by degraded presentation
-
-### 24.7 Retry behavior
-- duplicate registry creation returns same canonical record result
-- duplicate artifact or enrichment attachment returns same lineage result where applicable
-- duplicate publish/withdraw/supersede/discrepancy actions return same terminal action result
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Public Registry Lookup API
-    participant R as Registry Store
-    participant N as Network Reference Store
-    participant L as Lookup Index Store
-    participant A as Artifact Store
-    participant P as Publication Store
-    participant E as Enrichment Store
-
-    S->>API: POST /internal/v1/public-registry
-    API->>R: Create registry record
-    API->>N: Create network reference
-    API->>L: Create lookup indexes
-    API-->>S: registry summary
-
-    S->>API: POST /internal/v1/public-registry/{id}/artifact-links
-    API->>A: Create artifact link
-    API-->>S: artifact summary
-
-    S->>API: POST /internal/v1/public-registry/{id}/scope-enrichments
-    API->>E: Create scope enrichment
-    API-->>S: enrichment summary
-
-    S->>API: POST /admin/v1/public-registry/{id}/publish
-    API->>P: Create publication state
-    API-->>S: publication summary
-```
-
----
-
-## 26. Security and Risk Controls
-
-1. **Public registry truth is backend-owned**  
-   Frontends and informal publication channels may not authoritatively define public registry truth.
-
-2. **Registry lookup is not a control plane**  
-   Public registry surfaces must support trust, verification, and discovery, not expose governance, treasury, signer control, or internal orchestration controls.
-
-3. **Classification clarity is mandatory**  
-   Public registry must explicitly distinguish primary registry records, supporting artifacts, and derived public summaries so external consumers do not mistake one for another.
-
-4. **Public-safe visibility discipline**  
-   Publication state must keep public, authenticated-only, and internal-only registry clearly separated.
-
-5. **Rate limits and abuse controls**  
-   Public registry surfaces require public-surface protections such as rate limiting, actor/token throttling, input hardening, and stable pagination expectations.
-
-6. **Backward-compatibility discipline**  
-   Public registry surfaces must follow explicit versioning and conservative compatibility rules because public interfaces carry strong ecosystem trust obligations.
-
-7. **Audit-linked publication**  
-   Publication, withdrawal, and supersession of registry artifacts must remain traceable into internal audit systems.
-
-8. **Secrets/config boundary discipline**  
-   Public registry may include only values intentionally classed as public and must not leak confidential or control-sensitive configuration.
-
-9. **Trust-preserving degraded modes**  
-   Public registry should preserve the difference between freshness lag, external reference lag, and canonical truth mutation.
-
-10. **Historical intelligibility**  
-    Corrections and supersession must preserve lineage so public trust surfaces remain historically interpretable.
-
----
-
-## 27. Operational Considerations
-
-- public registry index, lookup, network, and detail reads should be highly available
-- publication-state changes and lookup-index correctness are trust-sensitive and must be monitored
-- contract-, wallet-, and role-binding-sensitive registry surfaces should surface clearly to ops views
-- supersession and discrepancy workflows should be observable and reviewable
-- monitoring should alert on:
-  - stale public registry records tied to trust-sensitive surfaces
-  - publication failures for trusted registry artifacts
-  - public/private visibility divergence
-  - broken public artifact references
-  - public-safe view inconsistency versus canonical registry state
-  - degraded public trust surfaces during active ecosystem verification periods
-
----
-
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between public registry truth, chain/deployment truth, control truth, transparency truth, and internal domain truth.
-2. Only `fuze-backend-api` owns canonical public registry publication truth.
-3. Public registry records, family profiles, classifications, publication states, network references, lookup indexes, artifact links, enrichments, supersession links, and discrepancy records are durable and backend-owned.
-4. Public and authenticated routes expose only bounded safe public registry views.
-5. Registry family, classification, network reference, lookup keys, and visibility posture are explicit and validated.
-6. Public registry distinguishes primary registry records, supporting artifacts, and derived summary models.
-7. Publication, withdrawal, supersession, and discrepancy actions preserve immutable lineage.
-8. Public registry mutation actions are idempotent and auditable.
-9. Internal and admin public registry routes are least-privilege and backend-only.
-10. Admin routes require reason-coded privileged authorization.
-11. Event emissions exist for major public registry mutations.
-12. Database schema separates records, family profiles, classifications, publication states, network references, lookup indexes, artifact links, enrichments, supersession links, and discrepancy layers.
-13. Public-safe consumers can rely on public registry views without needing internal platform knowledge.
-14. Public registry supports rate-limited, versioned, supportable external integration behavior.
-15. Mermaid diagrams remain consistent with prose and data model.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-1. Internal service creates draft public registry record successfully.
-2. Internal service attaches artifact link successfully.
-3. Internal service attaches scope enrichment successfully.
-4. Admin publishes public registry successfully.
-5. Public user reads published registry index successfully.
-6. Public user reads one published registry record successfully.
-7. Public user performs address/label lookup successfully.
-8. Admin supersedes stale registry successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access unpublished or internal-only registry.
-10. Internal service without write privilege cannot create registry record.
-11. Publication without valid classification returns `PUBLIC_REGISTRY_CLASSIFICATION_REQUIRED`.
-12. Publication without required network reference returns `PUBLIC_REGISTRY_NETWORK_REFERENCE_REQUIRED`.
-13. Disallowed visibility target returns `PUBLIC_REGISTRY_VISIBILITY_NOT_ALLOWED`.
-14. Withdrawal attempt in incompatible state returns `PUBLIC_REGISTRY_WITHDRAWAL_NOT_ALLOWED`.
-
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call admin registry publication APIs.
-16. Internal service without artifact-link privilege cannot attach artifact links.
-17. Operator without publication privilege cannot publish registry.
-18. Published public registry does not imply canonical ownership of linked deployment/control truth.
-
-### 29.4 Idempotency and replay cases
-19. Repeating registry creation with same idempotency key returns original registry result.
-20. Repeating artifact-link attachment with same idempotency key returns original linkage result.
-21. Repeating publish or withdraw with same idempotency key returns original terminal action result.
-22. Repeating supersede or discrepancy resolution with same idempotency key returns original terminal action result.
-
-### 29.5 Concurrency cases
-23. Concurrent lookup-index updates preserve one explicit current linkage lineage and duplicate-safe outcomes where appropriate.
-24. Concurrent publish and withdraw actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent supersede and discrepancy actions preserve explicit visible lineage without ambiguity.
-
-### 29.6 Recovery / admin cases
-26. Stale or mislinked public registry can be corrected under controlled policy with explicit lineage.
-27. Superseded public registry remains historically linked to the original record.
-28. Discrepancy resolution closes network ref, visibility, or reporting conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful registry creation emits `public_registry.record_created`.
-30. Successful artifact-link attachment emits `public_registry.artifact_linked`.
-31. Successful publication emits `public_registry.record_published`.
-32. Successful withdrawal emits `public_registry.record_withdrawn`.
-33. Successful discrepancy resolution emits `public_registry.discrepancy_resolved` with critical audit lineage.
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact registry-family taxonomy code sets are deferred.
-2. Exact normalized lookup-key taxonomy is deferred.
-3. Exact public-safe disclosure depth for role bindings is deferred.
-4. Exact actor-scoped enrichment taxonomy is deferred.
-5. Exact discrepancy taxonomy for registry/publication conflicts is deferred.
-6. Exact partner-oriented registry quota strategy is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  public-registry/
-  public-metadata/
-  public-transparency/
-  chain-registry/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep registry records, family profiles, network references, lookup indexes, publication state, artifact links, and supersession logic in one canonical domain service
-- perform family/classification/visibility/network-reference/lookup-key checks inside the commit boundary
-- keep publish, withdraw, supersede, and discrepancy actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public-safe registry views from canonical truth; do not let derived views mutate registry state
-
----
-
-## 32. Frontend Consumption Notes
-
-### For `fuze-frontend-webapp`
-- may read public registry and bounded authenticated enrichments where approved
-- must not infer canonical domain ownership from public registry alone
-- must treat backend public registry responses as authoritative for publication state and trust-surface semantics
-- should clearly distinguish primary registry records, supporting artifacts, and derived summary views when visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged publish, withdraw, supersede, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical public registry truth client-side
-- should present immutable registry history and correction lineage separately from current visible state
-
----
-
-## 33. Contract Derivation Notes
-
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public registry index/detail/lookup/network read operations
-- authenticated registry enrichment read operations
-- internal registry creation, artifact-link, and enrichment operations
-- admin publish / withdraw / supersede / discrepancy operations
-- shared problem-details schema
-- public registry lifecycle events in AsyncAPI
-
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public registry lookup helpers
-- public network discovery helpers
-- typed registry-family, classification, lookup-key, and publication-state summary models
-- problem-error models for public registry outcomes
-
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+- trace ID
+- timestamp
+
+Observability MUST include request rates, latency, error codes, rate-limit hits, projection lag, index refresh failures, admin action counts, event delivery status, and discrepancy queues.
+
+## Failure Handling / Edge Cases
+
+1. **Unpublished target queried publicly:** return not found or not public without leaking internal existence.
+2. **Superseded target queried:** return superseded state and replacement guidance when safe.
+3. **Withdrawn target queried:** return withdrawn/restricted explanation if public-trust continuity requires, otherwise not found.
+4. **Ambiguous address lookup:** return ambiguity result with matched public-safe candidates; do not guess official meaning.
+5. **Network mismatch:** reject or return no match; never normalize across chains silently.
+6. **Projection stale:** public may receive last known public-safe state; internal/admin views must show projection lag.
+7. **Dependency unavailable:** public routes return retryable service error where safe; admin routes preserve operation state.
+8. **Admin double-submit:** idempotency returns prior terminal result.
+9. **Conflicting publish/supersede:** reject with explicit conflict.
+10. **Security incident:** restrict or withdraw public visibility via audited control-plane path; preserve lineage.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+1. Public routes are versioned under `/v1` and MUST evolve conservatively.
+2. Additive fields MAY be added when public-safe.
+3. Removing fields, changing status meaning, changing classification meaning, or changing supersession semantics is breaking.
+4. Breaking changes require new version or explicit migration window.
+5. Deprecated routes/fields MUST include deprecation metadata where possible.
+6. Public SDKs MUST preserve compatibility with active public route versions.
+7. Migration MUST preserve public historical intelligibility of registry records.
+8. Legacy v1 interpretations are superseded where they conflict with refined semantics and this API SPEC v2.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI artifacts MUST preserve:
+
+- route-family separation
+- authentication requirements
+- visibility and publication-state fields
+- stable error codes
+- idempotency headers on mutation routes
+- correlation ID behavior
+- canonical vs derived resource distinctions
+- pagination and rate-limit metadata
+- deprecation/version metadata
+
+AsyncAPI artifacts MUST preserve:
+
+- internal event names and payload contracts
+- event IDs, occurred_at, correlation IDs, actor/service references
+- registry ID, family, classification, publication state, and reason code where relevant
+- retry and ordering expectations
+- public-safe webhook subset if any future webhook is approved
+
+SDKs MUST NOT expose admin/internal methods in public client packages. SDK naming MUST not imply that lookup results are chain-native truth or wallet-link truth.
+
+## Implementation-Contract Guardrails
+
+1. No implementation may write canonical registry truth from public routes.
+2. No implementation may treat cache, search index, export, or website data as source truth.
+3. No implementation may silently overwrite public registry history.
+4. No implementation may expose private signer/control details through lookup fields or artifacts.
+5. No implementation may treat partner credentials as operator authority.
+6. No implementation may allow chain observation callbacks to directly publish official registry records.
+7. No implementation may skip idempotency, audit, or reason codes for sensitive mutations.
+8. No implementation may merge public metadata, transparency, payout, and registry semantics into one generic public object without explicit typed ownership.
+
+## Downstream Execution Staging
+
+1. Confirm route families and resource names.
+2. Define machine-readable OpenAPI schemas.
+3. Define AsyncAPI internal event schemas.
+4. Define storage migration plan for registry records, lookup keys, publication states, idempotency records, and audit references.
+5. Implement public-safe projection worker.
+6. Implement admin/control-plane policy checks.
+7. Implement cache invalidation and search index refresh.
+8. Implement public/partner rate limits and abuse controls.
+9. Implement contract tests, authorization tests, idempotency tests, and audit tests.
+10. Run production-readiness review before public launch.
+
+## Required Downstream Specs / Contract Layers
+
+- OpenAPI spec for public/authenticated/partner/internal/admin route families
+- AsyncAPI spec for registry lifecycle events
+- Storage contract for registry lookup records and projections
+- Audit event contract
+- Admin policy contract
+- Rate-limit and abuse-control contract
+- Public web rendering contract
+- SDK packaging contract
+- Migration/deprecation plan
+- QA/regression test plan
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns:
+
+1. Public endpoint that creates official registry records.
+2. Frontend-maintained official address list outside backend registry truth.
+3. Public registry response exposing private signer/custody/control topology.
+4. Chain indexer callback directly changing publication state.
+5. Search index treated as canonical registry truth.
+6. Admin publication without reason code, idempotency key, or audit event.
+7. Partner export containing unpublished or internal-only registry records.
+8. Generic `address_status` API that mixes registry, chain, payout, wallet-link, and governance truth without typed boundaries.
+9. Silent deletion of published registry history.
+10. SDK method names that imply registry lookup proves chain safety or ownership beyond the published registry role.
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example
+
+A public caller looks up a Base payout wallet address. The response returns a published registry record with network reference, public role, registry family, publication state, artifact links, and supersession guidance. It does not expose internal signer details, treasury approval documents, or private risk notes.
+
+### Canonical Example
+
+An operator supersedes a deprecated contract registry record with a replacement. The action requires operator auth, reason code, idempotency key, policy check, audit event, and event emission. Public lookup of the old record returns supersession guidance.
+
+### Anti-Example
+
+A frontend repository contains a hard-coded `official_wallets.json` file and publishes it directly. This is forbidden because frontend presentation becomes shadow registry truth.
+
+### Anti-Example
+
+A partner bulk export includes unpublished registry records because they exist in a database. This is forbidden because publication state, visibility, and partner scope govern exposure.
+
+## Acceptance Criteria
+
+1. Public lookup endpoints return only records with approved public visibility.
+2. Public lookup responses distinguish registry publication truth from chain-native truth and derived lookup projections.
+3. Public responses never expose private signer/custody/security/operator details.
+4. Address lookup is network-aware and never silently merges matching addresses across chains.
+5. Superseded and withdrawn records preserve lineage according to public-trust policy.
+6. Authenticated enrichment endpoints require valid auth and scope checks.
+7. Partner endpoints require partner credentials, explicit scope, and partner-specific rate limits.
+8. Internal mutation routes require service identity and least privilege.
+9. Admin mutation routes require privileged operator identity, reason code, policy evaluation, idempotency key, and audit event.
+10. Mutation replay with identical idempotency key and same request returns prior result.
+11. Mutation replay with same key and different request fails with conflict.
+12. Projection refresh is distinguishable from canonical mutation success.
+13. Public cache/search projections invalidate or refresh after publication, restriction, withdrawal, correction, or supersession events.
+14. Structured errors include stable machine-readable codes and correlation IDs.
+15. Public errors do not leak unpublished record existence.
+16. Rate limits and abuse controls are enforced for public and partner lookup.
+17. Events include event ID, registry ID, family, classification, publication state, actor/service reference, reason code where relevant, and correlation ID.
+18. OpenAPI output keeps public, authenticated, partner, internal, and admin routes separated.
+19. SDKs do not expose admin/internal route families to public clients.
+20. Migration/deprecation plan preserves public historical intelligibility and compatibility windows.
+21. Audit and observability can reconstruct who changed what, why, under what policy, and with what resulting public state.
+
+## Test Cases
+
+### Positive Path Tests
+
+1. Public caller lists published registry records and receives only public-visible results.
+2. Public caller retrieves a published registry record by ID and receives public-safe detail.
+3. Public caller looks up a published address with matching network and receives the correct registry record.
+4. Authenticated user retrieves bounded enrichment for an allowed registry record.
+5. Internal service creates a draft registry record with valid idempotency key.
+6. Admin publishes a draft registry record with valid reason code and receives applied state.
+7. Superseded record returns replacement guidance.
+8. Projection worker refreshes lookup index after publication event.
+
+### Negative Path Tests
+
+1. Public caller queries unpublished registry ID and receives no existence leakage.
+2. Public caller submits invalid address format and receives validation error.
+3. Public caller queries address without network where multiple public matches exist and receives ambiguity result.
+4. Authenticated user without allowed scope is denied enrichment.
+5. Partner caller without required scope is denied export.
+6. Internal service without permission cannot create registry record.
+7. Admin without privileged role cannot publish registry record.
+8. Admin publish request without reason code is rejected.
+9. Admin publish request without idempotency key is rejected.
+10. Same idempotency key with different payload returns conflict.
+
+### Authorization / Entitlement / Scope Tests
+
+1. Public-read route requires no auth but returns only public fields.
+2. Authenticated route requires user/session auth and scope evaluation.
+3. Partner route requires partner credential and approved partner scope.
+4. Internal route rejects user tokens.
+5. Admin route rejects service token without operator identity.
+6. Entitlement-gated enrichment is denied when capability is absent.
+
+### Idempotency / Retry / Replay Tests
+
+1. Duplicate publish request returns prior terminal result.
+2. Retry after retryable projection failure does not duplicate canonical mutation.
+3. Network timeout after applied mutation can be safely retried with same idempotency key.
+4. Concurrent supersede and withdraw requests produce deterministic conflict or ordering behavior.
+5. Idempotency record expiry policy does not allow unsafe duplicate sensitive mutations.
+
+### Conflict / Boundary Tests
+
+1. Chain indexer reports address but registry remains unpublished until owner approval.
+2. Public metadata link references registry record but cannot change registry state.
+3. Search index contains stale record; public API filters or refreshes according to canonical publication state.
+4. Frontend hard-coded official address list is detected as non-canonical.
+5. Partner export cannot include private signer/control fields.
+
+### Rate-Limit / Abuse Tests
+
+1. High-volume unauthenticated lookup receives rate-limit response.
+2. Broad wildcard query is denied or constrained.
+3. Partner quota exhaustion returns partner-specific rate-limit error.
+4. Error responses do not expose unpublished candidate counts.
+
+### Failure / Degraded-Mode Tests
+
+1. Projection store unavailable returns retryable dependency error or safe degraded response.
+2. Canonical store unavailable prevents admin mutation rather than applying partial state.
+3. Event delivery failure creates retryable event job and observability alert.
+4. Cache invalidation failure is observable and does not permit unsafe stale publication indefinitely.
+5. Security incident restriction path updates public visibility through audited admin route.
+
+### Audit / Observability Tests
+
+1. Publish action writes audit event with actor, reason code, before/after summary, policy reference, idempotency key hash, correlation ID, and timestamp.
+2. Withdrawal action emits event and audit record.
+3. Discrepancy resolution preserves lineage and audit trail.
+4. Logs and traces exclude private signer/custody details.
+5. Metrics expose rate-limit hits, projection lag, error codes, and admin action counts.
+
+### Migration / Compatibility Tests
+
+1. Adding a new registry family is additive and does not break existing clients.
+2. Deprecated field includes migration guidance and remains available during compatibility window.
+3. Breaking status semantic change requires new version or explicit migration plan.
+4. SDK generated from OpenAPI does not expose internal/admin APIs in public package.
+5. Old v1 consumers receive compatible public-read payloads or documented deprecation path.
+
+## Dependencies / Cross-Spec Links
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+- `PUBLIC_CONTRACT_WALLET_REGISTRY_API_SPEC.md`
+- `API_ARCHITECTURE_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+- `PUBLIC_METADATA_API_SPEC.md`
+- `PUBLIC_TRANSPARENCY_API_SPEC.md`
+- `PUBLIC_PAYOUT_STATUS_API_SPEC.md`
+- `PUBLIC_PRODUCT_CATALOG_API_SPEC.md`
+- `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`
+- `SEARCH_INDEXING_AND_DISCOVERY_SPEC.md`
+- `FILE_OBJECT_AND_ARTIFACT_STORAGE_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`
+- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+
+## Explicitly Deferred Items
+
+1. Exact JSON schemas and generated OpenAPI files.
+2. Exact AsyncAPI event payload schema details.
+3. Exact database migrations and index definitions.
+4. Exact partner export packaging and contractual terms.
+5. Exact public website rendering behavior.
+6. Exact search ranking and indexing implementation.
+7. Exact admin workflow screen design.
+8. Exact incident/runbook procedure for emergency registry restriction.
+
+Deferred items MUST preserve this specification and upstream refined semantics.
+
+## Final Normative Summary
+
+The Public Registry Lookup API is the production interface layer for FUZE public registry discovery and verification. It MUST expose only deliberate, public-safe, publication-approved registry lookup resources. It MUST preserve the separation between registry publication truth, chain-native truth, wallet-link truth, governance/control truth, payout truth, transparency truth, public metadata truth, projection truth, presentation truth, and audit truth.
+
+Public callers may read approved registry lookup surfaces. Authenticated and partner callers may receive bounded enrichments only under explicit policy. Internal services may prepare registry state only under owner-domain contracts. Admin/control-plane actors may publish, restrict, withdraw, supersede, correct, and remediate only through reason-coded, policy-constrained, idempotent, audited routes.
+
+Downstream OpenAPI, AsyncAPI, SDKs, frontend surfaces, search indexes, exports, public sites, and partner integrations MUST preserve these boundaries and MUST NOT reinterpret public registry lookup as chain truth, private wallet truth, signer/control truth, public metadata truth, or arbitrary public write authority.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, authenticated, partner, internal, admin/control, event, reporting/export, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, idempotent, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] Chain-adjacent responsibilities are explicit.
+- [x] Accepted-state versus final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behavior is explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design diagram uses Mermaid syntax and distinguishes canonical and derived data.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax and distinguish canonical mutation from projection refresh.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement/capability, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

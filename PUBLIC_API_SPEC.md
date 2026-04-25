@@ -1,95 +1,215 @@
-# PUBLIC_API_SPEC.md
-Canonical Public API Specification for FUZE.ac
+# FUZE Public API Specification
 
-## 1. Title
+## Document Metadata
 
-**PUBLIC_API_SPEC.md**  
-Canonical Public API Specification for the FUZE Platform
+- **Document Name:** `PUBLIC_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / production-grade interface-contract specification
+- **Status:** Draft production-grade API specification
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-24
+- **Last Updated:** 2026-04-24
+- **Reviewed On:** 2026-04-24
+- **Document Owner:** FUZE Platform Public API Governance Domain
+- **Approval Authority:** FUZE Platform Architecture and Governance Authority; formal named approver not yet specified
+- **Review Cadence:** Quarterly, and whenever public exposure posture, partner integration posture, public trust surfaces, API compatibility policy, abuse controls, identity/session behavior, entitlement gating, public registry exposure, or public deprecation posture materially changes
+- **Governing Layer:** API SPEC v2 / public and external interface-contract governance layer
+- **Parent Registry:** `API_SPEC_INDEX.md`
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend engineering, frontend engineering, public API authors, partner integration authors, SDK/OpenAPI authors, security/risk, audit/compliance, operations, public trust/reporting authors, product domain owners, implementation-contract authors
+- **Primary Purpose:** Define the production-grade interface contract posture for all FUZE public and external API surfaces, including public-safe reads, authenticated caller-scoped reads, bounded external business actions, partner interfaces, public-trust read models, accepted async operations, abuse controls, compatibility posture, request/response/error semantics, audit lineage, and downstream OpenAPI/SDK derivation guardrails
+- **Primary Upstream References:** `REFINED_SYSTEM_SPEC_INDEX.md`, `API_SPEC_INDEX.md`, `DOCS_SPEC_INDEX.md`, `SYSTEM_SPEC_INDEX.md`, `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md` refined system spec, `INTERNAL_SERVICE_API_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`, `DATA_RETENTION_DELETION_AND_ARCHIVAL_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`, `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`, `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`, `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`, `TRANSPARENCY_MODEL_SPEC.md`, `TRANSPARENCY_REPORTING_SPEC.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` when created, and public companion API specs listed in the API SPEC v2 registry
+- **Primary Downstream Dependents:** public OpenAPI contracts, public SDKs, public gateway policies, partner integration contracts, public webhook delivery contracts, public registry lookup contracts, public transparency contracts, product-specific external APIs, API conformance tests, compatibility/deprecation plans, abuse/rate-limit policies, audit/observability implementation contracts
+- **API Surface Families Covered:** unauthenticated public read APIs, authenticated public APIs, first-party external application APIs, partner integration APIs, public trust/read-model APIs, public webhook subscription and delivery APIs, public async operation status APIs, public artifact retrieval APIs, public metadata/catalog/status APIs, bounded public write APIs
+- **API Surface Families Excluded:** internal service APIs, admin/control-plane APIs, operator override APIs, private provider callback internals, raw event bus contracts, raw worker/job APIs, database/storage APIs, smart-contract ABIs, private treasury/governance controls, private wallet/signing topology, product-local non-public implementation APIs
+- **Canonical System Owner(s):** Owner domains named by upstream refined system specs retain semantic ownership. The Public API Governance Domain owns public/external API exposure posture and interface-contract requirements, not business semantics.
+- **Canonical API Owner:** FUZE Platform Public API Governance Domain
+- **Supersedes:** Earlier public API drafts or v1-style documents that treated public APIs as route lists, mirrors of internal services, first-party frontend conveniences, or public-read exports without explicit owner-domain, truth-class, compatibility, idempotency, audit, and abuse-control posture
+- **Superseded By:** Not yet known
+- **Related Decision Records:** Not explicitly specified in the retrieved governing materials
+- **Canonical Status Note:** This API SPEC v2 document governs the public/external API contract layer. Refined system specs own semantic truth; this document owns how those truths may be exposed, requested, responded to, errored, versioned, audited, retried, migrated, and derived into public OpenAPI/SDK/webhook contracts.
+- **Implementation Status:** Ready for downstream implementation-contract derivation; route inventories, gateway policies, service contracts, OpenAPI files, SDK generation, public webhook contracts, tests, and migration plans MUST align before production exposure
+- **Approval Status:** Draft pending explicit FUZE approval workflow attachment
+- **Change Summary:** Converts the refined public API posture into API SPEC v2 form. Adds explicit API surface families, request/response/error/status semantics, route-family model, idempotency/retry model, rate-limit and abuse-control rules, diagrams, flow view, sequence-level data flows, acceptance criteria, test cases, OpenAPI/SDK derivation guardrails, and non-canonical public API patterns.
 
----
+## Purpose
 
-## 2. Document Metadata
+This document defines the FUZE public API interface-contract layer.
 
-- Document Name: `PUBLIC_API_SPEC.md`
-- Document Type: Shared public / external interface specification
-- API Classification: `public`
-- Owning Domain: Platform public API governance within `fuze-backend-api`
-- Primary Implementing Repo: `fuze-backend-api`
-- Primary System of Record: Domain-owned platform and product systems exposed through curated external contracts
-- Status: Canonical Draft for Source-of-Truth Use
-- Governing Registries:
-  - `DOCS_SPEC.md`
-  - `SYSTEM_SPEC_INDEX.md`
-- Primary Consumer Classes:
-  - external integrators
-  - public clients
-  - partner systems
-  - authenticated end-user clients
-  - public transparency consumers
-- Related Repos:
-  - `fuze-frontend-webapp`
-  - `fuze-frontend-admin`
-  - `fuze-contracts`
-  - `fuze-public-registry`
-  - `fuze-specs`
-  - `fuze-sdk` (future derived surface)
-- Specification Layer: Public / external contract layer
-- Intended Folder: `fuze.ac > docs > system-spec`
-- Related Specifications:
-  - `API_ARCHITECTURE_SPEC.md`
-  - `INTERNAL_SERVICE_API_SPEC.md`
-  - `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-  - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-  - `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+The public API layer is the set of FUZE contracts intentionally exposed outside ordinary internal service boundaries. It includes openly public reads, authenticated user-scoped reads and actions, partner-safe APIs, public trust surfaces, public artifact retrieval, public webhook subscription/delivery contracts, and bounded external business-action writes.
 
----
+This API spec exists to ensure that public exposure does not weaken FUZE's owner-domain model. Public APIs MUST remain curated external contracts. They MUST NOT mirror internal services, leak admin/control capabilities, expose raw internal mutation primitives, or convert derived public reads into semantic owners.
 
-## 3. Purpose
+The refined system-spec library owns semantic truth. This API spec owns the external interface expression of that truth: surface families, resource families, request/response contracts, error/result/status classes, idempotency, replay safety, versioning, deprecation, compatibility, authorization, entitlement checks, abuse controls, audit lineage, observability, public read-model discipline, and downstream OpenAPI/SDK guardrails.
 
-This document defines the canonical public API specification architecture of the FUZE ecosystem. Its purpose is to establish what parts of the FUZE platform may be exposed to external consumers, how public APIs differ from internal platform and product APIs, what safety and stability requirements apply to external-facing interfaces, and how public API design should preserve architectural clarity around identity, products, Platform Credits, transparency, registry data, and payout-related public information.
+## Scope
 
-FUZE is a multi-product, transparency-first platform ecosystem rather than a closed single-application stack. External consumers may include public frontend clients, partner integrations, ecosystem services, external developers, selected enterprise consumers, public transparency surfaces, and holder-facing information clients. Public API design therefore cannot be treated as a thin export layer added after the fact. It must be aligned with platform ownership, security, privacy, stability, auditability, and trust-sensitive architectural boundaries from the beginning.
+This specification governs:
 
-This specification defines the public API layer as a **curated external contract surface**, not as a raw mirror of internal services.
+1. public and external API surface-family classification
+2. public visibility classes and exposure approval rules
+3. unauthenticated public-read APIs
+4. authenticated caller-scoped APIs
+5. partner integration APIs
+6. bounded external business-action writes
+7. public async accepted-state and operation-status contracts
+8. public trust, registry, transparency, catalog, metadata, status, and artifact APIs
+9. public webhook subscription and delivery posture where externally exposed
+10. public request, response, error, status, and result semantics
+11. public idempotency, replay, duplicate-submission, and retry safety
+12. public rate-limit, abuse-control, signature, and credential posture
+13. public audit, correlation, traceability, and observability requirements
+14. public versioning, migration, compatibility, deprecation, sunset, and retirement rules
+15. implementation-contract guardrails for public OpenAPI, AsyncAPI, SDKs, gateways, service contracts, and tests
 
----
+## Out of Scope
 
-## 4. Scope
+This specification does not define:
 
-This specification covers:
+1. exact endpoint paths for every domain
+2. complete field-level schemas for every object type
+3. exact OAuth, session-token, key-storage, or cryptographic implementation details
+4. internal service-to-service collaboration contracts
+5. admin/control-plane mutation contracts
+6. operator override and support-tool workflows except where public APIs must not expose them
+7. raw event bus topics, internal worker/job queues, or private provider callback internals
+8. database schemas, storage keys, or read-model implementation tables
+9. smart-contract ABI details or chain-native contract behavior
+10. exact commercial packaging, plan names, public quotas, or SDK package architecture
+11. exact copywriting or UI presentation for public developer documentation
 
-- the canonical role of public APIs in the FUZE ecosystem
-- the distinction between public APIs, first-party app APIs, internal service APIs, admin/control APIs, and event-driven integrations
-- what kinds of capabilities are appropriate for public exposure
-- what domains should remain restricted or indirect rather than publicly writable
-- authentication, authorization, rate limiting, abuse resistance, visibility, and stability expectations for public-facing APIs
-- public API treatment for identity-aware reads, product access, wallet-aware context, transparency surfaces, registry lookups, and payout-related views
-- how public APIs should handle canonical public artifacts versus derived public read models
-- versioning, deprecation, and compatibility principles for externally consumed FUZE APIs
-- security, auditability, and failure-handling requirements for public API operations
-- architecture-level route family design for public surfaces
+Those topics belong to narrower domain API specs, implementation-contract specs, OpenAPI/AsyncAPI artifacts, runbooks, product-specific contracts, and machine-readable schemas. They MUST remain consistent with this document.
 
-This specification does **not** define every route path, every schema field, or every SDK class. Those are refined in downstream domain API specs, product API specs, OpenAPI / AsyncAPI contracts, and implementation documents.
+## Design Goals
 
----
+1. Make public APIs intentionally curated and safer than internal capability.
+2. Preserve owner-domain mutation boundaries even when external callers initiate actions.
+3. Distinguish public, authenticated-public, partner, first-party, event/webhook, reporting/public-read, and chain-adjacent surfaces.
+4. Ensure public writes are bounded business actions rather than generic internal commands.
+5. Ensure public async actions represent accepted intent separately from final outcome.
+6. Preserve public-read classification: canonical public artifact, caller-scoped canonical state, derived public view, and presentation output are distinct.
+7. Make public request/response/error/status semantics deterministic enough for client, SDK, QA, and support implementation.
+8. Make abuse resistance, idempotency, replay safety, rate limiting, privacy, auditability, and observability mandatory contract concerns.
+9. Enable OpenAPI, AsyncAPI, SDK, gateway, and conformance-test derivation without reinterpretation.
+10. Support long-term compatibility, migration, deprecation, and trust-preserving public contract evolution.
 
-## 5. Source-of-Truth Inputs
+## Non-Goals
 
-### 5.1 Governing FUZE docs
+This specification is not intended to:
 
-The following docs-level sources govern this specification:
+1. publish every internal route externally
+2. turn first-party frontend needs into a blanket public exposure rule
+3. expose raw internal mutation primitives such as arbitrary credits issuance, treasury movement, workflow replay, provider replay, admin correction, risk override, or governance control
+4. make public gateways, SDKs, frontend stores, or public caches owners of business truth
+5. let public transparency/reporting APIs become hidden ledger, payout, treasury, governance, or registry owners
+6. use public route naming to encode entitlement, plan, commercial, or policy truth
+7. weaken owner-domain semantics for external developer convenience
+8. conceal async execution behind false synchronous success
 
-- `DOCS_SPEC.md`
-- `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `FUZE_PLATFORM_CREDITS.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
-- `TOKEN_CONTRACT_ARCHITECTURE_.md`
+## Core Principles
 
-### 5.2 Governing FUZE system specs
+### Curated External Contract Principle
 
-The following system-spec sources govern this specification:
+Public APIs are curated external contracts, not public mirrors of internal services. Every public route family MUST have an explicit owner domain, visibility class, supportability posture, compatibility posture, abuse posture, and publication approval.
 
+### Owner-Domain Mutation Principle
+
+Public write APIs MUST terminate in the owner domain that owns the semantic state being changed. Gateways, product frontends, partner adapters, public views, and SDKs MUST NOT become hidden mutation owners.
+
+### Authenticated Public Is Still Public Principle
+
+Authenticated caller-scoped APIs remain public/external contracts. Authentication narrows the caller, but it does not convert the surface into an internal service API.
+
+### Narrower-Than-Internal Principle
+
+Public APIs MUST expose a smaller, safer, more stable subset of capability than internal service and admin/control-plane surfaces.
+
+### Public Artifact Classification Principle
+
+Public APIs MUST distinguish canonical public artifacts, caller-scoped canonical state, derived public views, projection/reporting outputs, and presentation data. Derived public views MUST NOT become source-of-truth mutation owners.
+
+### Accepted-State Honesty Principle
+
+Long-running, deferred, review-gated, provider-mediated, chain-adjacent, or retry-heavy public actions MUST return accepted-state operation references when final outcome is not yet determined.
+
+### Normalization-Before-Influence Principle
+
+Partner callbacks, provider inputs, chain observations, public forms, and third-party signals remain provider-input truth until validated, normalized, authorized, and accepted by the owner domain.
+
+### Public Trust Safety Principle
+
+Public registry, transparency, payout-status, governance-disclosure, metadata, catalog, and status APIs MUST derive from approved publication/read-model truth and MUST NOT leak private operational detail or override source-domain truth.
+
+### Strong Compatibility Principle
+
+Published public APIs create external promises. Versioning, deprecation, migration, sunset, idempotency, and compatibility windows are mandatory production concerns.
+
+### Auditability and Abuse-Resistance Principle
+
+Material public mutations, accepted async intents, privileged caller-scoped reads, partner callbacks, webhook deliveries, and public trust publication changes MUST preserve audit, request lineage, correlation, trace, rate-limit, and abuse-control references.
+
+## Canonical Definitions
+
+### Public API
+
+An intentionally exposed external contract surface for unauthenticated public readers, authenticated end users, first-party clients, external developers, partner systems, public trust consumers, or approved ecosystem systems.
+
+### Visibility Class
+
+The externally meaningful exposure class of a public contract. Approved values SHOULD include `open_public`, `authenticated_user`, `workspace_scoped`, `partner_only`, `limited_public`, `public_trust`, `public_status`, `public_metadata`, and `deprecated_public`.
+
+### Public Business Action
+
+A bounded externally exposed mutation request that represents business intent and terminates in an owner-domain mutation or accepted async intent. Examples include `create_workspace`, `initiate_checkout`, `submit_product_request`, `initiate_wallet_link`, or `request_export`.
+
+### Public Request Lineage
+
+Durable traceability data connecting request identity, caller type, client ID, surface family, visibility class, idempotency key, correlation ID, trace ID, operation reference, policy version, auth/scope decision, rate-limit decision, outcome, and audit record.
+
+### Public Operation Reference
+
+A stable public-safe reference returned for accepted async public actions. It allows callers to check status without exposing internal job IDs, queue mechanics, workflow internals, or sensitive provider details.
+
+### Canonical Public Artifact
+
+A publication artifact whose public representation is governed and canonical at the publication layer while remaining downstream of underlying source-domain truth where applicable. Examples include official registry records, approved public metadata, public status records, and transparency artifacts.
+
+### Derived Public View
+
+A public summary, projection, dashboard, aggregate, list view, export, cache, or simplified lookup derived from canonical owner-domain truth. Derived public views are read-only and non-owning.
+
+### Partner Integration API
+
+A public/external API exposed to approved partners under explicit credentials, scopes, replay protection, rate limits, callback authenticity, data-minimization, and support obligations.
+
+### Public Webhook
+
+A delivery contract by which FUZE sends externally consumable event notifications or status updates to a registered endpoint. Public webhooks are delivery contracts and do not replace canonical domain events or owner-domain truth.
+
+## Truth Class Taxonomy
+
+Public API implementations MUST preserve these truth classes:
+
+1. **Semantic truth** — business and lifecycle meaning owned by upstream refined system specs and owner domains.
+2. **API contract truth** — public surface families, route/resource contract shape, request/response/error/status semantics, versioning, compatibility, and visibility classification governed by this API spec and narrower API specs.
+3. **Policy truth** — authorization, entitlement, rollout, abuse, rate-limit, deprecation, data-classification, and public exposure rules.
+4. **Runtime truth** — current request execution, gateway decision, dependency health, async operation progress, retry state, and degraded-mode status.
+5. **Ledger / storage truth** — durable owner-domain records, idempotency records, operation records, request lineage, audit records, publication records, and contract-version records.
+6. **Public read-model truth** — approved public projections, registry lookup indexes, transparency summaries, catalog views, metadata views, payout-status views, and status pages.
+7. **Provider-input truth** — raw partner callbacks, provider signals, chain observations, uploaded/requested inputs, client-supplied metadata, and external assertions prior to owner-domain acceptance.
+8. **Event / async execution truth** — event publication, webhook delivery state, workflow progression, job execution, retry, cancellation, and finalization status.
+9. **Projection/reporting truth** — analytics, reporting, export, dashboard, and stakeholder-facing summaries derived from stronger truth.
+10. **Presentation truth** — SDK ergonomics, developer-doc wording, UI copy, labels, examples, and client-side display state.
+
+These truth classes MUST NOT be collapsed. Public API responses MAY expose selected values from multiple truth classes only when classification, lineage, visibility, and owner-domain boundaries remain explicit.
+
+## Architectural Position in the Spec Hierarchy
+
+This API spec sits below:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
 - `SYSTEM_SPEC_INDEX.md`
 - `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
 - `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
@@ -98,1578 +218,1133 @@ The following system-spec sources govern this specification:
 - `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
 - `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
 - `API_ARCHITECTURE_SPEC.md`
+- refined `PUBLIC_API_SPEC.md`
+
+It sits above or alongside:
+
+- product-specific public API specs
 - `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC_refreshed.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
 - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `ROLE_PERMISSION_AND_ACCESS_CONTROL_SPEC.md`
-- `AUTH_SESSION_AND_LINKED_LOGIN_SPEC.md`
-- `PLATFORM_CREDITS_SPEC.md`
-- `PAYMENT_RAILS_INTEGRATION_SPEC.md`
-- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `PAYOUT_LEDGER_SPEC.md`
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `PAYMENT_FRAUD_AND_ABUSE_PREVENTION_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- public companion API specs such as `PUBLIC_METADATA_API_SPEC.md`, `PUBLIC_TRANSPARENCY_API_SPEC.md`, `PUBLIC_PAYOUT_STATUS_API_SPEC.md`, `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md`, `PUBLIC_PRODUCT_CATALOG_API_SPEC.md`, `PUBLIC_CHAIN_REFERENCE_API_SPEC.md`, `PUBLIC_PLATFORM_STATUS_API_SPEC.md`, and `PUBLIC_GOVERNANCE_DISCLOSURE_API_SPEC.md`
+- OpenAPI / AsyncAPI / SDK artifacts
+- gateway policy specs
+- implementation-contract specs
 
-### 5.3 Highest-priority interpretation inputs
+## Upstream Semantic Owners
 
-When conflicts arise, the following are treated as highest priority for this document:
+This API spec consumes, but does not redefine, upstream semantics from:
 
-1. `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-2. `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-3. `PLATFORM_ARCHITECTURE_SPEC.md`
-4. `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-5. `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-6. `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
-7. docs-level conflict order from `DOCS_SPEC.md`
+- API architecture: surface-family, accepted-state, request/response/error, async, versioning, and owner-domain interface posture
+- identity/account/auth/session specs: account identity, linked login, authentication, session lifecycle, provider resolution, and recovery posture
+- workspace/access-control specs: workspace scope, membership, role, permission, effective permission, access traceability, and admin containment posture
+- entitlement/capability-gating specs: capability eligibility and product-access gating
+- security/risk specs: challenge, review, restriction, containment, abuse, fraud, and risk decision posture
+- audit specs: immutable evidence, request lineage, access traceability, reason codes, actor/target/scope lineage
+- data-classification/retention/storage specs: public exposure eligibility, sensitive data handling, deletion, suppression, artifact access, and lifecycle rules
+- public registry/transparency/reporting specs: public trust publication and read-model semantics
+- chain/off-chain and chain-linked economic specs: chain-native vs off-chain publication, payout, ledger, registry, and chain-adjacent boundaries
 
-### 5.4 Supporting external references
+## API Surface Families
 
-The following external references inform best practices but do not override FUZE source-of-truth rules:
+### Open Public Read APIs
 
-- OpenAPI Specification guidance
-- IETF guidance for the `Idempotency-Key` HTTP header
-- OWASP API Security Top 10 (2023)
-- Mermaid syntax guidance for flowchart, sequence diagrams, and ER diagrams
+Open public reads expose public-safe data without caller authentication. They are allowed only for information explicitly classified as public-safe or approved public trust material. They MUST NOT leak private object existence, user/workspace membership, partner-specific data, private operational detail, internal IDs, or non-public lifecycle state.
 
----
+### Authenticated Public APIs
 
-## 6. Governing Architecture and Ownership Interpretation
+Authenticated public APIs expose caller-scoped reads or bounded business actions after identity/session authentication, scope resolution, authorization, entitlement evaluation, risk checks, and data classification checks where applicable. They remain public/external contracts.
 
-### 6.1 Core interpretation
+### First-Party Application Public APIs
 
-FUZE public APIs are not the default interface for all capabilities. They are selected, supportable external contracts intentionally exposed where external use is valid and safe. Public APIs must remain narrower than internal platform and admin surfaces because FUZE contains trust-sensitive economic, governance, treasury, payout, and control-plane functions that must not leak into generic external access patterns.
+First-party application APIs used by FUZE products may share public API contracts where those contracts are suitable for long-term external compatibility. A first-party-only route that is not intended as a public contract MUST be classified separately and MUST NOT be published as public API by accident.
 
-### 6.2 Why this API belongs to a distinct public layer
+### Partner Integration APIs
 
-A distinct public API layer is necessary because public consumers differ materially from internal services and first-party interfaces:
+Partner APIs require explicit partner identity, partner scopes, credential lifecycle, replay protection, signature requirements where needed, bounded visibility, rate limits, support contact posture, and public-compatible error semantics. Partner APIs MUST NOT become internal service APIs under external credentials.
 
-- callers may be less trusted
-- usage patterns may be unpredictable
-- compatibility obligations are stronger
-- abuse risk is higher
-- security and data-exposure consequences are broader
-- external developers may assume long-term support once a route is published
+### Public Trust APIs
 
-Public API designation is therefore a deliberate product and architecture choice, not an accidental result of having an endpoint.
+Public trust APIs expose registry, transparency, governance disclosure, payout-status, chain-reference, public metadata, platform status, and official-contract/wallet information. They MUST be read-only unless a narrower approved public input path exists. They derive from canonical publication/read-model truth and MUST preserve supersession and correction lineage.
 
-### 6.3 Why other domains do not own this specification
+### Public Webhook APIs
 
-- Product domains do not own it because product public surfaces must still respect shared platform and public-interface rules.
-- Frontend repos do not own it because frontend surfaces consume public APIs but do not define their exposure or mutation authority.
-- `fuze-contracts` does not own it because on-chain interfaces are bounded chain contracts, not the whole external API model.
-- `fuze-sdk` does not own it because SDKs are derived packaging artifacts built from approved public contracts.
+Public webhook APIs include endpoint registration, subscription configuration, verification, delivery, retry, failure, and delivery-status contracts. Webhooks deliver public-safe external notifications; they do not replace canonical owner-domain events.
 
-### 6.4 Platform constraints that shape the final design
+### Public Async Operation APIs
 
-This public API design is constrained by the following FUZE rules:
+Public async APIs initiate long-running, review-gated, provider-mediated, chain-adjacent, export, workflow, AI, or billing-related work and return stable operation references. Status APIs expose public-safe progress and final outcome without exposing internal job topology.
 
-- backend domains own durable truth
-- frontend surfaces must not become shadow owners of business state
-- FUZE token, Platform Credits, payout execution, treasury, and governance must remain distinct
-- on-chain and off-chain responsibility boundaries must remain explicit
-- public write capabilities should express bounded business actions, not raw internal mutation primitives
-- public transparency and registry surfaces may be broad in readability but narrow in mutability
-- reporting and transparency views may be public, but they must not redefine underlying canonical truth
+### Public Artifact APIs
 
----
+Public artifact APIs retrieve public-safe documents, reports, exports, receipts, registry artifacts, transparency artifacts, status artifacts, or caller-scoped files. They MUST enforce data classification, retention, suppression, artifact ownership, bounded delivery tokens, and audit lineage where applicable.
 
-## 7. Domain Responsibilities
+## System / API Boundaries
 
-### 7.1 Public API layer responsibilities
+Public APIs are edge-facing contracts. They MAY call owner-domain services, authorization services, entitlement services, risk services, workflow services, public read-model services, and audit/observability systems. They MUST NOT become owners of the state held by those services.
 
-The public API layer is responsible for:
+The public API layer owns:
 
-- exposing intentionally public, supportable, versioned external contracts
-- clearly distinguishing public read, authenticated user, partner, and product-access surfaces
-- preserving security, privacy, rate-limit, and abuse-control expectations for public consumers
-- ensuring that public interfaces align with canonical domain ownership
-- ensuring public route stability and deprecation discipline
-- ensuring public responses distinguish canonical public artifacts from derived summaries
-
-### 7.2 Platform-owned public API responsibilities
-
-Platform-owned public APIs may include:
-
-- account and self-context reads under authenticated scope
-- workspace membership and entitlement reads under authenticated scope
-- wallet-link and wallet-aware participation status reads
-- Platform Credits balance and credits history reads under proper scope
-- subscription, invoice, and receipt retrieval under proper scope
-- public metadata and product catalog reads
-- public contract and wallet registry reads
-- public transparency and payout-status reads
-- approved public business-action entrypoints such as workspace creation, wallet-link initiation, checkout initiation, or controlled product request submission
-
-### 7.3 Product-owned public API responsibilities
-
-Product domains may expose externally consumable APIs only when the product contract is intentionally designed for external use.
-
-Examples:
-- request submission for product jobs
-- status-check endpoints for accepted async operations
-- result retrieval for caller-owned artifacts
-- safe partner-read endpoints for product outputs
-
-These remain product-owned but must fit the public API rules defined here.
-
-### 7.4 Restricted domain responsibilities
-
-The following remain non-public or only indirectly exposed:
-
-- treasury and vault action execution
-- governance-sensitive control actions
-- raw Platform Credits issuance, arbitrary adjustment, arbitrary reversal, or arbitrary release
-- payout entitlement authoring or eligibility editing
-- workflow replay or provider failover controls
-- fraud resolution and sensitive operator overrides
-- raw service-to-service orchestration controls
-
----
-
-## 8. Out of Scope
-
-This specification does not define:
-
-- every downstream route path and schema
-- internal service-to-service contracts
-- exact admin/control-plane API design
-- exact OAuth, session, or token format implementation
-- exact webhook signing implementation details
-- exact SDK package structure
-- exact monetization or public quota pricing
-- exact chain ABI and contract method design
-- exact per-product public route inventory
-- exact event registry naming
-
-Those details belong in downstream domain API specs, product API specs, OpenAPI / AsyncAPI files, and implementation documents.
-
----
-
-## 9. Canonical Entities and Data Ownership
-
-This section defines the minimum architecture-level entities required to govern public API behavior coherently.
-
-### 9.1 Public surface entities
-
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `public_api_surface` | Top-level definition of a public interface family | Platform public API governance |
-| `public_api_operation` | Operation-level public contract definition | Owning domain + platform API governance |
-| `public_visibility_class` | Defines public, authenticated, partner, or limited-public visibility | Platform public API governance |
-| `public_contract_version` | Tracks externally supported contract versions | Platform public API governance |
-
-### 9.2 Caller and scope entities
-
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `public_client` | External application or partner client registration | Identity / access domain |
-| `public_client_credential` | Client authentication material metadata | Identity / security domain |
-| `public_access_scope` | Declared account, workspace, product, or partner scope | Access control domain |
-| `public_request_lineage` | Public request trace and correlation record | Platform request layer |
-
-### 9.3 Abuse and policy entities
-
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `rate_limit_policy` | Route- or surface-family rate control | Control / security layer |
-| `abuse_signal` | Detection of suspicious or disallowed usage patterns | Security / abuse-prevention layer |
-| `public_idempotency_record` | Replay protection for public mutations where required | Owning mutation domain |
-| `public_deprecation_notice` | Sunset and migration messaging state | Platform API governance |
-
-### 9.4 Public artifact entities
-
-| Entity | Purpose | Canonical Owner |
-|---|---|---|
-| `public_registry_entry` | Publicly published contract or wallet metadata | Registry domain |
-| `public_transparency_artifact` | Published transparency report or related public artifact | Transparency reporting domain |
-| `public_payout_cycle_view` | Publicly exposed payout status or summary | Payout-ledger / transparency domain |
-| `public_product_metadata` | Public product listing and discovery metadata | Product catalog / public metadata domain |
-
-### 9.5 Ownership rules
-
-- Public artifacts remain owned by the domain that publishes them; public APIs are the exposure mechanism, not the owner of the underlying fact.
-- Public request lineage and rate-limit state are platform-governed cross-cutting entities.
-- Platform Credits balances remain credits-domain truth even when exposed via public authenticated reads.
-- Registry and transparency surfaces may be public and canonical at the publication layer, but they still do not collapse chain truth, payout execution truth, and internal accounting truth into one object.
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 Public API surface lifecycle
-
-`proposed -> approved -> published -> active -> deprecated -> sunset -> retired`
-
-### 10.2 Public request lifecycle
-
-`received -> authenticated_or_public -> authorized_if_needed -> validated -> processed -> responded -> traced`
-
-### 10.3 Public async operation lifecycle
-
-`received -> authenticated_or_public -> authorized_if_needed -> validated -> accepted -> queued -> executing -> completed | failed | cancelled`
-
-### 10.4 Public artifact publication lifecycle
-
-`prepared -> approved_for_publication -> published -> active -> superseded | archived`
-
-### 10.5 Deprecation lifecycle
-
-`active -> deprecation_announced -> migration_window -> sunset_enforced -> retired`
-
-### 10.6 Important lifecycle rule
-
-Public route publication changes compatibility obligations. Once an interface is published as public, deprecation must be explicit and migration-aware.
-
----
-
-## 11. API Surface Overview
-
-FUZE public APIs must be structured into clearly understood external surface families.
-
-### 11.1 Public read APIs
-
-Public or partner-safe read surfaces exposing intentionally visible ecosystem data.
-
-Examples:
-- public contract and wallet registry reads
-- public transparency report catalog and artifact retrieval
-- public payout-ledger summaries and cycle status views
-- public platform metadata
-- public product catalog or ecosystem directory views
-
-### 11.2 Authenticated user public APIs
-
-Externally consumable APIs used by authenticated users or client applications under explicit identity scope.
-
-Examples:
-- account profile reads
-- workspace-scoped membership and entitlement reads
-- Platform Credits balance and credits history reads
-- subscription plan and billing-state reads
-- invoice and receipt retrieval
-- wallet-link status reads
-- async job status for caller-owned operations
-
-### 11.3 Public product access APIs
-
-Selected public product capability surfaces intentionally designed for controlled external consumption.
-
-Examples:
-- submit product request
-- query job status
-- fetch result artifact
-- manage caller-owned product objects where approved
-
-### 11.4 Partner / integration APIs
-
-APIs intended for selected external platforms, ecosystem partners, or enterprise integrations.
-
-Examples:
-- partner-safe read feeds
-- integration callbacks
-- partner data-export retrieval
-- contract-limited product operation interfaces
-
-### 11.5 Transparency and registry APIs
-
-Read-oriented public trust surfaces.
-
-Examples:
-- registry lookup
-- payout-cycle public status
-- transparency report catalog
-- public governance-history summary if explicitly approved
-- public contract address references
-
-### 11.6 Surface-family principle
-
-Each public API family may have different expectations for:
-
-- authentication
-- authorization
-- rate limits
-- caching
-- compatibility guarantees
-- data sensitivity
-- abuse controls
-- audit expectations
-
-FUZE must not treat all public APIs as one generic access plane.
-
----
-
-## 12. Authentication and Authorization Model
-
-### 12.1 Authentication postures
-
-FUZE public APIs should support multiple authentication postures according to surface type:
-
-#### A. Unauthenticated public access
-Used only for intentionally public read surfaces.
-
-Examples:
-- public registry lookup
-- published transparency reports
-- public product metadata
-- public payout-cycle status summaries
-
-#### B. User-authenticated access
-Used for account-, workspace-, or user-owned resource access.
-
-Examples:
-- profile reads
-- Platform Credits balance
-- workspace views
-- wallet-link operations
-- job result access
-- invoice retrieval
-
-#### C. Partner / client-credential access
-Used for external integrations and ecosystem services under explicit agreements or scoped permissions.
-
-Examples:
-- partner ingestion
-- integration polling
-- partner-safe read surfaces
-- callback subscription management where allowed
-
-### 12.2 Authorization dimensions
-
-Public API authorization must consider:
-
-- account identity
-- workspace role and scope
-- product entitlement
-- Platform Credits or billing state where relevant
-- wallet-aware context where relevant
-- partner client scope
+- public surface classification
 - public visibility class
-- environment and feature-gating rules
-
-### 12.3 Scope examples
-
-- **Account scope:** personal profile, wallet link, personal Platform Credits, self-owned jobs
-- **Workspace scope:** shared billing, memberships, shared balances, workspace-owned product operations
-- **Product scope:** product-owned objects, jobs, and results
-- **Public transparency scope:** public registry, reports, and payout-ledger public resources
-
-### 12.4 Principle
-
-Public APIs should never rely on identity alone. They must also understand the scope in which the caller is acting and what rights that scope allows.
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-This architecture-level public specification defines the canonical route families and contract classes rather than every final downstream endpoint.
-
-### 13.1 Canonical public route families
-
-#### A. Public read families
-- `/v1/public/metadata/...`
-- `/v1/public/products/...`
-- `/v1/public/registry/...`
-- `/v1/public/transparency/...`
-- `/v1/public/payouts/...`
-
-#### B. Authenticated self-context families
-- `/v1/public/me/...`
-- `/v1/public/workspaces/...`
-- `/v1/public/credits/...`
-- `/v1/public/billing/...`
-- `/v1/public/invoices/...`
-- `/v1/public/receipts/...`
-- `/v1/public/wallets/...`
-
-#### C. Public product access families
-- `/v1/public/qtb/...`
-- `/v1/public/aimm/...`
-- `/v1/public/zaga/...`
-- `/v1/public/aie/...`
-- `/v1/public/herhelp/...`
-- `/v1/public/botmad/...`
-- `/v1/public/toolgrid/...`
-
-#### D. Partner / integration families
-- `/v1/partners/...`
-- `/v1/integrations/...`
+- contract version and compatibility posture
+- public request envelope requirements
+- public error/result/status posture
+- public idempotency posture
+- public request lineage and external operation reference posture
+- public gateway, rate-limit, and abuse-control obligations
+- external documentation and SDK derivation guardrails
+
+The public API layer does not own:
+
+- business object semantics
+- identity/account/session truth
+- workspace/permission/entitlement truth
+- billing, credits, ledger, payout, treasury, governance, registry, transparency, or chain truth
+- internal service orchestration truth
+- admin override truth
+- queue/worker truth
+- private provider or connector truth
+
+## Adjacent API Boundaries
+
+### Internal Service API
+
+Internal service APIs govern service-to-service collaboration. Public APIs MAY call internal APIs through approved backend mediation, but public consumers MUST NOT receive internal routes, internal schemas, internal error detail, internal service identities, or private mutation power.
+
+### Event Model and Webhook
+
+Domain events are canonical internal/external notification facts after owner-domain commit. Public webhooks are externally delivered projections of approved events or outcomes. Webhook subscriptions and delivery records are public API contracts; raw event bus topics are not.
+
+### Idempotency and Versioning
+
+This public API spec requires strict idempotency and versioning posture. The cross-cutting idempotency/versioning API spec owns shared mechanics and deprecation posture. Public APIs MUST apply the stricter interpretation when external compatibility or replay safety is at stake.
+
+### Migration and Backward Compatibility
+
+Public APIs MUST maintain explicit coexistence, deprecation, sunset, and retirement posture. Public consumers MUST receive migration-safe behavior rather than internal-breakage-driven changes.
+
+### Public Companion API Specs
+
+Companion specs such as `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md` and `PUBLIC_PLATFORM_STATUS_API_SPEC.md` narrow route families for specific public trust domains. They MUST preserve this specification and may be stricter.
+
+## Conflict Resolution Rules
+
+1. `REFINED_SYSTEM_SPEC_INDEX.md` wins on refined-library membership and refined-over-legacy precedence.
+2. Higher-order system boundary and ownership specs win on top-level semantic ownership and plane separation.
+3. Owner-domain refined specs win on business meaning, lifecycle semantics, canonical write ownership, and canonical read ownership.
+4. `API_ARCHITECTURE_SPEC.md` wins on shared API architecture, surface-family taxonomy, and accepted-state posture.
+5. This document wins on public/external API exposure classification, public contract shape requirements, public compatibility posture, public request/response/error/status rules, and public abuse/idempotency/audit requirements.
+6. Narrower public domain API specs win on route/resource specifics only when they preserve this document and upstream semantic owners.
+7. Internal service specs, admin specs, gateway configs, SDKs, caches, docs, exports, reports, dashboards, and frontends never win over stronger public API or owner-domain rules.
+8. If ambiguity remains, FUZE MUST choose the more conservative public-exposure posture and escalate the ambiguity into explicit specification or decision work.
+
+## Default Decision Rules
+
+1. External exposure defaults to non-public until explicitly approved.
+2. Public writes default to bounded business actions, not generic commands.
+3. Authenticated external access defaults to public/external posture, not internal service posture.
+4. Public reads default to minimum necessary fields.
+5. Unknown or mixed-class data defaults to the more restrictive public exposure class.
+6. Public async work defaults to `202 Accepted` with operation reference, not false completion.
+7. Partner callbacks default to provider-input truth until normalized and accepted by owner domains.
+8. Public trust outputs default to read-only derived or publication-backed outputs unless narrower specs explicitly permit write input.
+9. Public route families without an owner domain, visibility class, compatibility posture, authorization model, idempotency posture, and audit posture are incomplete.
+10. Security uncertainty defaults to deny, challenge, review, restriction, containment, or narrower exposure.
+
+## Roles / Actors / API Consumers
+
+- unauthenticated public readers
+- authenticated end users
+- workspace-scoped members and owners
+- first-party FUZE clients
+- external developers
+- approved partner systems
+- public trust consumers, community readers, registry consumers, auditors, and exchanges
+- webhook endpoint operators
+- support-visible but non-admin callers of public-safe support flows
+- public gateway, auth, authorization, entitlement, risk, rate-limit, audit, and observability services
+- owner-domain services that satisfy public requests
+- public read-model, registry, transparency, status, and catalog services
+
+## Resource / Entity Families
+
+Public API resources SHOULD be organized around public-safe concepts, not internal tables:
 
-#### E. Webhook-related public families
-- partner callback registration / management routes where explicitly approved
-- outbound webhook event contracts
-- dedicated inbound callback routes for public/partner integrations
-
-### 13.2 Canonical public contract classes
-
-#### Public canonical artifact read
-- Purpose: retrieve intentionally published canonical public artifacts
-- Examples: registry entries, published transparency reports, public payout cycle records
-- Caller types: public or partner-safe
-- Side effects: none
-- Audit: request trace only unless risk policy requires more
-
-#### Public derived read
-- Purpose: retrieve public summaries, dashboards, or simplified views
-- Caller types: public or partner-safe
-- Side effects: none
-- Rule: response must not be mistaken for the underlying canonical owner of all related facts
-
-#### Authenticated self-scope read
-- Purpose: retrieve caller-owned or caller-scoped state
-- Caller types: authenticated end-user or partner acting on behalf of approved identity scope
-- Side effects: none
-- Rule: strict scope and authorization evaluation required
-
-#### Public business-action write
-- Purpose: initiate a bounded external action
-- Examples: create account, create workspace, initiate checkout, submit product request, link wallet
-- Caller types: authenticated user or approved partner
-- Side effects: domain-owned mutation or accepted async submission
-- Rule: public writes express business actions, not raw internal mutation primitives
-
-#### Accepted async public action
-- Purpose: accept long-running external work
-- Examples: report generation, AI job submission, product analysis request
-- Caller types: authenticated user or approved partner
-- Response: accepted + operation reference
-- Rule: do not pretend accepted means completed
-
-#### Partner-safe callback / webhook contract
-- Purpose: allow external integration event delivery or intake
-- Caller types: approved partner systems
-- Requirements: signing, replay safety, deduplication, version discipline
-
-### 13.3 Public write boundary rule
-
-Public writes should **not** expose internal mutation primitives directly.
-
-Examples of prohibited direct exposure:
-- generic `issue_credits`
-- generic `adjust_credits`
-- generic `reverse_payout_entitlement`
-- generic treasury action execution
-- generic governance action approval
-- generic workflow replay or operator override controls
-
-Public writes should instead express bounded business actions that terminate in domain-owned policy-checked logic.
-
----
-
-## 14. Request Rules
-
-### 14.1 Request composition rules
-
-Requests must be explicit about:
-
-- caller identity or public posture
-- scope
-- target resource or operation
-- business-action intent for writes
-- idempotency key where applicable
-- correlation metadata where supported
-- requested contract version where relevant
-
-### 14.2 Public mutation rules
-
-Public mutation-capable routes must validate:
-
-- caller identity and scope
-- entitlement and plan state where relevant
-- product ownership and allowed action semantics
-- billing, Platform Credits, or wallet prerequisites where relevant
-- policy constraints for regulated or trust-sensitive flows
-
-### 14.3 Public read rules
-
-Public reads must validate:
-
-- whether the requested data is actually public
-- whether the route returns canonical public artifacts or derived views
-- whether caller scope is sufficient for authenticated reads
-- whether property-level filtering is required to prevent overexposure
-
-### 14.4 Replay safety rule
-
-Retry-capable public mutations must be designed with domain-level idempotency semantics rather than assuming network reliability.
-
----
-
-## 15. Response Rules
-
-### 15.1 Response philosophy
-
-Public API responses must make clear:
-
-- whether the call succeeded, was accepted, or failed
-- whether the returned object is canonical public artifact or derived public view
-- whether the data is account-, workspace-, product-, or public-scoped
-- whether additional async processing remains pending
-- the applicable correlation or operation reference when relevant
-
-### 15.2 Minimum response envelope semantics
-
-At minimum, public APIs should be able to carry these concepts:
-
-- success or accepted outcome
-- data payload
-- error object when needed
-- correlation reference
-- pagination metadata where relevant
-- async operation metadata where relevant
-- public artifact classification where confusion is possible
-
-### 15.3 Public async response rule
-
-Accepted async responses must return an operation reference and must not imply final completion.
-
-### 15.4 Public artifact classification rule
-
-Where helpful, public responses should classify resources as one of:
-
-- canonical public artifact
-- public reporting artifact
-- derived public view
-- caller-scoped canonical object
-- caller-scoped derived view
-
----
-
-## 16. Error Model
-
-### 16.1 Error architecture principles
-
-Public errors must communicate:
-
-- machine-readable code
-- human-readable message
-- category
-- retry guidance where appropriate
-- correlation reference
-- safe contextual detail without leaking sensitive internals
-
-### 16.2 Minimum public error classes
-
-FUZE public errors must distinguish among:
-
-- validation errors
-- authentication errors
-- authorization errors
-- object-level access errors
-- entitlement or plan-state denial
-- Platform Credits or billing precondition failures
-- rate limit / quota errors
-- abuse-protection denials
-- unsupported operation or contract version errors
-- dependency/provider errors
-- internal platform errors
-- async operation failure states
-
-### 16.3 Sensitive-domain rule
-
-Commercial and payout-adjacent public APIs must return explicit, supportable error classes and must not hide meaningful caller-actionable conditions behind generic failures.
-
-### 16.4 Public exposure rule
-
-Public errors must not leak internal service names, infrastructure details, secrets, internal decision logic, or confidential operator context.
-
----
-
-## 17. Idempotency and Mutation Safety
-
-### 17.1 Canonical rule
-
-If the same public business mutation is submitted more than once due to retry, replay, duplicate delivery, or transient failure, FUZE should apply it at most once in business meaning.
-
-### 17.2 When idempotency is required
-
-Idempotency is required for public mutations such as:
-
-- account creation where duplicate create semantics are dangerous
-- workspace creation where retry may occur
-- wallet-link initiation completion where replay is possible
-- checkout or purchase initiation follow-through
-- product request submission for async or billable actions
-- partner callback ingestion
-- external public write flows that can trigger billing or Platform Credits outcomes
-
-### 17.3 Architecture-level mechanism
-
-FUZE should support an `Idempotency-Key` style request mechanism for non-idempotent public HTTP mutations where retry safety matters.
-
-### 17.4 Conflict rule
-
-A repeated key with the same business request should return the stable prior outcome where possible. A repeated key with a materially different payload should be treated as a conflict.
-
----
-
-## 18. Versioning and Compatibility Rules
-
-### 18.1 Versioning philosophy
-
-Public APIs have the strongest compatibility obligations in the FUZE interface stack.
-
-- Public routes must use explicit, stable versioning.
-- Breaking changes must not be introduced casually.
-- Deprecation must be explicit and time-bounded.
-- Public consumers must have migration windows when contract changes matter.
-
-### 18.2 Preferred evolution pattern
-
-- add rather than break when possible
-- deprecate explicitly
-- preserve migration windows where needed
-- document semantic changes clearly
-- keep route-family stability even when payloads evolve carefully
-- separate public contract change control from internal service evolution pace
-
-### 18.3 Compatibility rule
-
-The more external and partner-consumed a surface is, the stronger its compatibility discipline must be. Public contract stability takes precedence over internal implementation convenience.
-
----
-
-## 19. Event Emission and Webhook Behavior
-
-### 19.1 Public event philosophy
-
-FUZE may expose selected event-driven public or partner integration patterns, but only for intentionally supported external outcomes.
-
-Examples:
-- async product job completed
-- public report published
-- external integration callback result available
-- partner-safe status update emitted
-
-### 19.2 Event ownership rule
-
-Public webhook or event exposure does not transfer ownership of the underlying truth. Events communicate meaningful outcomes from the owning domain outward.
-
-### 19.3 Webhook safety rule
-
-Public and partner webhooks must support:
-
-- signature verification
-- replay protection
-- deduplication
-- version-aware event payloads
-- retry discipline
-- clear event taxonomy
-
-### 19.4 Restriction rule
-
-Governance-sensitive, treasury-sensitive, and internal operator-control events must not be exposed as ordinary public or partner webhook families by default.
-
----
-
-## 20. Audit and Activity Requirements
-
-### 20.1 Public request auditability
-
-Public APIs must support:
-
-- request correlation IDs
-- actor and scope traceability where authenticated
-- route-family classification
-- client registration linkage where partner access exists
-- idempotency references where relevant
-- async operation references for accepted actions
-- abuse and rate-limit observability
-
-### 20.2 Activity versus audit distinction
-
-- public activity/history endpoints are user-facing experience surfaces
-- audit records remain durable control traces
-- public API request logs are not a substitute for full audit records
-- public job history is not the same as internal audit lineage
-
-### 20.3 Stronger audit requirement
-
-Platform Credits-adjacent, billing-adjacent, payout-adjacent, partner-ingestion, and abuse-sensitive public APIs require stronger traceability than ordinary public metadata reads.
-
----
-
-## 21. Data Model and Database Schema View
-
-This section provides the architecture-level relational blueprint needed to support public API discipline in `fuze-backend-api`. Exact schema details belong in downstream domain specs.
-
-### 21.1 Core public API tables
-
-#### `public_api_surfaces`
-- `public_api_surface_id` (PK, UUID)
-- `surface_name` (unique)
-- `surface_family` (enum: public_read, authenticated_user, public_product, partner_integration, transparency_registry, webhook)
-- `owning_domain`
-- `visibility_class` (enum: public, authenticated, partner, limited_public)
-- `status` (draft, active, deprecated, retired)
-- `version_reference`
-- `created_at`
-- `updated_at`
-
-#### `public_api_operations`
-- `public_api_operation_id` (PK, UUID)
-- `public_api_surface_id` (FK -> `public_api_surfaces.public_api_surface_id`)
-- `operation_name`
-- `http_method` (nullable for non-HTTP contracts)
-- `route_pattern`
-- `operation_type` (public_read, authenticated_read, public_write, async_accept, partner_callback, webhook_outbound)
-- `owning_domain`
-- `sensitivity_class`
-- `requires_authentication`
-- `requires_idempotency`
-- `rate_limit_policy_id` (nullable FK -> `rate_limit_policies.rate_limit_policy_id`)
-- `audit_class`
-- `status`
-- `created_at`
-- `updated_at`
-
-#### `public_request_lineage`
-- `public_request_id` (PK, UUID)
-- `correlation_id` (indexed)
-- `public_api_operation_id` (FK -> `public_api_operations.public_api_operation_id`)
-- `caller_type` (public, user, partner)
-- `caller_reference` (nullable)
-- `client_id` (nullable)
-- `workspace_id` (nullable)
-- `scope_type`
-- `scope_reference`
-- `received_at`
-- `completed_at` (nullable)
-- `response_status`
-- `error_code` (nullable)
-- `rate_limit_outcome` (nullable)
-- `abuse_review_status` (nullable)
-
-#### `public_clients`
-- `public_client_id` (PK, UUID)
-- `client_name`
-- `client_type` (partner, enterprise, ecosystem_service, internal_public_consumer)
-- `status` (active, suspended, revoked)
-- `owner_account_id` (nullable)
-- `created_at`
-- `updated_at`
-
-#### `public_client_credentials`
-- `public_client_credential_id` (PK, UUID)
-- `public_client_id` (FK -> `public_clients.public_client_id`)
-- `credential_type`
-- `credential_fingerprint`
-- `status`
-- `issued_at`
-- `expires_at` (nullable)
-- `revoked_at` (nullable)
-
-#### `rate_limit_policies`
-- `rate_limit_policy_id` (PK, UUID)
-- `policy_name`
-- `surface_family`
-- `request_window_seconds`
-- `max_requests_per_window`
-- `burst_limit` (nullable)
-- `scope_dimension` (ip, client_id, account_id, workspace_id, hybrid)
-- `created_at`
-- `updated_at`
-
-#### `public_idempotency_records`
-- `public_idempotency_record_id` (PK, UUID)
-- `owning_domain`
-- `idempotency_key`
-- `request_fingerprint`
-- `operation_name`
-- `caller_reference`
-- `scope_reference`
-- `first_public_request_id` (FK -> `public_request_lineage.public_request_id`)
-- `stored_outcome_reference`
-- `status`
-- `expires_at` (nullable)
-- `created_at`
-
-**Constraints**
-- unique constraint on (`owning_domain`, `idempotency_key`)
-- fingerprint mismatch with same key must produce conflict semantics
-
-#### `public_async_operations`
-- `public_async_operation_id` (PK, UUID)
-- `public_request_id` (FK -> `public_request_lineage.public_request_id`)
-- `owning_domain`
-- `operation_name`
-- `status` (accepted, queued, executing, completed, failed, cancelled)
-- `accepted_at`
-- `started_at` (nullable)
-- `completed_at` (nullable)
-- `failed_at` (nullable)
-- `result_reference` (nullable)
-- `failure_code` (nullable)
-- `retry_count`
-- `workflow_reference` (nullable)
-- `job_reference` (nullable)
-
-#### `public_deprecation_notices`
-- `public_deprecation_notice_id` (PK, UUID)
-- `surface_name`
-- `version_reference`
-- `announced_at`
-- `sunset_at` (nullable)
-- `migration_guidance_reference`
-- `status`
-
-### 21.2 Public artifact tables
-
-#### `public_registry_entries`
-- `public_registry_entry_id` (PK, UUID)
-- `artifact_type`
-- `display_label`
-- `canonical_reference`
-- `chain_reference` (nullable)
-- `status`
-- `published_at`
-- `updated_at`
-
-#### `public_transparency_artifacts`
-- `public_transparency_artifact_id` (PK, UUID)
-- `artifact_kind`
-- `title`
-- `publication_version`
-- `source_reference`
-- `published_at`
-- `superseded_by` (nullable FK self-reference)
-
-#### `public_payout_cycle_views`
-- `public_payout_cycle_view_id` (PK, UUID)
-- `payout_cycle_reference` (unique)
-- `public_status`
-- `funding_state`
-- `publication_state`
-- `published_at`
-- `updated_at`
-
-#### `public_product_metadata`
-- `public_product_metadata_id` (PK, UUID)
-- `product_key` (unique)
-- `display_name`
-- `category`
-- `status`
-- `public_description`
-- `public_docs_reference` (nullable)
-- `updated_at`
-
-### 21.3 Relationship model
-
-- one `public_api_surface` has many `public_api_operations`
-- one `public_api_operation` has many `public_request_lineage` rows
-- one `public_client` may have many `public_client_credentials`
-- one public request may have zero or one `public_async_operations`
-- one public request may link to one `public_idempotency_record`
-- public artifact tables are owned by their publication domains and are exposed through public operations, not owned by the public API layer itself
-
-### 21.4 Database design notes
-
-- Keep `public_request_lineage` append-heavy and searchable by `correlation_id`, `client_id`, `caller_reference`, and `received_at`.
-- Keep rate-limit policy association explicit rather than inferred from route naming alone.
-- Maintain strict distinction between public artifact tables and underlying domain truth tables.
-- Do not store sensitive internal operator notes or service topology in public-facing response models.
-- Platform Credits balances, invoices, and workspace relationships remain owned by their canonical domains; public tables expose metadata and access discipline, not a shadow ledger.
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
+- `public_client`
+- `public_api_key` or approved client credential reference
+- `public_session_context` where caller-scoped and public-safe
+- `public_account_profile` where approved
+- `workspace_scope_summary`
+- `public_operation`
+- `public_request_lineage`
+- `public_idempotency_record`
+- `public_visibility_class`
+- `public_contract_version`
+- `public_deprecation_notice`
+- `public_registry_entry`
+- `public_metadata_record`
+- `public_product_catalog_item`
+- `public_transparency_artifact`
+- `public_payout_status_view`
+- `public_chain_reference`
+- `public_platform_status`
+- `public_governance_disclosure`
+- `webhook_subscription`
+- `webhook_delivery`
+- `public_artifact_reference`
+- `public_error`
+- `rate_limit_decision`
+- `abuse_control_decision`
+
+Implementation-specific service objects, database rows, provider payloads, job records, and admin records MUST NOT leak as public resources unless explicitly transformed into public-safe resources.
+
+## Ownership Model
+
+Public API Governance owns public/external contract discipline. It does not own business semantics. Owner domains remain the canonical mutation and read authorities for their domains.
+
+A public write may be initiated through the public API gateway, but the mutation MUST terminate in the owner domain. If the owner domain accepts deferred work, the public API returns an operation reference. If a worker, provider adapter, or chain-adjacent service later executes work, that execution remains subordinate to the owner-domain accepted intent and finalization rules.
+
+Derived public read models are downstream to canonical owner-domain records. They MAY be optimized, cached, indexed, exported, or replicated, but they MUST preserve lineage, classification, suppression, correction, and supersession rules.
+
+## Authority / Decision Model
+
+Public API request handling follows this authority chain:
+
+1. classify surface family and visibility class
+2. authenticate caller where required
+3. resolve caller, client, account, workspace, partner, and product scope where applicable
+4. evaluate authorization, permission, entitlement, rollout, and risk posture
+5. apply data-classification and public exposure rules
+6. validate request schema and business-intent shape
+7. evaluate idempotency and replay state before side effects
+8. route to owner-domain contract or public read-model contract
+9. commit immediate mutation, reject, or record accepted async intent
+10. emit audit, events, metrics, and request lineage
+11. return public-safe response, error, or operation status
+
+No gateway, frontend, SDK, cache, or partner adapter may bypass this authority chain for material public operations.
+
+## Authentication Model
+
+Public APIs MAY be unauthenticated only when the resource is intentionally open-public and public-safe.
+
+Authenticated public APIs MUST distinguish:
+
+- identity/authentication status
+- session validity
+- client/application identity
+- account subject
+- workspace scope
+- partner identity
+- delegated or scoped credential authority
+- risk/security posture
+
+A valid session or credential is necessary but not sufficient for authorization. It MUST NOT imply workspace authority, product capability, entitlement, public artifact access, privileged read access, partner authority, or mutation authority.
+
+## Authorization / Scope / Permission Model
+
+Public APIs MUST apply scope-aware authorization. Depending on the route family, this may include:
+
+- account self-scope
+- workspace membership
+- role and permission grants
+- effective permission evaluation
+- partner scope
+- product scope
+- visibility class
+- data-classification release eligibility
+- public artifact visibility state
+- security restriction state
+- audit and access traceability requirements
+
+Authorization failures MUST avoid leaking unauthorized resource existence. Error responses MAY distinguish `not_authenticated`, `not_authorized`, `scope_denied`, `entitlement_required`, `risk_denied`, and `not_found_or_not_visible` only when safe for the audience.
+
+## Entitlement / Capability-Gating Model
+
+Entitlement is not authorization and not identity. Public APIs that expose product capabilities MUST evaluate entitlement separately from authentication, permission, rollout, and rate limit.
+
+Public APIs MUST NOT encode entitlement meaning solely through route names, frontend behavior, or SDK package availability. If entitlement affects the contract, the API MUST define the possible safe result classes, such as `entitlement_required`, `capability_unavailable`, `quota_exceeded`, or `plan_not_eligible`, without exposing confidential commercial or internal policy detail.
+
+## API State Model
+
+Public API surface lifecycle states:
+
+- `proposed`
+- `approved_for_public_design`
+- `published`
+- `active`
+- `deprecated`
+- `sunset_scheduled`
+- `retired`
+- `superseded`
+- `withdrawn`
+
+Public request states:
+
+- `received`
+- `authenticated_or_public`
+- `authorized_if_required`
+- `validated`
+- `idempotency_checked`
+- `accepted`
+- `processing`
+- `completed`
+- `failed_retryable`
+- `failed_terminal`
+- `cancelled`
+- `conflicted`
+- `previously_applied`
+- `rate_limited`
+- `risk_denied`
+
+Public operation states:
+
+- `accepted`
+- `queued`
+- `in_progress`
+- `waiting_for_external_input`
+- `waiting_for_review`
+- `completed`
+- `failed_retryable`
+- `failed_terminal`
+- `cancelled`
+- `expired`
+- `superseded`
+
+`accepted` MUST remain distinct from `completed`. `previously_applied` MUST remain distinct from new application. `failed_retryable` MUST remain distinct from `failed_terminal`.
+
+## Lifecycle / Workflow Model
+
+1. A public contract is proposed with owner domain, visibility class, route family, public data classification, supportability, abuse posture, and compatibility policy.
+2. Public API Governance and the owner domain approve or reject exposure.
+3. The route family is published with explicit version, documentation, SDK policy, error model, idempotency model, and deprecation policy.
+4. Requests enter through a public gateway or equivalent public boundary.
+5. The gateway validates transport, version, authentication, client identity, signatures, rate limits, and basic schema.
+6. Authorization, entitlement, risk, and public visibility are evaluated before owner-domain side effects.
+7. Idempotency and replay checks are performed before mutation.
+8. The owner domain returns read data, applies the mutation, rejects it, or records accepted async intent.
+9. Async work proceeds through workflow/worker/provider/chain-adjacent systems under accepted intent and owner-domain finalization rules.
+10. Public-safe events, webhooks, read-model updates, and operation status updates are emitted or projected.
+11. Audit, metrics, traces, and access lineage are recorded.
+12. Contract changes follow versioning, migration, deprecation, sunset, and retirement rules.
+
+## Architecture Diagram — Mermaid flowchart
 
 ```mermaid
 flowchart TD
-    A[Public Consumers]
-    B[Authenticated End Users]
-    C[Partner Systems]
+  PublicReaders[Unauthenticated Public Readers]
+  AuthUsers[Authenticated Users and Workspaces]
+  Partners[Approved Partner Systems]
+  FirstParty[First-Party FUZE Clients]
+  WebhookConsumers[External Webhook Consumers]
 
-    subgraph PUB[Public API Surface Families]
-        D[Public Read APIs]
-        E[Authenticated User Public APIs]
-        F[Public Product Access APIs]
-        G[Partner Integration APIs]
-        H[Public Webhook or Callback Interfaces]
-    end
+  Gateway[Public API Gateway / Edge Contract Boundary]
+  Auth[Auth Session and Client Credential Services]
+  Authz[Authorization / Scope / Permission Evaluation]
+  Entitlement[Entitlement and Capability Gate]
+  Risk[Security / Risk / Abuse Controls]
+  Idem[Public Idempotency and Replay Store]
+  Audit[Audit / Request Lineage / Observability]
 
-    subgraph GATEWAY[fuze-backend-api Public Layer]
-        I[Public Route Gateway]
-        J[Public Auth and Scope Checks]
-        K[Rate Limit and Abuse Controls]
-        L[Public Contract Versioning]
-    end
+  OwnerDomains[Owner-Domain Services]
+  Async[Workflow / Job / Async Execution]
+  Providers[Partner / Provider / Chain Input Normalization]
+  Events[Domain Events and Public Webhook Projection]
+  ReadModels[Public Read Models / Registry / Transparency / Catalog / Status]
+  Stores[(Canonical Owner Stores)]
+  Derived[(Derived Public Projection Stores)]
 
-    subgraph PLATFORM[Platform Domains]
-        M[Identity and Access Domain]
-        N[Workspace and Roles Domain]
-        O[Wallet-Aware Domain]
-        P[Billing and Subscription Domain]
-        Q[Platform Credits Domain]
-        R[Public Metadata Domain]
-        S[Registry Publication Domain]
-        T[Transparency Reporting Domain]
-        U[Payout-Ledger Public View Domain]
-    end
+  PublicReaders --> Gateway
+  AuthUsers --> Gateway
+  Partners --> Gateway
+  FirstParty --> Gateway
+  WebhookConsumers --> Gateway
 
-    subgraph PRODUCTS[Product Domains]
-        V[QTB]
-        W[AIMM]
-        X[ZAGA]
-        Y[AIE]
-        Z[HerHelp]
-        AA[Botmad]
-        AB[ToolGrid]
-    end
+  Gateway --> Auth
+  Gateway --> Authz
+  Gateway --> Entitlement
+  Gateway --> Risk
+  Gateway --> Idem
+  Gateway --> Audit
 
-    subgraph ASYNC[Async and Integration]
-        AC[Async Operation Store]
-        AD[Workers and Schedulers]
-        AE[Partner Callback Intake]
-        AF[Event or Webhook Outbound]
-    end
+  Auth --> Authz
+  Authz --> Entitlement
+  Entitlement --> Risk
+  Risk --> OwnerDomains
+  Idem --> OwnerDomains
 
-    subgraph OUTPUTS[Derived Outputs]
-        AG[fuze-public-registry]
-        AH[Published Transparency Artifacts]
-        AI[Public Payout Status Views]
-    end
+  OwnerDomains --> Stores
+  OwnerDomains --> Async
+  OwnerDomains --> Events
+  Providers --> OwnerDomains
+  Async --> OwnerDomains
+  Events --> ReadModels
+  Stores --> ReadModels
+  ReadModels --> Derived
+  ReadModels --> Gateway
+  Events --> Gateway
+  Audit --> Gateway
 
-    A --> D
-    B --> E
-    B --> F
-    C --> G
-    C --> H
-
-    D --> I
-    E --> I
-    F --> I
-    G --> I
-    H --> AE
-
-    I --> J
-    I --> K
-    I --> L
-
-    D --> R
-    D --> S
-    D --> T
-    D --> U
-
-    E --> M
-    E --> N
-    E --> O
-    E --> P
-    E --> Q
-
-    F --> V
-    F --> W
-    F --> X
-    F --> Y
-    F --> Z
-    F --> AA
-    F --> AB
-
-    G --> M
-    G --> N
-    G --> P
-    G --> Q
-    G --> V
-    G --> W
-    G --> X
-    G --> Y
-    G --> Z
-    G --> AA
-    G --> AB
-
-    F --> AC
-    G --> AC
-    AC --> AD
-    AD --> AF
-
-    S --> AG
-    T --> AH
-    U --> AI
+  classDef external fill:#f7f7f7,stroke:#333,stroke-width:1px;
+  classDef contract fill:#eaf4ff,stroke:#333,stroke-width:1px;
+  classDef owner fill:#e9ffe9,stroke:#333,stroke-width:1px;
+  classDef derived fill:#fff7df,stroke:#333,stroke-width:1px;
+  class PublicReaders,AuthUsers,Partners,FirstParty,WebhookConsumers external;
+  class Gateway,Auth,Authz,Entitlement,Risk,Idem,Audit contract;
+  class OwnerDomains,Stores owner;
+  class Async,Providers,Events,ReadModels,Derived derived;
 ```
 
----
-
-## 23. Data Design — Mermaid Diagram
+## Data Design — Mermaid Diagram
 
 ```mermaid
 erDiagram
-    PUBLIC_API_SURFACES ||--o{ PUBLIC_API_OPERATIONS : contains
-    PUBLIC_API_OPERATIONS ||--o{ PUBLIC_REQUEST_LINEAGE : records
-    PUBLIC_CLIENTS ||--o{ PUBLIC_CLIENT_CREDENTIALS : owns
-    PUBLIC_REQUEST_LINEAGE ||--o| PUBLIC_ASYNC_OPERATIONS : may_create
-    PUBLIC_REQUEST_LINEAGE ||--o| PUBLIC_IDEMPOTENCY_RECORDS : may_link
-    RATE_LIMIT_POLICIES ||--o{ PUBLIC_API_OPERATIONS : applies_to
+  PUBLIC_CLIENT ||--o{ PUBLIC_REQUEST : initiates
+  PUBLIC_CONTRACT_VERSION ||--o{ PUBLIC_REQUEST : governs
+  PUBLIC_REQUEST ||--o| IDEMPOTENCY_RECORD : uses
+  PUBLIC_REQUEST ||--o| PUBLIC_OPERATION : may_create
+  PUBLIC_REQUEST ||--o{ AUDIT_RECORD : emits
+  PUBLIC_OPERATION ||--o{ WEBHOOK_DELIVERY : may_notify
+  OWNER_DOMAIN_ENTITY ||--o{ PUBLIC_READ_MODEL : projects_to
+  OWNER_DOMAIN_ENTITY ||--o{ PUBLIC_OPERATION : finalizes
+  PUBLIC_READ_MODEL ||--o{ PUBLIC_ARTIFACT : exposes
+  PUBLIC_REGISTRY_ENTRY ||--o{ PUBLIC_READ_MODEL : contributes_to
+  VISIBILITY_CLASS ||--o{ PUBLIC_CONTRACT_VERSION : classifies
+  RATE_LIMIT_POLICY ||--o{ PUBLIC_REQUEST : evaluates
+  ABUSE_DECISION ||--o{ PUBLIC_REQUEST : constrains
 
-    PUBLIC_API_SURFACES {
-        uuid public_api_surface_id PK
-        string surface_name UK
-        string surface_family
-        string owning_domain
-        string visibility_class
-        string status
-        string version_reference
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    PUBLIC_API_OPERATIONS {
-        uuid public_api_operation_id PK
-        uuid public_api_surface_id FK
-        string operation_name
-        string http_method
-        string route_pattern
-        string operation_type
-        string owning_domain
-        string sensitivity_class
-        boolean requires_authentication
-        boolean requires_idempotency
-        uuid rate_limit_policy_id FK
-        string audit_class
-        string status
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    PUBLIC_REQUEST_LINEAGE {
-        uuid public_request_id PK
-        string correlation_id IDX
-        uuid public_api_operation_id FK
-        string caller_type
-        string caller_reference
-        uuid client_id
-        uuid workspace_id
-        string scope_type
-        string scope_reference
-        timestamp received_at
-        timestamp completed_at
-        string response_status
-        string error_code
-        string rate_limit_outcome
-        string abuse_review_status
-    }
-
-    PUBLIC_CLIENTS {
-        uuid public_client_id PK
-        string client_name
-        string client_type
-        string status
-        uuid owner_account_id
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    PUBLIC_CLIENT_CREDENTIALS {
-        uuid public_client_credential_id PK
-        uuid public_client_id FK
-        string credential_type
-        string credential_fingerprint
-        string status
-        timestamp issued_at
-        timestamp expires_at
-        timestamp revoked_at
-    }
-
-    RATE_LIMIT_POLICIES {
-        uuid rate_limit_policy_id PK
-        string policy_name
-        string surface_family
-        int request_window_seconds
-        int max_requests_per_window
-        int burst_limit
-        string scope_dimension
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    PUBLIC_IDEMPOTENCY_RECORDS {
-        uuid public_idempotency_record_id PK
-        string owning_domain
-        string idempotency_key
-        string request_fingerprint
-        string operation_name
-        string caller_reference
-        string scope_reference
-        uuid first_public_request_id FK
-        string stored_outcome_reference
-        string status
-        timestamp expires_at
-        timestamp created_at
-    }
-
-    PUBLIC_ASYNC_OPERATIONS {
-        uuid public_async_operation_id PK
-        uuid public_request_id FK
-        string owning_domain
-        string operation_name
-        string status
-        timestamp accepted_at
-        timestamp started_at
-        timestamp completed_at
-        timestamp failed_at
-        string result_reference
-        string failure_code
-        int retry_count
-        string workflow_reference
-        string job_reference
-    }
-
-    PUBLIC_DEPRECATION_NOTICES {
-        uuid public_deprecation_notice_id PK
-        string surface_name
-        string version_reference
-        timestamp announced_at
-        timestamp sunset_at
-        string migration_guidance_reference
-        string status
-    }
-
-    PUBLIC_REGISTRY_ENTRIES {
-        uuid public_registry_entry_id PK
-        string artifact_type
-        string display_label
-        string canonical_reference
-        string chain_reference
-        string status
-        timestamp published_at
-        timestamp updated_at
-    }
-
-    PUBLIC_TRANSPARENCY_ARTIFACTS {
-        uuid public_transparency_artifact_id PK
-        string artifact_kind
-        string title
-        string publication_version
-        string source_reference
-        timestamp published_at
-        uuid superseded_by FK
-    }
-
-    PUBLIC_PAYOUT_CYCLE_VIEWS {
-        uuid public_payout_cycle_view_id PK
-        string payout_cycle_reference UK
-        string public_status
-        string funding_state
-        string publication_state
-        timestamp published_at
-        timestamp updated_at
-    }
-
-    PUBLIC_PRODUCT_METADATA {
-        uuid public_product_metadata_id PK
-        string product_key UK
-        string display_name
-        string category
-        string status
-        string public_description
-        string public_docs_reference
-        timestamp updated_at
-    }
+  PUBLIC_CLIENT {
+    string client_id
+    string client_type
+    string partner_id
+    string credential_status
+    string allowed_scopes
+  }
+  PUBLIC_CONTRACT_VERSION {
+    string contract_id
+    string version
+    string visibility_class
+    string owner_domain
+    string compatibility_status
+    string deprecation_state
+  }
+  PUBLIC_REQUEST {
+    string request_id
+    string correlation_id
+    string trace_id
+    string actor_ref
+    string scope_ref
+    string operation_class
+    string status
+  }
+  IDEMPOTENCY_RECORD {
+    string idempotency_key_hash
+    string caller_scope
+    string request_fingerprint
+    string result_reference
+    string replay_status
+  }
+  PUBLIC_OPERATION {
+    string operation_id
+    string owner_domain
+    string accepted_at
+    string operation_state
+    string final_result_ref
+  }
+  OWNER_DOMAIN_ENTITY {
+    string owner_domain
+    string canonical_entity_ref
+    string lifecycle_state
+    string semantic_truth_class
+  }
+  PUBLIC_READ_MODEL {
+    string read_model_ref
+    string source_lineage
+    string projection_state
+    string visibility_class
+    string freshness_state
+  }
+  PUBLIC_ARTIFACT {
+    string artifact_ref
+    string classification
+    string publication_state
+    string supersession_ref
+  }
+  PUBLIC_REGISTRY_ENTRY {
+    string registry_ref
+    string chain_network
+    string address_or_identifier
+    string publication_state
+    string supersession_ref
+  }
+  AUDIT_RECORD {
+    string audit_id
+    string actor_ref
+    string target_ref
+    string reason_code
+    string policy_version
+  }
+  WEBHOOK_DELIVERY {
+    string delivery_id
+    string subscription_id
+    string event_ref
+    string delivery_state
+    string retry_count
+  }
 ```
 
----
+## Flow View
 
-## 24. Flow View
+### Public Read Flow
 
-### 24.1 Happy path — public canonical read
+1. Request reaches public gateway with version, route family, correlation ID, and caller context if any.
+2. Gateway identifies visibility class.
+3. If open-public, the gateway still applies rate-limit, abuse, cache, and public-data classification rules.
+4. If authenticated or partner-scoped, authentication, scope, permission, entitlement, and risk checks execute.
+5. Public read-model service or owner-domain read contract returns approved public-safe representation.
+6. Response includes status, data, pagination/cursor if applicable, version headers, cache policy, and correlation ID.
+7. Audit or access logs are captured where required by sensitivity.
 
-1. A public client calls a public read endpoint.
-2. The API classifies the route as a public canonical artifact read.
-3. If unauthenticated, the API verifies the route truly allows public access.
-4. The API fetches the published public artifact from the owning domain or publication store.
-5. The API returns the response marked as canonical public artifact where applicable.
-6. Public request lineage is recorded.
+### Public Mutation Flow
 
-### 24.2 Happy path — authenticated self-scope read
+1. Caller submits bounded business-action request with version, idempotency key where required, correlation ID, and public-safe payload.
+2. Gateway authenticates and validates schema.
+3. Authorization, entitlement, data-classification, risk, rate-limit, and idempotency checks run before side effects.
+4. Owner domain validates business intent.
+5. Owner domain either applies synchronously, rejects with structured public error, or records accepted async intent.
+6. API returns `200`, `201`, `202`, `204`, `4xx`, or `5xx` according to final or accepted state.
+7. Audit, event, observability, and idempotency results are recorded.
 
-1. An authenticated caller requests Platform Credits balance or invoice retrieval.
-2. The API authenticates the caller and resolves scope.
-3. The API checks account or workspace authorization.
-4. The owning domain returns canonical scoped state or derived scoped read model.
-5. The API responds with scoped data and a correlation reference.
+### Public Async Flow
 
-### 24.3 Happy path — public business-action write
+1. Caller submits async request.
+2. Owner domain records accepted intent and operation reference.
+3. Public API returns `202 Accepted` with `operation_id`, current state, status URL, retry guidance, and correlation ID.
+4. Workflow/worker/provider/chain-adjacent systems continue execution under owner-domain rules.
+5. Public status endpoint exposes public-safe progress.
+6. Final outcome updates operation state and may emit webhook delivery.
+7. Failure paths preserve retryable vs terminal distinction and audit lineage.
 
-1. A caller submits a bounded public action such as wallet-link initiation, workspace creation, or product request submission.
-2. The API authenticates if required, validates scope, and enforces route policy.
-3. The API validates payload and business preconditions.
-4. The API checks idempotency where required.
-5. The owning domain performs canonical mutation or accepts async work.
-6. The API returns success or accepted response with references.
-7. Public request lineage and required audit traces are recorded.
+### Public Webhook Flow
 
-### 24.4 Happy path — accepted async public product request
+1. Caller registers endpoint with verification and approved event families.
+2. FUZE verifies endpoint ownership and stores subscription state.
+3. Owner-domain event occurs and is eligible for external notification.
+4. Public webhook projection filters payload by visibility, data classification, and subscription scope.
+5. Delivery is signed, sent, retried according to policy, and recorded.
+6. Delivery status is available through public-safe subscription/delivery APIs.
 
-1. A caller submits a long-running public product request.
-2. The API authenticates, authorizes, validates, and checks idempotency.
-3. The API creates a durable async operation record.
-4. Work is queued for backend execution.
-5. The API returns accepted response with operation reference.
-6. The caller polls status or receives approved webhook or event update.
-7. Result becomes available through caller-scoped retrieval endpoint.
+### Failure / Degraded Mode Flow
 
-### 24.5 Alternate flow — derived transparency summary
+1. Dependency failure, security uncertainty, stale projection, rate-limit spike, or incident condition is detected.
+2. Risk/continuity posture narrows public behavior.
+3. Public APIs return safe error/status classes, degraded response indicators, stale-but-labeled read models, or temporary unavailability.
+4. Public writes do not proceed if owner-domain acceptance cannot be safely determined.
+5. Audit, metrics, incident linkage, and public status updates are recorded where applicable.
 
-1. A client requests a public transparency summary endpoint.
-2. The API resolves a derived reporting view.
-3. The response explicitly presents itself as public reporting artifact or derived summary.
-4. No canonical internal accounting state is mutated.
-
-### 24.6 Failure flow — unauthorized workspace access
-
-1. An authenticated user requests workspace-scoped public billing state.
-2. The API authenticates the user but fails authorization for workspace scope.
-3. The API returns authorization error without exposing foreign workspace details.
-4. Public request lineage records the denial outcome.
-
-### 24.7 Failure flow — rate-limit or abuse-control block
-
-1. A public client exceeds a policy threshold or triggers sensitive-flow abuse signals.
-2. The API applies rate-limit or abuse-protection controls.
-3. The API returns rate-limit or abuse-protection error classification.
-4. Public request lineage records control outcome.
-5. Sensitive business flow is not executed.
-
-### 24.8 Retry or replay flow
-
-1. A client retries a public mutation with the same idempotency key after timeout.
-2. The API looks up the public idempotency record in the owning domain.
-3. If the payload matches, the prior stable outcome is returned.
-4. If the payload differs, a conflict response is returned.
-5. Duplicate mutation is prevented.
-
-### 24.9 Partner callback ingestion flow
-
-1. An external partner sends a callback to an approved inbound public or partner route.
-2. The API validates signature and client identity.
-3. The API validates replay safety and deduplication state.
-4. The API records lineage and forwards a bounded event into the owning domain.
-5. Duplicate callback does not create duplicate business effect.
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
+## Data Flows — Mermaid sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Consumer as Public Consumer
-    actor User as Authenticated User
-    actor Partner as Partner System
-    participant API as Public API Gateway
-    participant Auth as Auth and Scope Layer
-    participant Abuse as Rate Limit and Abuse Controls
-    participant Domain as Owning Domain
-    participant Async as Public Async Store
-    participant Worker as Worker
-    participant Webhook as Outbound Webhook
+  autonumber
+  participant C as Public Caller
+  participant G as Public API Gateway
+  participant A as Auth / Client Credential Service
+  participant Z as Authorization / Entitlement / Risk
+  participant I as Idempotency Store
+  participant O as Owner Domain Service
+  participant W as Workflow / Worker
+  participant R as Public Read Model
+  participant E as Event / Webhook Projection
+  participant L as Audit / Observability
 
-    Consumer->>API: GET public artifact
-    API->>Abuse: Apply public-read controls
-    Abuse-->>API: Allowed
-    API->>Domain: Fetch canonical public artifact
-    Domain-->>API: Public artifact
-    API-->>Consumer: Public read response
-
-    User->>API: GET scoped user or workspace data
-    API->>Auth: Authenticate and resolve scope
-    Auth-->>API: Scope result
-    API->>Domain: Fetch scoped data
-    Domain-->>API: Scoped result
-    API-->>User: Authenticated public response
-
-    User->>API: POST bounded business action
-    API->>Auth: Authenticate and authorize
-    Auth-->>API: Allowed
-    API->>Abuse: Check rate limit or abuse policy
-    Abuse-->>API: Allowed
-    API->>Domain: Execute or accept action
-    alt Async accepted
-        Domain->>Async: Create operation record
-        Async-->>API: Operation reference
-        API-->>User: Accepted response
-        Async->>Worker: Dispatch work
-        Worker->>Domain: Execute async business logic
-        Domain->>Webhook: Emit approved outbound update
-    else Synchronous success
-        Domain-->>API: Success result
-        API-->>User: Success response
-    end
-
-    Partner->>API: Callback or partner request
-    API->>Auth: Validate partner credential or signature
-    Auth-->>API: Partner verified
-    API->>Domain: Process bounded partner operation
-    Domain-->>API: Result
-    API-->>Partner: Partner-safe response
+  C->>G: Request with version, correlation_id, idempotency_key
+  G->>A: Authenticate if required
+  A-->>G: Caller / client / session context
+  G->>Z: Evaluate scope, permission, entitlement, risk, visibility
+  Z-->>G: Allow / deny / challenge / narrow
+  G->>I: Check idempotency and replay state
+  I-->>G: New / previously_applied / conflict
+  G->>O: Owner-domain read or bounded business action
+  alt Synchronous accepted and applied
+    O->>L: Record audit lineage
+    O->>R: Publish/update derived read model if applicable
+    O-->>G: Final public-safe result
+    G-->>C: 200/201/204 with correlation_id
+  else Async accepted
+    O->>L: Record accepted intent and audit lineage
+    O->>W: Enqueue under owner-domain accepted intent
+    O-->>G: operation_id and accepted state
+    G-->>C: 202 Accepted with operation reference
+    W->>O: Finalize owner-domain outcome
+    O->>R: Update projection
+    O->>E: Emit eligible public webhook projection
+    E-->>C: Signed webhook delivery if subscribed
+  else Rejected / conflict / policy denial
+    O->>L: Record rejection or conflict lineage where required
+    O-->>G: Structured public error
+    G-->>C: 4xx/409/422/429 safe error response
+  end
 ```
 
----
-
-## 26. Security and Risk Controls
+## Request Model
+
+Public requests MUST define, where applicable:
+
+- HTTP method or protocol operation class
+- version identifier
+- route/resource family
+- owner domain
+- visibility class
+- caller type
+- authentication requirement
+- authorization scope
+- entitlement/capability requirement
+- idempotency requirement
+- request fingerprinting fields
+- correlation ID and trace ID behavior
+- pagination/cursor fields for list reads
+- filter/sort constraints
+- public-safe field selection rules
+- payload size and content-type limits
+- signature fields for partner callbacks/webhooks
+- operation intent fields for async actions
+- reason code if the public action affects supportable or sensitive state
+
+Mutation requests MUST express business intent. They MUST NOT accept raw internal command names, arbitrary state patches, privileged role names, internal job IDs, hidden policy flags, internal ledger deltas, or admin override parameters.
+
+## Response Model
+
+Public responses MUST be stable, public-safe, and contract-versioned. They SHOULD include:
+
+- `status`
+- `data` or `error`
+- `request_id`
+- `correlation_id`
+- `trace_id` where safe
+- `operation_id` for async accepted work
+- `idempotency_status` where applicable
+- `version`
+- `deprecation` or `sunset` metadata where applicable
+- `pagination` metadata for list responses
+- `links` only when public-safe
+- `warnings` for degraded, stale, partial, or soon-to-be-deprecated states where appropriate
+
+Responses MUST NOT expose internal service names, database IDs, raw stack traces, private policy internals, private risk reasoning, private wallet/control topology, internal job IDs, provider secret material, raw internal event topics, or unauthorized object existence.
+
+## Error / Result / Status Model
+
+Public APIs MUST distinguish these error/result classes where relevant:
+
+- `invalid_request`
+- `unsupported_version`
+- `authentication_required`
+- `invalid_credentials`
+- `session_expired`
+- `authorization_denied`
+- `scope_denied`
+- `entitlement_required`
+- `capability_unavailable`
+- `not_found_or_not_visible`
+- `conflict`
+- `idempotency_conflict`
+- `previously_applied`
+- `validation_failed`
+- `policy_denied`
+- `risk_denied`
+- `challenge_required`
+- `rate_limited`
+- `quota_exceeded`
+- `payload_too_large`
+- `unsupported_media_type`
+- `dependency_unavailable`
+- `provider_input_rejected`
+- `operation_accepted`
+- `operation_pending`
+- `operation_failed_retryable`
+- `operation_failed_terminal`
+- `deprecated_contract`
+- `sunset_contract`
+
+HTTP status mapping SHOULD preserve semantics:
+
+- `200 OK` for successful reads or completed actions returning data
+- `201 Created` for synchronous public-safe creation
+- `202 Accepted` for accepted async intent
+- `204 No Content` for completed action without body
+- `400 Bad Request` for malformed requests
+- `401 Unauthorized` for missing/invalid authentication
+- `403 Forbidden` for safe authorization denial
+- `404 Not Found` or generic `not_found_or_not_visible` where existence must not leak
+- `409 Conflict` for state conflict or idempotency mismatch
+- `422 Unprocessable Entity` for semantic validation failure
+- `429 Too Many Requests` for rate limit or quota throttling
+- `5xx` only for platform/server/dependency failures, without leaking internals
+
+## Idempotency / Retry / Replay Model
+
+Public mutation APIs MUST require idempotency keys when duplicate submission, retry, external callbacks, payment-like behavior, async acceptance, partner replay, or chain-adjacent initiation could cause duplicate side effects.
+
+Idempotency records MUST be scoped by caller/client, route family, operation class, owner domain, request fingerprint, and time window. The same key with the same fingerprint MUST return `previously_applied` or the prior accepted operation/result. The same key with a different fingerprint MUST return `idempotency_conflict` and MUST NOT execute side effects.
+
+Partner callbacks and webhooks MUST use replay protection appropriate to their trust level, including timestamp, nonce, signature, idempotency key, delivery ID, or provider event ID where applicable.
 
-### 26.1 Core security principles
-
-- least privilege
-- strict distinction between public, authenticated, partner, internal, and admin surfaces
-- object-level and function-level authorization checks
-- property-level exposure control
-- rate limiting and abuse protection
-- replay protection for mutation-capable public routes
-- safe consumption of partner and external callbacks
-- strong inventory management for published public interfaces
-
-### 26.2 Architecture-level controls
-
-- broken object-level authorization must be addressed for every scoped read or write
-- broken function-level authorization must distinguish public product actions from restricted control-plane actions
-- property-level exposure must be controlled in response shaping, not delegated to ad hoc frontend hiding
-- unrestricted access to sensitive business flows must be prevented with route-level design and anti-abuse policy
-- public API inventory and deprecation tracking must remain explicit
-- unsafe consumption of upstream APIs and callbacks must be mediated through dedicated inbound integration contracts
-
-### 26.3 Sensitive-domain hardening
-
-The following require tighter controls than ordinary public metadata reads:
-
-- Platform Credits and billing reads or writes
-- invoice and receipt access
-- wallet-link actions
-- async billable product requests
-- payout-related public status views where user-specific information exists
-- partner callback ingestion
-- public routes capable of initiating economically meaningful workflows
-
----
-
-## 27. Operational Considerations
-
-### 27.1 Degraded mode philosophy
-
-Public APIs should support degraded mode without redefining truth.
-
-Examples:
-- public transparency summary unavailable while canonical internal state remains healthy
-- partner-safe product submission delayed while accepted async requests remain visible
-- public catalog reads available even if selected authenticated surfaces degrade
-- public payout summaries delayed without changing actual payout execution truth
-
-### 27.2 Observability requirements
-
-Operational monitoring should support:
-
-- request correlation
-- caller classification
-- client registration attribution
-- surface-family attribution
-- rate-limit and abuse-control outcomes
-- async operation visibility
-- public versus partner traffic segmentation
-- error-class aggregation
-- deprecation usage monitoring
-
-### 27.3 Runtime placement rule
-
-- public HTTP request handling belongs in public request and response entrypoints
-- async work belongs in orchestration and worker layers
-- partner callback validation belongs in dedicated inbound integration layers
-- public artifact publication belongs in reporting, registry, and publication domains
-- public APIs should never host raw control-plane logic in route handlers
-
----
-
-## 28. Acceptance Criteria
-
-1. The specification explicitly distinguishes public read, authenticated user, public product access, partner or integration, and transparency or registry surface families.
-2. The specification clearly distinguishes public APIs from first-party app APIs, internal service APIs, and admin or control APIs.
-3. The specification explicitly states that public write APIs must express bounded business actions rather than raw internal mutation primitives.
-4. The specification preserves separation among FUZE token, Platform Credits, payout execution, treasury, governance, and transparency layers.
-5. The specification identifies domains suitable for public exposure and domains that must remain restricted.
-6. The specification defines authentication and scope-aware authorization expectations for public APIs.
-7. The specification defines public error, idempotency, versioning, and compatibility rules.
-8. The specification includes a concrete architecture-level database schema view with identifiable tables, keys, and constraints.
-9. The specification includes a Mermaid architecture diagram that matches the public-surface ownership model.
-10. The specification includes a Mermaid data-design diagram that matches the schema view.
-11. The specification includes a flow view and Mermaid sequence diagram covering public reads, authenticated reads, public writes, async product requests, authorization failure, rate-limit or abuse-control failure, and retry behavior.
-12. The specification aligns with the FUZE repository model and assigns primary implementation ownership to `fuze-backend-api`.
-13. The specification is usable as a governing source-of-truth file for downstream public-domain API specs and public OpenAPI or AsyncAPI work.
-14. The specification includes contract derivation notes suitable for future `fuze-sdk` generation from approved public contracts.
-
----
+Retries MUST distinguish:
 
-## 29. Test Cases
+- safe read retry
+- safe duplicate mutation retry with same idempotency key
+- retryable dependency failure
+- terminal policy rejection
+- idempotency conflict
+- accepted operation status polling
 
-### 29.1 Positive cases
+## Rate Limit / Abuse-Control Model
 
-1. **Public registry read succeeds without auth**
-   - Given a published registry entry exists
-   - When an unauthenticated client calls the public registry lookup endpoint
-   - Then the API returns the published registry entry
-   - And no internal-only fields are exposed
-
-2. **Authenticated Platform Credits balance read succeeds within scope**
-   - Given a user is authenticated and owns an account-scoped Platform Credits balance
-   - When they call the authenticated public credits balance read endpoint
-   - Then the API returns their scoped balance
-   - And the balance remains clearly distinct from FUZE token holdings and payout claims
+Public APIs MUST apply rate limits and abuse controls by route family, visibility class, caller type, client ID, account, workspace, partner, IP/device/network signals where appropriate, operation sensitivity, and current security posture.
 
-3. **Public product request can be accepted asynchronously**
-   - Given an authenticated user is entitled to a public product request flow
-   - When they submit a long-running product request
-   - Then the API returns accepted with an operation reference
-   - And the result becomes retrievable through status or result flows
+Public write, partner callback, webhook registration, auth-adjacent, export, AI, billing, wallet-aware, registry, transparency, and public trust routes require stricter posture than routine public metadata reads.
 
-### 29.2 Negative cases
+Abuse controls MAY include:
 
-4. **Restricted treasury action is not exposed publicly**
-   - Given an external client attempts to access a treasury action route
-   - Then the route must not exist in the public contract set
-   - Or the request must be denied as unsupported or forbidden by design
-
-5. **Raw Platform Credits mutation primitive is rejected**
-   - Given an external client attempts to call a generic Platform Credits issue or adjust endpoint
-   - Then the design fails review because public routes must not expose raw internal mutation power
+- fixed and adaptive rate limits
+- quota and burst controls
+- signature enforcement
+- replay blocking
+- challenge or step-up
+- endpoint verification
+- temporary suspension
+- scope narrowing
+- public exposure suppression
+- denylist/allowlist decisions
+- incident-driven degradation
 
-6. **Derived summary is not treated as canonical source for internal truth**
-   - Given a public transparency summary endpoint exists
-   - When a downstream consumer treats it as the canonical owner of internal payout execution state
-   - Then the design is considered misleading and fails review unless the artifact is clearly classified
+Rate-limit and abuse responses MUST be public-safe and SHOULD include retry guidance only when safe.
 
-### 29.3 Authorization cases
+## Endpoint / Route Family Model
 
-7. **Workspace-scoped read denied outside membership**
-   - Given a user is authenticated but not a member of the requested workspace
-   - When they request workspace-scoped invoice or Platform Credits data
-   - Then the API returns authorization denial without leaking workspace details
+This document does not freeze final paths. It governs allowed route families:
 
-8. **Partner client denied operator-level action**
-   - Given a partner client has partner-safe read scope only
-   - When it attempts an admin-like or governance-sensitive action
-   - Then the action is denied and traced
+### Allowed Route Families
 
-### 29.4 Idempotency cases
+- `/v{version}/public/metadata/*`
+- `/v{version}/public/status/*`
+- `/v{version}/public/catalog/*`
+- `/v{version}/public/registry/*`
+- `/v{version}/public/transparency/*`
+- `/v{version}/public/payout-status/*`
+- `/v{version}/public/chain-reference/*`
+- `/v{version}/public/governance-disclosure/*`
+- `/v{version}/me/*` for authenticated caller-scoped public APIs
+- `/v{version}/workspaces/{workspace_ref}/*` only where workspace-scoped public access is approved
+- `/v{version}/partners/*` for approved partner APIs
+- `/v{version}/operations/{operation_id}` for public async status
+- `/v{version}/webhooks/*` for public subscription and delivery-management contracts
+- `/v{version}/artifacts/*` for public-safe or caller-scoped artifact retrieval
 
-9. **Public write replay with same key returns stable prior outcome**
-   - Given a product submission request is retried with the same idempotency key and identical payload
-   - Then the same accepted or successful business outcome is returned without duplicate side effects
+### Forbidden Route Families
 
-10. **Public write replay with different payload conflicts**
-   - Given a mutation is retried with the same idempotency key but materially different payload
-   - Then the API returns conflict and does not apply a second mutation
+Public API MUST NOT expose route families that imply:
 
-### 29.5 Concurrency or replay cases
+- `/internal/*`
+- `/admin/*`
+- `/control/*`
+- `/operator/*`
+- `/debug/*`
+- `/jobs/raw/*`
+- `/queues/*`
+- `/events/raw/*`
+- `/database/*`
+- `/ledger/raw-mutate/*`
+- `/treasury/execute/*`
+- `/governance/override/*`
+- `/risk/private-reasoning/*`
+- `/wallet/private-inventory/*`
+- arbitrary owner-domain state patching
 
-11. **Partner callback replay is safe**
-   - Given a partner callback is delivered twice
-   - When the second delivery is received
-   - Then deduplication prevents duplicate business effect
+A route path alone does not determine safety. Route family, owner domain, visibility class, request shape, authorization, data classification, and mutation termination all must align.
 
-12. **Concurrent retries do not create duplicate async jobs**
-   - Given two near-simultaneous retries use the same idempotency key and equivalent payload
-   - Then only one durable async operation is accepted
-   - And the second request resolves to the same stable operation reference
+## Public API Considerations
 
-### 29.6 Reconciliation and integrity cases
+Public APIs MUST be stable, documented, supportable, minimized, explicit, and compatibility-governed. Field exposure MUST be approved. Sensitive or ambiguous fields MUST default to omitted, redacted, aggregated, or denied.
 
-13. **Public artifact classification remains accurate**
-   - Given a public payout summary is derived from canonical payout and reporting domains
-   - When the summary is returned
-   - Then the response identifies itself as derived or reporting-oriented rather than underlying payout execution truth
+Open-public APIs SHOULD prefer cacheable, immutable, or low-sensitivity outputs. When serving dynamic status or public trust data, they MUST expose freshness and supersession/correction posture where meaningful.
 
-14. **Public response does not leak internal-only fields**
-   - Given a public transparency artifact exists
-   - When a public route retrieves it
-   - Then internal operator notes, raw internal identifiers, and privileged lineage are not exposed
+## First-Party Application API Considerations
 
-### 29.7 Event or webhook cases
+First-party clients may use public APIs, but first-party convenience MUST NOT silently publish internal capabilities as external contracts. If a route is first-party-only but externally reachable, it still requires public-style auth, abuse, visibility, compatibility, and audit posture unless explicitly classified as non-public behind appropriate platform boundaries.
 
-15. **Outbound public event uses versioned payload**
-   - Given a supported outbound webhook is emitted
-   - When the event is delivered
-   - Then the payload is version-tagged and suitable for signature verification and retry-safe handling
+## Internal Service API Considerations
 
-16. **Unauthorized inbound callback is rejected**
-   - Given an inbound partner callback lacks a valid signature or credential
-   - When it reaches the API
-   - Then the callback is rejected and the owning domain mutation is not executed
+Public APIs MAY mediate calls to internal services. They MUST translate external requests into owner-domain business actions. They MUST NOT forward external caller payloads as raw internal commands without validation, normalization, authorization, idempotency, and audit lineage.
 
----
+## Admin / Control-Plane API Considerations
 
-## 30. Open Questions or Explicit Deferred Decisions
+Admin/control-plane behavior MUST remain outside public API. Public APIs may expose user-facing request submission or public-safe status of a governed process, but not privileged approval, override, correction, remediation, treasury, governance, or security control actions.
 
-The following areas are intentionally deferred to downstream domain specs, product API specs, or machine-readable contract work:
+If a public API allows users to request support, correction, export, registry review, or policy review, it MUST create a bounded request or case. It MUST NOT execute the privileged control-plane result directly.
 
-- exact public route inventory for each product
-- exact partner onboarding and credential-issuance workflow
-- exact OAuth, session-token, or delegated-auth mechanism
-- exact rate-limit thresholds by route family and consumer class
-- exact public payout claim flows, if any, beyond read-oriented status surfaces
-- exact public API monetization, quota billing, or commercial packaging
-- exact webhook catalog, event names, and event-subscription lifecycle
-- exact property-level field visibility matrices for each domain route
-- exact OpenAPI grouping, tag structure, and shared component-library organization
+## Event / Webhook / Async API Considerations
 
-No unresolved item above should be interpreted as permission to weaken the core public-boundary rules defined in this specification.
+Public webhooks MUST be derived from eligible owner-domain outcomes or approved event projections. Payloads MUST be public-safe, versioned, signed where appropriate, replay-safe, and delivery-lineaged.
 
----
+Async public APIs MUST return operation references, not internal workflow IDs. Operation status responses MUST distinguish accepted intent, current processing, waiting for external input, waiting for review, completed, failed retryable, failed terminal, cancelled, expired, and superseded where relevant.
 
-## 31. Implementation Notes for `fuze-backend-api`
+## Chain-Adjacent API Considerations
 
-- Implement the public API layer as curated boundary modules, not as direct leakage of internal service endpoints.
-- Keep public route-family composition explicit and versioned.
-- Centralize request lineage, correlation, rate-limit, and idempotency handling patterns.
-- Ensure object-level and function-level authorization occurs in backend domain logic, not only at edge middleware.
-- Keep public artifact retrieval separated from private domain mutation handlers.
-- Expose async request acceptance and result retrieval through a consistent shared pattern across products.
-- Never place treasury, governance, vault, or raw internal credits mutation primitives in the public route inventory.
-- Publish stable contract metadata suitable for later OpenAPI, AsyncAPI, and SDK derivation.
+Public chain-adjacent APIs MAY expose official registry entries, chain references, public-safe contract metadata, payout-status summaries, transaction references, and chain observation summaries. They MUST NOT redefine chain-native truth or off-chain owner-domain policy truth.
 
----
+Chain observations remain provider/chain-input truth until normalized and accepted by the relevant owner domain. Public APIs MUST label chain-adjacent freshness, network, confirmation, supersession, discrepancy, or reconciliation status when relevant.
 
-## 32. Frontend Consumption Notes
+## Data Model / Storage Support Implications
 
-### 32.1 `fuze-frontend-webapp`
+Implementations MUST support durable records for:
 
-- May consume selected public routes for public metadata, catalog, registry, transparency, and authenticated self-context experiences.
-- Must not treat first-party consumption alone as proof that a route belongs in the permanent public contract.
-- Must not own durable truth, authorization policy, or idempotency semantics.
-- Should rely on public artifact classification to present canonical public artifacts versus derived summaries accurately.
+- public clients and partner credentials
+- public contract versions
+- public visibility classes
+- public request lineage
+- public idempotency records
+- public operation records
+- public webhook subscriptions and deliveries
+- public read-model lineage
+- public artifact references
+- public deprecation/sunset notices
+- rate-limit and abuse decisions
+- public audit references
 
-### 32.2 `fuze-frontend-admin`
+These records must not become semantic owners of business truth. They support interface contract safety, lineage, compatibility, and operations.
 
-- Must not use public API surfaces as a shortcut for privileged operational workflows.
-- Should use admin or internal control-plane interfaces for operator actions.
-- May consume public views only where operator workflows need to see exactly what public consumers see.
-- Must not redefine public exposure policy from the dashboard layer.
+## Read Model / Projection / Reporting Rules
 
----
+Public read models MUST:
 
-## 33. Contract Derivation Notes
+1. name their upstream canonical sources
+2. identify visibility class
+3. preserve source lineage or projection version where material
+4. distinguish canonical public artifact from derived public view
+5. avoid exposing private fields
+6. support correction, suppression, deprecation, supersession, and freshness indicators where relevant
+7. honor deletion, retention, classification, and incident suppression policies
+8. avoid becoming hidden write owners
 
-### 33.1 OpenAPI or AsyncAPI derivation
+Caches, CDN edges, public search indexes, SDK local caches, and public exports are derived. They MUST observe invalidation, suppression, deprecation, and correction requirements.
 
-This specification should later derive into:
+## Security / Risk / Privacy Controls
 
-- public read route groups
-- authenticated self-context route groups
-- public product request and async route groups
-- partner integration route groups
-- outbound webhook or callback contracts
-- shared response envelope components
-- shared error-catalog components
-- shared idempotency and correlation headers
+Public APIs MUST preserve least privilege, audience minimization, safe error disclosure, replay safety, credential hygiene, signature verification, threat monitoring, endpoint verification, abuse controls, security posture narrowing, and data classification.
+
+Security/risk posture may deny, challenge, restrict, narrow, contain, or suppress public exposure. Public APIs MUST not continue unsafe operations due to stale sessions, stale caches, stale rollout decisions, SDK defaults, or product convenience.
+
+## Audit / Traceability / Observability Requirements
+
+Material public operations MUST record:
 
-Machine-readable contracts must not introduce business rules, permissions, lifecycle states, or mutation capabilities that are absent from or inconsistent with this narrative specification.
+- request ID
+- correlation ID
+- trace ID where safe
+- caller/client reference
+- account/workspace/partner scope where applicable
+- route family and contract version
+- visibility class
+- authorization and entitlement decision references where applicable
+- risk/abuse/rate-limit decision references where applicable
+- idempotency key hash and replay result where applicable
+- owner-domain target reference
+- operation reference where applicable
+- result/error/status class
+- policy version where applicable
+- audit record reference
+
+Observability MUST distinguish public gateway failure, auth failure, authorization denial, owner-domain rejection, rate-limit denial, idempotency conflict, accepted async progress, dependency failure, projection lag, and webhook delivery failure.
+
+## Failure Handling / Edge Cases
+
+Public APIs MUST define deterministic behavior for:
+
+- missing authentication
+- expired session
+- invalid partner credential
+- insufficient scope
+- insufficient workspace permission
+- entitlement denial
+- feature rollout denial
+- risk challenge or containment
+- duplicate idempotency key
+- idempotency fingerprint mismatch
+- concurrent mutation conflict
+- stale public read model
+- source-domain correction or supersession
+- public contract deprecation
+- webhook endpoint failure
+- provider callback replay
+- dependency outage
+- degraded mode
+- public status incident
+- deletion/suppression of source data
+- chain discrepancy or delayed confirmation
+- operation cancellation, expiry, or terminal failure
+
+When safe owner-domain acceptance cannot be confirmed, public mutation APIs MUST fail closed or return accepted/pending only if the accepted intent is durably recorded.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+Public APIs MUST use explicit versioning and compatibility policy. Breaking changes require:
+
+1. owner-domain and Public API Governance review
+2. documented compatibility impact
+3. deprecation notice where public consumers are affected
+4. coexistence window when required
+5. migration guide or SDK guidance where applicable
+6. sunset date where known
+7. clear `deprecated`, `sunset_scheduled`, `retired`, or `superseded` contract state
+8. monitoring for remaining consumer traffic
+9. rollback or exception posture when required
+
+Non-breaking additive changes MAY proceed under compatibility policy if they do not leak data, change semantics, weaken auth, or alter error/result meaning unexpectedly.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI, AsyncAPI, SDKs, examples, and developer docs MUST preserve:
+
+- visibility class
+- owner domain
+- authentication and scope requirements
+- entitlement requirements
+- request schemas and business-intent names
+- response/result/error/status classes
+- idempotency requirements
+- operation references for async actions
+- rate-limit and retry guidance
+- deprecation and version metadata
+- public-safe field exposure
+- webhook signature and replay requirements
+- no internal IDs, private fields, admin routes, or internal error detail
 
-### 33.2 Future `fuze-sdk`
-
-Future `fuze-sdk` packages may derive from approved public contracts, but the SDK is not a source of truth. SDK design should preserve:
-
-- route-family distinctions
-- auth posture distinctions
-- public artifact classification
-- idempotency semantics for supported mutations
-- async operation handling patterns
-- stable version and deprecation awareness
-
-Narrative API specs remain authoritative. OpenAPI or AsyncAPI contracts and SDK packages are derived implementation artifacts.
+SDKs MUST NOT hide accepted-state semantics by pretending async operations are completed. SDK retries MUST respect idempotency and rate-limit guidance.
+
+## Implementation-Contract Guardrails
+
+1. Public route publication requires explicit owner-domain and visibility-class assignment.
+2. Public mutations require owner-domain termination.
+3. Public async operations require durable operation records.
+4. Public idempotent mutations require idempotency records before side effects.
+5. Public reads require public-data classification and read-model lineage.
+6. Partner APIs require explicit credential, scope, signature/replay, and support posture.
+7. Public webhooks require payload filtering, signing where appropriate, delivery lineage, retry policy, and dead-letter/remediation posture.
+8. Public gateway logs must avoid sensitive payload leakage while preserving enough request lineage.
+9. Public error messages must be audience-minimized and deterministic.
+10. Public compatibility changes must preserve migration and deprecation lineage.
+
+## Downstream Execution Staging
+
+1. Inventory candidate public route families and classify each by owner domain, visibility class, and compatibility posture.
+2. Map each mutation to owner-domain acceptance/finalization contracts.
+3. Establish shared public request, response, error, idempotency, operation, audit, and deprecation envelopes.
+4. Implement public gateway policy controls and security/abuse/rate-limit enforcement.
+5. Build public read-model lineage and suppression/correction mechanisms.
+6. Generate OpenAPI/AsyncAPI contracts and SDK rules from approved contract sources.
+7. Add conformance tests for public API boundaries, auth, idempotency, errors, async, audit, and migration.
+8. Establish public API review gates before production publication.
+
+## Required Downstream Specs / Contract Layers
+
+- domain-specific public API specs
+- `PUBLIC_METADATA_API_SPEC.md`
+- `PUBLIC_TRANSPARENCY_API_SPEC.md`
+- `PUBLIC_PAYOUT_STATUS_API_SPEC.md`
+- `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md`
+- `PUBLIC_PRODUCT_CATALOG_API_SPEC.md`
+- `PUBLIC_CHAIN_REFERENCE_API_SPEC.md`
+- `PUBLIC_PLATFORM_STATUS_API_SPEC.md`
+- `PUBLIC_GOVERNANCE_DISCLOSURE_API_SPEC.md`
+- public OpenAPI contracts
+- public AsyncAPI/webhook contracts
+- public SDK derivation specs
+- public gateway/rate-limit policy specs
+- public API conformance test suite
+- public deprecation and migration runbooks
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+The following patterns are forbidden unless a stronger approved specification creates a bounded exception:
+
+1. exposing internal service routes publicly
+2. exposing admin/control operations publicly
+3. using public APIs as raw database mutation surfaces
+4. using public reads as hidden source-of-truth owners
+5. treating authenticated public users as internal callers
+6. treating partner callbacks as canonical truth without normalization
+7. exposing raw provider payloads publicly
+8. exposing private wallet inventory, signer topology, or treasury controls
+9. leaking unauthorized resource existence through errors
+10. using idempotency keys without request fingerprinting
+11. returning `200 OK` for accepted async intent that is not completed
+12. silently changing public response semantics without version/deprecation posture
+13. allowing SDK retries to duplicate side effects
+14. using public route names to encode hidden entitlement truth
+15. allowing frontend or gateway convenience to redefine owner-domain semantics
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example — Public Registry Lookup
+
+A public caller requests an official contract address. The API reads from registry publication truth, returns only public-safe metadata, includes network, publication state, supersession guidance if applicable, and does not expose private signer/control details.
+
+### Canonical Example — Authenticated Workspace Action
+
+An authenticated user submits a bounded product request inside a workspace. The API authenticates the session, resolves account/workspace scope, checks permission, entitlement, risk, idempotency, and owner-domain acceptance, then returns either final result or `202 Accepted` with operation reference.
+
+### Canonical Example — Partner Callback
+
+A partner sends a signed callback with event ID and timestamp. FUZE verifies signature and replay window, stores provider-input lineage, normalizes the input, routes it to the owner domain, and only then updates canonical state or rejects the input.
+
+### Anti-Example — Internal Route Mirror
+
+A public route directly forwards arbitrary payloads to an internal service mutation endpoint. This is forbidden because it bypasses public validation, owner-domain business-action shape, idempotency, and public error discipline.
+
+### Anti-Example — False Synchronous Completion
+
+A public API returns success for a payout, export, AI run, or chain-adjacent operation before the owner-domain final outcome exists. This is forbidden. The API must return accepted-state or pending operation status.
+
+### Anti-Example — Derived View as Owner
+
+A public transparency cache is edited directly to correct payout status without updating the payout ledger/publication owner. This is forbidden because the derived read model becomes a shadow source of truth.
+
+## Acceptance Criteria
+
+1. Every public route family declares owner domain, visibility class, authentication requirement, authorization model, entitlement posture, idempotency posture, and compatibility status.
+2. Public mutation routes express bounded business actions and terminate in owner-domain contracts.
+3. No public route exposes internal service, admin/control, raw job, raw event, raw database, raw ledger, raw treasury, private wallet, or private security/risk mutation capability.
+4. Authenticated public APIs distinguish authentication, session validity, account scope, workspace scope, authorization, entitlement, and risk posture.
+5. Public async APIs return durable public operation references and distinguish accepted intent from final outcome.
+6. Public idempotent mutations return prior results for same key/fingerprint and reject same key/different fingerprint without side effects.
+7. Public error responses distinguish safe result classes without leaking internal details or unauthorized object existence.
+8. Public read models identify upstream source lineage and never become mutation owners.
+9. Public trust APIs preserve public artifact classification, publication state, supersession, correction, and visibility constraints.
+10. Partner APIs enforce explicit credential, scope, signature/replay, rate-limit, and audit requirements.
+11. Public webhook deliveries are payload-filtered, signed where required, replay-safe, retried according to policy, and delivery-lineaged.
+12. Public rate-limit and abuse controls apply per route family, caller/client, scope, sensitivity, and current risk posture.
+13. Material public operations emit audit and observability records with request ID, correlation ID, actor/client, route family, owner domain, result class, and policy references where applicable.
+14. Public contract changes include version/deprecation/sunset/retirement metadata and migration guidance when externally breaking.
+15. OpenAPI/AsyncAPI/SDK artifacts preserve visibility, auth, error, idempotency, async, rate-limit, and deprecation semantics.
+16. Degraded mode does not allow unsafe public writes and labels stale or partial public reads where applicable.
+17. Data classification, retention, deletion, suppression, and artifact-delivery rules are enforced before public exposure.
+18. Boundary-violation tests fail builds when internal/admin/private routes or fields are exposed through public contracts.
+
+## Test Cases
+
+### Positive Tests
+
+1. Open-public metadata read returns only public-safe fields, version metadata, cache policy, and correlation ID.
+2. Authenticated self-scope read succeeds only for the authenticated account and omits unauthorized workspace data.
+3. Workspace-scoped public action succeeds when session, workspace permission, entitlement, risk, and idempotency checks pass.
+4. Partner API request with valid credential, scope, signature, timestamp, and nonce succeeds and records request lineage.
+5. Async export request returns `202 Accepted` with `operation_id`; status endpoint later returns `completed` after owner-domain finalization.
+6. Public registry lookup returns published entry with public role, network, address, publication state, supersession guidance, and no private wallet/control details.
+7. Webhook delivery signs payload, records delivery ID, and exposes public-safe delivery status.
+
+### Negative / Boundary Tests
+
+1. Unauthenticated request to authenticated route returns `authentication_required` without object leakage.
+2. Authenticated user without workspace permission receives safe denial or `not_found_or_not_visible` according to route policy.
+3. Entitlement-denied action returns `entitlement_required` or `capability_unavailable` without redefining entitlement truth.
+4. Same idempotency key with different payload returns `idempotency_conflict` and no side effects.
+5. Duplicate retry with same idempotency key and fingerprint returns prior operation/result.
+6. Public route attempting to call internal admin mutation fails boundary validation.
+7. Public response schema containing internal service name, database ID, private risk reason, raw job ID, or private wallet detail fails contract validation.
+8. Partner callback with invalid signature, expired timestamp, replayed nonce, or unknown event ID is rejected and audited as provider-input failure.
+9. Public async endpoint cannot return `completed` unless owner-domain finalization exists.
+10. Deprecated contract version returns deprecation metadata and still preserves compatibility during coexistence window.
+11. Sunset route after retirement returns `sunset_contract` or approved migration error, not ambiguous server failure.
+12. Rate-limit burst returns `429` with safe retry guidance where allowed.
+13. Security containment suppresses public write and returns safe policy/risk denial while recording lineage.
+14. Stale public read model returns freshness warning or degraded status; it must not claim canonical currentness.
+15. Source deletion/suppression removes or suppresses derived public view and artifact access according to lifecycle policy.
+16. Webhook endpoint failure triggers retries and delivery-state updates without duplicate semantic event creation.
+17. Chain discrepancy prevents public API from asserting final chain-adjacent outcome until reconciliation posture is explicit.
+18. Migration test verifies OpenAPI and SDK outputs preserve accepted-state and idempotency semantics.
+
+## Dependencies / Cross-Spec Links
+
+This document depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `DOCS_SPEC_INDEX.md`
+- `SYSTEM_SPEC_INDEX.md`
+- `API_ARCHITECTURE_SPEC.md`
+- refined `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`
+- `DATA_RETENTION_DELETION_AND_ARCHIVAL_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`
+- `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+- `TRANSPARENCY_MODEL_SPEC.md`
+- `TRANSPARENCY_REPORTING_SPEC.md`
+- domain-specific public companion API specs
+
+## Explicitly Deferred Items
+
+1. final endpoint paths and complete field schemas for each domain
+2. exact OAuth, token, API key, or credential implementation
+3. exact public gateway vendor and infrastructure topology
+4. exact SDK package structure and code-generation templates
+5. exact public webhook event catalog
+6. exact per-route public quota values
+7. exact commercial packaging and pricing plans
+8. exact public developer documentation copy
+9. exact per-domain public read-model storage schemas
+10. exact support runbooks for public API incidents
+
+Deferred items MUST be resolved in narrower specs or implementation contracts without contradicting this document.
+
+## Final Normative Summary
+
+FUZE public APIs are curated external contracts. They are not internal route mirrors, admin surfaces, raw mutation channels, or public cache owners. Public APIs MUST preserve owner-domain truth, truth-class separation, public visibility classification, authenticated-public boundary discipline, bounded business-action writes, accepted-state honesty, idempotency, replay safety, abuse controls, safe error semantics, audit lineage, observability, compatibility posture, migration discipline, and public trust read-model safety.
+
+When public convenience conflicts with owner-domain semantics, security, privacy, auditability, compatibility, or public trust, the stricter architecture-consistent interpretation wins.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are excluded from public APIs and bounded to adjacent admin/control specs.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit where relevant.
+- [x] Accepted-state vs final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behavior is explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid flowchart syntax.
+- [x] Architecture Diagram clarifies consumers, surfaces, owner domains, stores, event systems, async workers, public read models, and downstream consumers.
+- [x] Data Design diagram uses Mermaid ER syntax.
+- [x] Data Design distinguishes canonical owner data from derived projections and public artifacts.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, webhook, and finalization paths.
+- [x] Data Flows use Mermaid sequenceDiagram syntax.
+- [x] Data Flows distinguish accepted-state responses from final business outcomes.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authentication, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

@@ -1,705 +1,638 @@
-# TRANSPARENCY_REPORTING_API_SPEC
+# FUZE Transparency Reporting API Specification
+
+## Document Metadata
+
+- **Document Name:** `TRANSPARENCY_REPORTING_API_SPEC.md`
+- **Document Type:** API SPEC v2 / Production-grade interface-contract specification
+- **Status:** Draft refined API specification pending canonical approval
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Transparency Reporting API Domain; named individual owner not explicitly specified in retrieved governing materials
+- **Approval Authority:** FUZE canonical specification approval workflow; exact named approver not explicitly specified in retrieved governing materials
+- **Review Cadence:** Quarterly and whenever transparency posture, publication controls, reporting cadence, public API posture, payout/registry/governance reporting obligations, source-lineage requirements, or public-trust disclosure policy materially changes
+- **Governing Layer:** API contract layer for recurring transparency reporting, transparency report publication, reporting source-lineage, and public-safe report exposure
+- **Parent Registry:** FUZE API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend/API engineering, public API authors, admin/control-plane authors, reporting authors, public-trust surface authors, treasury/governance stakeholders, audit/compliance, security, runtime operations, OpenAPI/AsyncAPI/SDK authors, implementation-contract authors
+- **Primary Purpose:** Define the production-grade API contract for transparency report families, reporting periods, source-linked report generation, publication, correction, supersession, retraction-if-required, public-safe reads, exports, and lifecycle events without allowing the reporting API to redefine source-domain truth.
+- **Primary Upstream References:** `REFINED_SYSTEM_SPEC_INDEX.md`; `DOCS_SPEC_INDEX.md`; `SYSTEM_SPEC_INDEX.md`; `API_SPEC_INDEX.md`; `TRANSPARENCY_REPORTING_SPEC.md`; `TRANSPARENCY_MODEL_SPEC.md`; `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`; `PUBLIC_API_SPEC.md`; `API_ARCHITECTURE_SPEC.md`; `INTERNAL_SERVICE_API_SPEC.md`; `EVENT_MODEL_AND_WEBHOOK_SPEC.md`; `IDEMPOTENCY_AND_VERSIONING_SPEC.md`; `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`; `AUDIT_LOG_AND_ACTIVITY_SPEC.md`; `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`; `SECURITY_AND_RISK_CONTROL_SPEC.md`; `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`; `DATA_CLASSIFICATION_AND_HANDLING_SPEC.md`; `DATA_RETENTION_DELETION_AND_ARCHIVAL_SPEC.md`; `PAYOUT_LEDGER_SPEC.md`; `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`; `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`; `TREASURY_CONTROL_POLICY_SPEC.md`; `VAULT_ACTION_POLICY_SPEC.md`; `MULTISIG_AND_TIMELOCK_SPEC.md`; `GOVERNANCE_MODEL_SPEC.md`; `FOUNDATION_GOVERNANCE_SPEC.md`; `CHAIN_ARCHITECTURE_SPEC.md`; `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`; `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`; `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- **Primary Downstream Dependents:** `PUBLIC_TRANSPARENCY_API_SPEC.md`; `INVESTOR_AND_COMMUNITY_REPORTING_API_SPEC.md`; `PUBLIC_METADATA_API_SPEC.md`; `PUBLIC_PAYOUT_STATUS_API_SPEC.md`; `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md`; public transparency sites; transparency export/publication pipelines; report-generation workers; attestation services; discrepancy/correction runbooks; OpenAPI/AsyncAPI/SDK artifacts; admin/control-plane implementation contracts
+- **API Surface Families Covered:** Public read, first-party read, internal service, admin/control-plane, event, webhook-if-approved, reporting/export, chain-adjacent reference surfaces
+- **API Surface Families Excluded:** Raw accounting APIs, raw audit-log APIs, raw chain-indexer APIs, private investor-data APIs, static rendering internals, treasury execution APIs, payout execution APIs, registry mutation APIs, governance approval APIs
+- **Canonical System Owner(s):** FUZE Transparency Reporting Domain owns transparency report-family semantics, reporting cadence posture, publication-state governance, source-lineage grounding, correction/supersession discipline, and public trust-safe recurring reporting behavior. Source domains retain canonical ownership of underlying registry, payout, treasury, governance, chain, audit, analytics, and accounting truth.
+- **Canonical API Owner:** FUZE Transparency Reporting API Domain
+- **Supersedes:** API SPEC v1 `TRANSPARENCY_REPORTING_API_SPEC.md` where it is incomplete, weaker, route-dump-oriented, or inconsistent with refined system semantics
+- **Superseded By:** None currently defined
+- **Related Decision Records:** Not explicitly specified in retrieved governing materials
+- **Canonical Status Note:** This API spec is a v2 interface-contract expression of refined transparency-reporting semantics. It does not replace `TRANSPARENCY_REPORTING_SPEC.md`, which remains semantic source truth.
+- **Implementation Status:** Normative API-contract draft for downstream implementation planning and contract generation
+- **Approval Status:** Pending explicit approval workflow
+- **Change Summary:** Upgrades the v1 transparency reporting API into a v2 production-grade contract with explicit truth classes, API surface families, lifecycle state, source-lineage and correction-lineage requirements, idempotency, replay, public/private separation, admin bounds, event/export behavior, diagrams, acceptance criteria, test cases, and downstream guardrails.
+
+## Purpose
+
+This specification defines the FUZE Transparency Reporting API contract. It governs how FUZE exposes, mutates, publishes, corrects, supersedes, retracts-if-required, exports, and audits transparency reports through public, first-party, internal, admin/control-plane, reporting/export, and event-oriented API surfaces.
+
+Transparency reports are public-trust artifacts. They explain trust-relevant structures, cycles, periods, and changes across FUZE, including registry-linked structural updates, payout-related public summaries, governance/control disclosures, treasury/reserve summaries, token/credits context where approved, and other report families defined by the Transparency Reporting domain. They are not raw source-domain truth. They are derived, source-linked, public-safe report artifacts governed by canonical reporting semantics.
+
+This API exists to make report production and exposure implementation-safe: source-linked, idempotent, auditable, correction-safe, public/private separated, versioned, and compatible with downstream public surfaces and contract artifacts.
+
+## Scope
+
+This API specification governs:
+
+- public read APIs for published transparency reports, reporting periods, report versions, public artifacts, and public-safe correction/supersession guidance;
+- first-party application APIs for bounded report consumption by FUZE-owned clients;
+- internal service APIs for creating report drafts, binding source snapshots, generating report versions, attaching attestations, preparing exports, and reading canonical report records;
+- admin/control-plane APIs for publish, correct, supersede, retract-if-required, restrict, unrestrict, retry export, and resolve discrepancy actions;
+- event and webhook posture for report lifecycle changes and approved downstream notifications;
+- request, response, error, status, idempotency, audit, observability, versioning, and migration rules for the transparency reporting API domain;
+- read-model, projection, public artifact, cache, and export rules for derived transparency-reporting surfaces.
+
+## Out of Scope
+
+This API specification does not govern:
+
+- source-domain semantics for treasury, governance, payout, registry, chain, accounting, audit, analytics, billing, credits, or investor/private-reporting truth;
+- raw accounting workbook exposure or legal-review workflow details;
+- exact PDF/HTML/static-site rendering internals;
+- exact database schema details beyond API-supporting entity families;
+- exact chain-indexer internals or smart-contract ABI details;
+- private board or investor-only reporting exposure;
+- final legal disclaimer wording;
+- runtime incident runbooks except where API behavior, audit, status, or degraded-mode response is required.
+
+## Design Goals
+
+1. Preserve refined transparency-reporting semantics at the API boundary.
+2. Keep reports source-linked, correction-safe, historically intelligible, and public-safe.
+3. Distinguish public-safe reads from canonical internal reporting records.
+4. Separate report publication from source-domain truth, source-domain mutation, and public-site rendering.
+5. Require idempotent and replay-safe mutations for generation, source binding, publication, correction, supersession, retraction, export, and discrepancy resolution.
+6. Make admin/control actions reason-coded, policy-constrained, auditable, and separate from ordinary application APIs.
+7. Support OpenAPI, AsyncAPI, SDK, event catalog, worker, and implementation-contract derivation without allowing derived artifacts to reinterpret domain semantics.
+8. Ensure public read models remain derived from canonical reporting truth and never become hidden mutation owners.
+
+## Non-Goals
+
+- Do not create a generic public reporting framework for all FUZE information.
+- Do not expose raw internal finance, security, audit, operational, workspace, user, or private source material.
+- Do not allow static pages, spreadsheets, dashboards, exports, public sites, or frontends to mint canonical report truth.
+- Do not collapse registry truth, payout truth, governance truth, treasury truth, chain truth, audit truth, analytics truth, and reporting truth into one ambiguous API.
+- Do not make public report availability equivalent to final source-domain settlement, execution, approval, or chain finality.
+
+## Core Principles
+
+### 1. Semantic Source Separation
+`TRANSPARENCY_REPORTING_SPEC.md` owns transparency-reporting meaning. This API owns interface expression of that meaning. Source-domain specifications own the underlying facts summarized or linked by reports.
+
+### 2. Report-Is-Derived-Public-Artifact
+A transparency report is a governed public explanation artifact. It does not replace registry, payout, treasury, governance, chain, audit, accounting, or analytics truth.
+
+### 3. Source-Lineage Requirement
+Material report versions MUST be backed by approved source references, source snapshots, attestation metadata where required, and validation lineage sufficient for audit and correction.
+
+### 4. Public-Safe Exposure
+Public APIs MUST expose only approved public-safe report content, publication metadata, public artifacts, correction/supersession guidance, and bounded source references.
+
+### 5. Correction Visibility
+Material corrections, supersessions, restrictions, and retractions MUST preserve lineage. Silent overwrite of public-trust artifacts is forbidden.
 
-## 1. Title
+### 6. Owner-Domain Mutation Boundary
+Canonical reporting mutations terminate in the Transparency Reporting domain. Source-domain mutations terminate in their respective owner domains.
 
-**TRANSPARENCY_REPORTING_API_SPEC.md**
+### 7. Accepted-State Discipline
+Generation, export, discrepancy remediation, and other deferred work MUST distinguish accepted async intent from final report generation, publication, or export outcome.
 
----
-
-## 2. Document Metadata
-
-- **Document Name:** TRANSPARENCY_REPORTING_API_SPEC.md
-- **API Classification:** public, internal, admin, event-driven, chain-adjacent
-- **Owning Domain:** Transparency Reporting Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** transparency report definitions, reporting periods, published report artifacts, source-snapshot lineage, publication state, attestation metadata, and correction/remediation records in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE transparency reporting, reporting-period publication, public trust artifact generation, source-lineage traceability, and controlled correction-safe transparency disclosure across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 2.1 API Classification Header
-
-- **API Classification:** public | internal | admin | event-driven | chain-adjacent
-- **Owning Domain:** Transparency Reporting Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** transparency reporting and publication-control domain
-
----
-
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE transparency reporting operations. It translates the governing FUZE platform architecture, transparency model, transparency reporting rules, public contract and wallet registry rules, chain architecture, profit participation and payout reporting rules, treasury control expectations, audit requirements, and API architecture rules into an implementation-ready API contract.
-
-This API exists because FUZE positions transparency as a platform principle rather than a marketing afterthought. Transparency reports are public trust artifacts that summarize approved, policy-bounded views of platform performance, wallet and contract references, payout-related disclosures, and other reportable facts tied to FUZE’s transparency model. These reports must therefore be backend-governed, source-linked, publication-safe, versioned, and correction-safe. They cannot depend on ad hoc spreadsheets, ephemeral operator notes, or informal public posts.
-
-Accordingly, this specification defines how reporting periods and report artifacts are represented, how report source snapshots and attestations are linked, how published transparency reports are exposed publicly, how internal/admin flows generate and publish transparency reports safely, and how transparency reporting remains auditable, idempotent, and architecture-consistent across FUZE.
-
----
-
-## 4. Scope
-
-This specification covers:
-
-- public list and detail APIs for published transparency reports
-- public APIs for reporting-period metadata and report artifact access
-- internal service APIs for transparency report generation, source binding, and publication preparation
-- admin/control-plane APIs for publish, supersede, correct, retract-if-required, and discrepancy resolution
-- source-snapshot and attestation metadata APIs
-- event emission requirements for transparency reporting lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
-
-This specification does **not** redefine:
-
-- full treasury policy semantics
-- full profit participation and payout execution semantics
-- full public wallet registry semantics
-- full investor/community reporting semantics
-- full accounting-policy text or legal disclaimers
-- external document rendering implementation detail
-- on-chain proof generation standards for every future reporting class
-
-Those remain governed by their own source-of-truth specifications.
-
----
-
-## 5. Source-of-Truth Inputs
-
-### Primary FUZE docs and specs used
-
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
-
-#### Primary transparency / reporting / trust sources
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `INVESTOR_AND_COMMUNITY_REPORTING_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `PAYOUT_LEDGER_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
-- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
-- `TREASURY_CONTROL_POLICY_SPEC.md`
-- `VAULT_ACTION_POLICY_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
-
-#### API and runtime sources
-- `API_ARCHITECTURE_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-
-#### Security and operations sources
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-
-#### Core docs inputs
-- `DOCS_SPEC.md`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
-- `FUZE_TOKENOMICS_TABLES.md`
-- `ONEPAGE_PAPER.md`
-- `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
-
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
-
-### Highest-priority interpretation applied
-
-For this file, the most important governing interpretation is:
-
-1. transparency reports are public trust artifacts derived from approved source-of-truth data
-2. backend owns canonical transparency reporting truth and publication state
-3. transparency reports must remain explicitly linked to source snapshots, reporting periods, and publication lineage
-4. public reports are distinct from raw internal ledgers, raw audit data, and private operational details
-5. admin/control-plane may publish, supersede, correct, or retract under controlled policy but must preserve public trust lineage
-6. published transparency outputs must remain separated from investor-private materials, private wallet operations, and non-public internal controls
-
-### Supporting external standards used only as guidance
-
-- HTTP semantics for public document and list APIs plus controlled mutation APIs
-- structured problem-details error design
-- general public-report versioning, attestation, and correction-lineage patterns as supporting guidance
-
-External guidance does not override FUZE source-of-truth documents.
-
----
-
-## 6. Governing Architecture and Ownership Interpretation
-
-This API belongs to the **Transparency Reporting Domain** because it owns the public publication layer for transparency reports, reporting periods, source-linked report artifacts, and correction-safe trust disclosures.
-
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable transparency reporting and publication truth
-- public trust artifacts must be centrally controlled
-- reports require explicit linkage to approved source snapshots and reporting periods
-- correction, supersession, and attestation handling must be backend-governed
-- audit generation and discrepancy handling must be centralized
-
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because webapp only reads and displays published reports
-- `fuze-frontend-admin`, because admin may publish or correct reports but must not own transparency truth
-- `fuze-public-registry`, because that repository or delivery surface stores derived public artifacts while canonical mutable reporting truth is owned by `fuze-backend-api`
-- payout, treasury, or public wallet registry domains, because those domains may provide approved source data but do not own transparency report publication semantics
-- on-chain contracts, because the reports are off-chain trust artifacts even when they reference on-chain facts
-
-### Architectural implications
-
-- one reporting period may have one or more report artifacts
-- one published transparency report must link to explicit source snapshots and approved data provenance
-- public report views must remain bounded and safe for public disclosure
-- superseded or corrected reports must preserve lineage to prior published versions
-- public transparency reporting is a disclosure layer, not itself a financial execution or governance action
-- raw operational or sensitive source data must remain private unless explicitly published through bounded report content
-
----
-
-## 7. Domain Responsibilities
-
-The Transparency Reporting API domain is responsible for:
-
-1. maintaining canonical transparency reporting periods and report artifacts
-2. exposing public list and detail views for published transparency reports
-3. recording source snapshots, attestation metadata, and publication lineage
-4. supporting internal report generation and export-safe publication preparation
-5. supporting admin publish, supersede, correct, and retract workflows
-6. supporting derived artifact export to public trust surfaces
-7. emitting reporting lifecycle events
-8. generating audit lineage for sensitive publication and correction actions
-9. preserving separation between public reporting truth and raw internal source data
-10. supporting safe public lookup of historical and current transparency disclosures
-
-The domain is not responsible for:
-
-- executing payouts, treasury, or vault actions
-- mutating source ledgers as the source of truth
-- replacing investor-private or internal financial reporting
-- exposing private wallet inventories or secret material
-- acting as the raw accounting system of record
-- proving all on-chain facts directly within the API response format
-
----
-
-## 8. Out of Scope
-
-The following are out of scope for this API specification:
-
-- private board or investor-only reporting exposure
-- raw accounting workbook exposure
-- legal opinion workflows
-- final PDF/HTML rendering implementation details
-- private audit workpapers
-- public static-site generation internals outside canonical export lineage
-- chain-indexing subsystem internals
-- third-party assurance workflow implementation detail
-
-Where later detailed specs are needed, they must remain compatible with this API.
-
----
-
-## 9. Canonical Entities and Data Ownership
-
-### Durable entities
-
-#### 9.1 transparency_reporting_periods
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** canonical reporting-period definitions such as quarter, month, or special disclosure period
-- **Nature:** source-of-truth durable entity
-
-#### 9.2 transparency_reports
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** canonical report records for one reporting period and report class
-- **Nature:** source-of-truth durable entity
-
-#### 9.3 transparency_report_versions
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** immutable version lineage for published and unpublished report variants
-- **Nature:** source-of-truth durable entity
-
-#### 9.4 transparency_source_snapshots
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** approved references to source data snapshots used for report generation
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.5 transparency_attestations
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** attestation, preparation, or verification metadata linked to report versions
-- **Nature:** durable attestation lineage entity
-
-#### 9.6 transparency_publication_states
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** publication lifecycle and visibility state for reports
-- **Nature:** source-of-truth durable entity
-
-#### 9.7 transparency_supersession_links
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** links between superseded, corrected, or retracted report versions
-- **Nature:** durable lineage entity
-
-#### 9.8 transparency_export_records
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** lineage of public artifact generation and export publication pushes
-- **Nature:** durable export lineage entity
-
-#### 9.9 transparency_discrepancy_cases
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** review and remediation records for missing, incorrect, conflicting, or stale transparency reports
-- **Nature:** durable review/remediation entity
-
-#### 9.10 transparency_mutation_actions
-- **Owner:** Transparency Reporting Domain
-- **Purpose:** high-level action records for generate, publish, supersede, correct, retract, export, and resolve discrepancies
-- **Nature:** durable action records with audit linkage
-
-#### 9.11 transparency_audit_events
-- **Owner:** Audit / Activity domain, sourced by Transparency Reporting Domain
-- **Purpose:** immutable trail for sensitive publication and correction actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.12 transparency_public_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe list and detail representations of published reports
-- **Nature:** derived
-
-#### 9.13 transparency_lookup_views
-- **Owner:** derived read-model layer
-- **Purpose:** optimized reporting-period and report lookup responses
-- **Nature:** derived
-
-#### 9.14 transparency_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into stale, conflicting, or failed report publication conditions
-- **Nature:** derived
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 reporting period lifecycle
-
-Possible states:
-
+### 8. Derived-Read Discipline
+Public views, reports lists, static exports, public sites, search indexes, feeds, and caches MAY present reporting truth but MUST NOT become canonical write owners.
+
+## Canonical Definitions
+
+- **Transparency Report:** A public-trust artifact generated, reviewed, published, corrected, superseded, restricted, or archived under FUZE transparency-reporting rules.
+- **Report Family:** A governed category of transparency report with defined structural focus and cadence posture.
+- **Reporting Period:** A bounded calendar or reporting window for periodic report families.
+- **Reporting Cycle:** A bounded domain-specific execution or publication window, such as a payout cycle or registry-change cycle.
+- **Event-Driven Report:** A report or notice published because a structural or trust-sensitive event occurred.
+- **Report Version:** An immutable durable version of a report artifact or report body.
+- **Publication State:** A report's current visibility and public-meaning state.
+- **Source Snapshot:** A durable reference to approved source data, source-domain artifact, or validated snapshot used to generate a report.
+- **Attestation:** Bounded metadata showing preparation, validation, review, approval, or verification posture for a report version.
+- **Correction Lineage:** Durable linkage that explains corrected, superseded, restricted, withdrawn, or retracted report meaning over time.
+- **Export Record:** A durable record of public artifact generation or propagation from canonical report truth.
+- **Discrepancy Case:** A bounded remediation record for stale, conflicting, missing, unsafe, or incorrect report state.
+
+## Truth Class Taxonomy
+
+This API MUST preserve these truth classes:
+
+1. **Semantic truth:** Report-family meaning, cadence posture, public-trust role, publication-state meaning, correction semantics, and report/source separation owned by refined system specs.
+2. **API contract truth:** Route families, request/response/error/status conventions, required identifiers, idempotency, versioning, and exposure rules owned by this API spec.
+3. **Policy truth:** Publication eligibility, public-safety policy, reason-code requirements, role/scope requirements, disclosure limits, and governance or approval constraints.
+4. **Runtime truth:** Current request, job, export, retry, generation, discrepancy, or dependency state.
+5. **Storage truth:** Durable reporting-period, report, report-version, source-snapshot, attestation, publication-state, export, discrepancy, idempotency, and audit-link records.
+6. **Source-domain truth:** Registry, payout, treasury, governance, chain, audit, accounting, analytics, and other canonical truths referenced by reports.
+7. **Public read-model truth:** Public-safe lists, details, feeds, search indexes, static artifacts, and public-site views derived from canonical report truth.
+8. **Presentation truth:** Labels, summaries, charts, explanatory copy, and rendered artifacts.
+9. **Event truth:** Lifecycle events emitted by reporting APIs and consumed by downstream projections, sites, feeds, webhooks, or monitoring.
+10. **Audit truth:** Immutable evidence of sensitive mutations, control-plane decisions, public exposure, correction, and remediation actions.
+
+No API route, worker, site, report renderer, or export process may collapse these classes into one mutable surface.
+
+## Architectural Position in the Spec Hierarchy
+
+This API spec sits below the refined semantic registry and transparency-reporting system spec. It expresses those semantics through interface contracts. It sits alongside domain API specs for public transparency, investor/community reporting, public metadata, public payout status, registry lookup, audit/activity, events/webhooks, and API architecture.
+
+## Upstream Semantic Owners
+
+- `TRANSPARENCY_REPORTING_SPEC.md` owns report-family, cadence, publication, correction, source-lineage, and public-trust reporting semantics.
+- `TRANSPARENCY_MODEL_SPEC.md` owns the higher-order public-trust interpretation layer and transparency coherence rules.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` owns registry entry publication truth and official contract/wallet designation truth.
+- `PAYOUT_LEDGER_SPEC.md`, `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`, and `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` own payout, profit-participation, and eligibility-source truth.
+- `TREASURY_CONTROL_POLICY_SPEC.md`, `VAULT_ACTION_POLICY_SPEC.md`, `MULTISIG_AND_TIMELOCK_SPEC.md`, `GOVERNANCE_MODEL_SPEC.md`, and `FOUNDATION_GOVERNANCE_SPEC.md` own governance, treasury, vault, and control truth.
+- `CHAIN_ARCHITECTURE_SPEC.md` and on-chain/off-chain responsibility materials own chain-adjacent boundary interpretation.
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md` and `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md` own audit truth and access traceability.
+- `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, and `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` own shared API posture.
+
+## API Surface Families
+
+### Public Read Surface
+Exposes published, public-safe transparency reports and bounded metadata. It is read-only, narrower than internal truth, and compatibility-sensitive.
+
+### First-Party Application Surface
+Supports FUZE-owned clients that render published or caller-appropriate report views. It MUST NOT expose privileged mutation power.
+
+### Internal Service Surface
+Supports owner-aligned service collaboration for draft creation, source binding, generation, attestation, export preparation, canonical reads, and projection refresh.
+
+### Admin / Control-Plane Surface
+Supports privileged publication, correction, supersession, retraction-if-required, restriction, export retry, and discrepancy remediation. It is reason-coded, policy-constrained, audited, and separate from ordinary application routes.
+
+### Event / Webhook / Async Surface
+Emits lifecycle events for downstream projections, public sites, search indexes, notification/reporting pipelines, webhook subscribers where approved, monitoring, and audit linkage.
+
+### Reporting / Export Surface
+Produces public artifacts or export records from canonical report truth. It MUST NOT act as canonical report truth.
+
+### Chain-Adjacent Surface
+May include source references, chain references, contract registry links, or proof pointers where approved. It MUST NOT interpret raw chain state as report truth without source-domain validation.
+
+## System / API Boundaries
+
+- Public APIs expose only `published_public` or explicitly public-safe historical states.
+- Internal APIs may expose canonical report records to authorized services only.
+- Admin/control APIs mutate reporting lifecycle state but may not alter source-domain truth.
+- Event APIs announce reporting lifecycle changes but may not become canonical report storage.
+- Export APIs produce derived artifacts; canonical report truth remains in reporting owner-domain storage.
+- Static/public sites render public-safe derived state and never own publication lifecycle truth.
+
+## Adjacent API Boundaries
+
+- `PUBLIC_TRANSPARENCY_API_SPEC.md` governs broader public transparency views and may consume this API's published report views.
+- `INVESTOR_AND_COMMUNITY_REPORTING_API_SPEC.md` governs audience-specific reporting packaging and must not broaden public exposure beyond this API's publication posture.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` governs registry lookup/publication API semantics; transparency reports may link to registry entries but do not mutate them.
+- `PUBLIC_METADATA_API_SPEC.md` may expose discovery metadata derived from report publication state.
+- `PUBLIC_PAYOUT_STATUS_API_SPEC.md` may expose payout-status views derived from payout owner domains; this API may link approved reports but does not own payout status.
+- `AUDIT_LOG_AND_ACTIVITY_API_SPEC.md` owns immutable audit read and write behavior; this API emits audit-linked events and mutation references.
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md` governs event envelope, delivery, replay, and webhook behavior.
+
+## Conflict Resolution Rules
+
+1. `REFINED_SYSTEM_SPEC_INDEX.md` and constitutional boundary specs win over this API spec.
+2. `TRANSPARENCY_REPORTING_SPEC.md` wins on report-family, publication-state, correction-lineage, and source-lineage semantics.
+3. Source-domain specs win on the meaning and validity of facts summarized by reports.
+4. `TRANSPARENCY_MODEL_SPEC.md` wins on public-trust interpretation and coherence.
+5. API architecture specs win on shared surface-family, accepted-state, idempotency, versioning, migration, and event-contract conventions.
+6. This API spec wins on transparency-reporting route families, request/response/error/status expectations, admin action constraints, and public/private API exposure within its scope.
+7. Public sites, exports, dashboards, PDFs, files, feeds, caches, SDKs, and frontend convenience never win over canonical report or source-domain truth.
+8. When ambiguity remains, the API MUST choose the narrower, more conservative, trust-preserving interpretation and require explicit review.
+
+## Default Decision Rules
+
+1. Public exposure defaults to denied until a report version is explicitly published under approved lifecycle state.
+2. Mutation defaults to owner-domain internal/admin APIs, never public routes.
+3. Report generation defaults to accepted async intent when source gathering, validation, rendering, or export can be deferred.
+4. Source references are required for material report versions; missing source lineage blocks publication.
+5. Correction and supersession default to visible lineage, not overwrite.
+6. Public artifact failures default to explicit stale/unavailable status, not fabricated current status.
+7. Ambiguous report-family classification defaults to the narrower, more structured report family.
+8. Ambiguous audience exposure defaults to the narrower audience.
+9. Chain-originating data defaults to provider/chain input truth until validated by the relevant owner domain.
+10. Admin intervention defaults to reason-coded, audited, policy-constrained control-plane action.
+
+## Roles / Actors / API Consumers
+
+### Human Actors
+- Public users and community members
+- Holders, partners, and ecosystem observers
+- Internal reporting authors
+- Treasury/governance reviewers
+- Audit/compliance reviewers
+- Security and runtime operators
+- Admin/control-plane operators
+- Public API and site authors
+
+### System Actors
+- Public API gateway
+- FUZE first-party clients
+- Transparency reporting service
+- Transparency model service
+- Source-domain services
+- Report-generation workers
+- Attestation/review services
+- Export/publication pipeline
+- Public site/static artifact delivery
+- Public registry service
+- Payout-ledger publication service
+- Audit/activity service
+- Event bus/webhook delivery system
+- Monitoring/alerting systems
+- Admin/control-plane backend
+
+## Resource / Entity Families
+
+### Canonical API Resources
+- `transparency_reporting_period`
+- `transparency_reporting_cycle`
+- `transparency_report`
+- `transparency_report_version`
+- `transparency_source_snapshot`
+- `transparency_attestation`
+- `transparency_publication_state`
+- `transparency_correction`
+- `transparency_supersession_link`
+- `transparency_export_record`
+- `transparency_discrepancy_case`
+- `transparency_operation`
+- `transparency_idempotency_record`
+- `transparency_audit_link`
+
+### Derived API Resources
+- `transparency_public_report_summary`
+- `transparency_public_report_detail`
+- `transparency_public_period_summary`
+- `transparency_public_feed_item`
+- `transparency_public_artifact_reference`
+- `transparency_report_search_index_record`
+- `transparency_public_sitemap_record`
+
+## Ownership Model
+
+The Transparency Reporting API domain owns canonical report API contracts and mutations for transparency report records. It does not own the source-domain facts referenced by reports. Source-domain records may be referenced, snapshot-linked, attested, or summarized, but they are not mutated by this API unless an explicit source-domain API call occurs through that source owner.
+
+Admin/control operators can trigger report lifecycle mutations only through bounded control-plane routes. They do not acquire semantic authority over registry, payout, treasury, governance, or chain facts by publishing or correcting a report.
+
+## Authority / Decision Model
+
+- **Report-family authority:** Transparency Reporting Domain.
+- **Public-trust interpretation authority:** Transparency Model Domain.
+- **Source-fact authority:** The relevant source owner domain.
+- **Publication action authority:** Transparency Reporting Domain plus required review/policy gates.
+- **Control-plane authority:** Bounded admin roles with reason codes, policy checks, and audit linkage.
+- **API contract authority:** Transparency Reporting API Domain under platform API architecture rules.
+- **Derived surface authority:** Read-only rendering or discovery authority only.
+
+## Authentication Model
+
+- Public read routes MAY be unauthenticated but MUST apply abuse controls and public-safe filtering.
+- First-party routes require FUZE client authentication where caller-specific behavior is present.
+- Internal routes require service-to-service authentication and explicit service scopes.
+- Admin/control routes require authenticated operator identity, session validity, privileged role, policy checks, reason codes, and correlation IDs.
+- Event/webhook administration requires internal or privileged authentication. Public webhook consumption, if approved, uses signed delivery rather than public mutation power.
+
+## Authorization / Scope / Permission Model
+
+Required authorization dimensions:
+
+- `transparency.report.read_public`
+- `transparency.report.read_internal`
+- `transparency.report.create`
+- `transparency.source_snapshot.attach`
+- `transparency.report.generate`
+- `transparency.report.attest`
+- `transparency.report.publish`
+- `transparency.report.correct`
+- `transparency.report.supersede`
+- `transparency.report.retract`
+- `transparency.report.restrict`
+- `transparency.export.generate`
+- `transparency.export.retry`
+- `transparency.discrepancy.resolve`
+
+Scope checks MUST consider report family, target audience, publication state, source-domain sensitivity, operator role, policy version, and requested mutation state transition.
+
+## Entitlement / Capability-Gating Model
+
+Public reports generally do not require product entitlement once published publicly. First-party, internal, admin, export, and partner surfaces MAY require capability gates for privileged visibility or mutation. Capability gates MUST NOT override authorization, policy, public-safety, source-domain restrictions, or publication-state rules.
+
+## API State Model
+
+### Reporting Period States
 - `draft`
 - `open`
 - `closed`
 - `published`
 - `archived`
 
-### 10.2 transparency report lifecycle
-
-Possible states:
-
+### Report States
 - `draft`
 - `generated`
 - `verified_if_required`
+- `approved_for_publication`
 - `published`
 - `deprecated`
 - `superseded`
+- `restricted`
 - `retracted_if_required`
+- `archived`
 
-### 10.3 report version lifecycle
-
-Possible states:
-
+### Version States
 - `draft`
 - `generated`
+- `validated`
 - `published`
+- `corrected`
 - `superseded`
 - `archived`
 
-### 10.4 publication lifecycle
+### Operation States
+- `requested`
+- `validated`
+- `accepted`
+- `running`
+- `applied`
+- `previously_applied`
+- `conflicted`
+- `failed_retryable`
+- `failed_terminal`
+- `compensated`
 
-Possible states:
+`accepted` is not final business success. `published` is not source-domain settlement. `superseded` and `corrected` preserve lineage rather than erase history.
 
-- `unpublished`
-- `published`
-- `hidden`
-- `retracted`
-- `archived`
+## Lifecycle / Workflow Model
 
-### 10.5 export lifecycle
+1. A reporting period, cycle, or structural event becomes eligible for reporting.
+2. Authorized internal services create a draft report under a report family.
+3. Source snapshots are bound from approved source-domain references.
+4. Generation workers produce a report version and artifacts.
+5. Required review/attestation gates validate source lineage, public-safety, family correctness, and disclosure posture.
+6. Admin/control action publishes the report with reason code, policy version, correlation ID, and audit linkage.
+7. Public read models, public artifacts, feeds, search indexes, and public sites refresh from canonical report truth.
+8. Events are emitted for downstream projections, monitoring, and approved webhooks.
+9. Corrections, supersessions, restrictions, or retractions follow explicit lifecycle routes with durable lineage and audit records.
+10. Failed exports, stale projections, or discrepancies enter remediation without altering source-domain truth.
 
-Possible states:
+## Architecture Diagram — Mermaid flowchart
 
-- `pending`
-- `generated`
-- `published`
-- `failed`
-- `superseded`
+```mermaid
+flowchart TB
+    PublicUser[Public users / community / partners]
+    FirstParty[FUZE first-party clients]
+    Admin[Admin / control-plane operators]
+    InternalSvc[Internal source and reporting services]
 
-Lifecycle notes:
-- generated does not imply public visibility
-- published reports must remain historically queryable according to policy even after supersession or correction
-- corrections and supersession must preserve public lineage rather than erase prior disclosure history
-- retraction is exceptional and must preserve trust-oriented explanation metadata
+    PublicAPI[Public Transparency Reporting API\nread-only public-safe]
+    FirstPartyAPI[First-party Reporting API\nbounded reads]
+    InternalAPI[Internal Reporting Service API\nsource binding / generation / canonical reads]
+    AdminAPI[Admin Control-Plane Reporting API\npublish / correct / supersede / retract]
 
----
+    ReportingDomain[Transparency Reporting Owner Domain\ncanonical reports, versions, periods, publication state]
+    SourceDomains[Source Owner Domains\nregistry / payout / treasury / governance / chain / audit / analytics]
+    Workers[Report generation and export workers]
+    EventBus[Event bus / webhook delivery]
+    Audit[Audit and activity service]
+    Store[(Canonical reporting store)]
+    Idem[(Idempotency records)]
+    PublicViews[(Derived public read models / caches / search)]
+    Artifacts[(Published artifacts / exports)]
+    PublicSite[Public transparency site / SDK / feeds]
+    Monitoring[Monitoring / alerting]
 
-## 11. API Surface Overview
+    PublicUser --> PublicAPI --> PublicViews
+    PublicViews --> PublicSite
+    FirstParty --> FirstPartyAPI --> PublicViews
+    InternalSvc --> InternalAPI --> ReportingDomain
+    Admin --> AdminAPI --> ReportingDomain
+    ReportingDomain --> Store
+    ReportingDomain --> Idem
+    ReportingDomain --> SourceDomains
+    SourceDomains --> ReportingDomain
+    ReportingDomain --> Workers
+    Workers --> Artifacts
+    Workers --> PublicViews
+    ReportingDomain --> EventBus
+    EventBus --> PublicViews
+    EventBus --> PublicSite
+    ReportingDomain --> Audit
+    AdminAPI --> Audit
+    InternalAPI --> Audit
+    ReportingDomain --> Monitoring
+    Workers --> Monitoring
 
-The API surface is divided into four families:
+    classDef canonical fill:#f6f6f6,stroke:#333,stroke-width:2px;
+    classDef derived fill:#fff,stroke:#777,stroke-dasharray: 5 5;
+    class ReportingDomain,Store,Idem canonical;
+    class PublicViews,Artifacts,PublicSite derived;
+```
 
-### 11.1 Public read APIs
-Used by public users, partners, community members, and general readers for:
-- listing published transparency reports
-- retrieving one report detail
-- reading reporting-period metadata
-- accessing current and historical published report artifacts
+## Data Design — Mermaid Diagram
 
-### 11.2 First-party authenticated read APIs
-Used by `fuze-frontend-webapp` and approved first-party clients for:
-- reading the same public report views
-- optionally reading bounded publication metadata if policy allows
+```mermaid
+erDiagram
+    TRANSPARENCY_REPORTING_PERIOD ||--o{ TRANSPARENCY_REPORT : contains
+    TRANSPARENCY_REPORT ||--o{ TRANSPARENCY_REPORT_VERSION : versions
+    TRANSPARENCY_REPORT_VERSION ||--o{ TRANSPARENCY_SOURCE_SNAPSHOT : grounded_by
+    TRANSPARENCY_REPORT_VERSION ||--o{ TRANSPARENCY_ATTESTATION : reviewed_by
+    TRANSPARENCY_REPORT ||--o{ TRANSPARENCY_PUBLICATION_STATE : has_state
+    TRANSPARENCY_REPORT_VERSION ||--o{ TRANSPARENCY_EXPORT_RECORD : exported_as
+    TRANSPARENCY_REPORT_VERSION ||--o{ TRANSPARENCY_CORRECTION : corrected_by
+    TRANSPARENCY_REPORT_VERSION ||--o{ TRANSPARENCY_SUPERSESSION_LINK : superseded_by
+    TRANSPARENCY_REPORT ||--o{ TRANSPARENCY_DISCREPANCY_CASE : may_have
+    TRANSPARENCY_OPERATION ||--o{ TRANSPARENCY_IDEMPOTENCY_RECORD : protected_by
+    TRANSPARENCY_OPERATION ||--o{ TRANSPARENCY_AUDIT_LINK : audited_by
+    TRANSPARENCY_REPORT_VERSION ||--o{ PUBLIC_REPORT_VIEW : derives
+    TRANSPARENCY_EXPORT_RECORD ||--o{ PUBLIC_ARTIFACT_REFERENCE : derives
 
-### 11.3 Internal service APIs
-Used by trusted internal services for:
-- creating report drafts
-- binding source snapshots
-- writing attestation metadata
-- generating exports
-- reading canonical reporting truth
+    TRANSPARENCY_REPORTING_PERIOD {
+        string id PK
+        string period_type
+        string start_at
+        string end_at
+        string state
+    }
+    TRANSPARENCY_REPORT {
+        string id PK
+        string report_family
+        string reporting_period_id FK
+        string state
+        string current_version_id
+    }
+    TRANSPARENCY_REPORT_VERSION {
+        string id PK
+        string report_id FK
+        string version_label
+        string state
+        string content_hash
+        string published_at
+    }
+    TRANSPARENCY_SOURCE_SNAPSHOT {
+        string id PK
+        string report_version_id FK
+        string source_domain
+        string source_reference
+        string snapshot_hash
+    }
+    TRANSPARENCY_ATTESTATION {
+        string id PK
+        string report_version_id FK
+        string attestation_type
+        string policy_version
+        string reviewer_reference
+    }
+    PUBLIC_REPORT_VIEW {
+        string id PK
+        string report_version_id FK
+        string visibility
+        string cache_state
+    }
+```
 
-### 11.4 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- publish, supersede, correct, retract actions
-- source-snapshot remediation
-- export retry/remediation
-- discrepancy resolution
+## Flow View
 
----
+### Synchronous Public Read
+1. Caller requests a report list or detail.
+2. Public API validates parameters and rate-limit posture.
+3. API reads only the public-safe derived view or canonical published view approved for public exposure.
+4. API returns current status, correction/supersession guidance, artifact references, and cache freshness metadata.
+5. API MUST NOT expose draft, operator note, private source, raw audit, or internal remediation fields.
 
-## 12. Authentication and Authorization Model
+### Internal Generate and Publish
+1. Internal service creates draft with idempotency key.
+2. Internal service binds source snapshots.
+3. Generation route accepts work and returns operation reference when async.
+4. Worker creates report version and export-prep records.
+5. Review/attestation route validates required source lineage.
+6. Admin publish route enforces role, policy, state, source, reason-code, and audit checks.
+7. Canonical publication state changes to published.
+8. Events refresh derived public views and artifacts.
 
-### 12.1 Authentication posture by route family
+### Correction / Supersession
+1. Discrepancy or correction request is opened.
+2. Admin/control route validates state, reason code, replacement/correction payload, and policy.
+3. API creates correction or supersession lineage.
+4. Public view updates to show current meaning and prior-version context.
+5. Audit and event records are emitted.
 
-#### Public read routes
-No authentication required:
-- list published reports
-- published report detail views
-- published reporting-period metadata
-- public artifact access routes where applicable
+### Failure and Degraded Mode
+1. If source validation fails, publication is blocked.
+2. If export generation fails, canonical report state remains intact and export status becomes `failed_retryable` or `failed_terminal`.
+3. If public view refresh fails, public response must indicate stale/unavailable posture rather than fabricate freshness.
+4. If source-domain contradiction is detected, report state moves to discrepancy review and publication is blocked or restricted.
 
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create drafts
-- attach source snapshots and attestations
-- trigger generation and export
-- read canonical report and period records
+## Data Flows — Mermaid sequenceDiagram
 
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- publish, supersede, correct, retract reports
-- update or remediate source lineage
-- resolve discrepancies
-- retry exports
+```mermaid
+sequenceDiagram
+    autonumber
+    participant S as Internal Reporting Service
+    participant API as Internal Reporting API
+    participant ID as Idempotency Store
+    participant R as Transparency Reporting Domain
+    participant SRC as Source Owner Domains
+    participant W as Generation/Export Worker
+    participant A as Audit Service
+    participant E as Event Bus
+    participant ADM as Admin Control Plane
+    participant P as Public API
+    participant V as Public Read Model
 
-### 12.2 Authorization checkpoints
+    S->>API: POST /internal/v1/transparency/reports {family, period, key}
+    API->>ID: reserve idempotency key + request hash
+    API->>R: create draft report
+    R->>A: audit report_created
+    R->>E: transparency.report.created
+    API-->>S: 201 draft report
 
-Authorization must evaluate:
-- caller identity and route family
-- whether target report or period is public-only or privileged internal state
-- whether internal service has write privilege for reporting mutations
-- whether admin/operator role is present for publication or correction actions
-- whether current state allows requested mutation
+    S->>API: POST /source-snapshots {source refs, key}
+    API->>SRC: validate approved source references
+    SRC-->>API: validated source references
+    API->>R: bind source snapshots
+    R->>A: audit source_snapshot_attached
+    API-->>S: 200 source lineage bound
 
-### 12.3 Sensitive action rules
+    S->>API: POST /generate {key}
+    API->>R: validate report state and source completeness
+    API-->>S: 202 accepted {operation_id}
+    R->>W: enqueue generation job
+    W->>R: create report version + artifacts
+    R->>A: audit report_generated
+    R->>E: transparency.report.generated
 
-The following require heightened checks:
-- publication of new transparency reports
-- correction or retraction of published reports
-- supersession of current public reports
-- source-snapshot changes for generated reports
-- export retry after failure
-- discrepancy-resolution actions
+    ADM->>API: POST /admin/.../publish {reason, key}
+    API->>R: authorize + policy + state checks
+    R->>A: critical audit publish
+    R->>E: transparency.report.published
+    E->>V: refresh public read model
+    ADM-->>API: published response
 
----
+    P->>V: GET published report detail
+    V-->>P: public-safe report view + correction lineage
+```
 
-## 13. API Endpoints / Interface Contracts
+## Request Model
 
-## 13.1 Public Read APIs
+All mutation requests MUST include:
 
-### 13.1.1 `GET /v1/transparency/reports`
-**Purpose:** list published transparency reports  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `report_type`
-- optional `period_type`
-- optional `year`
-- pagination
-**Response Summary:**
-- published report summaries
-- reporting-period summary
-- publication timestamp
-- current/deprecated/superseded status
-- artifact availability summary
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
+- stable target identifiers or creation attributes;
+- `Idempotency-Key` header unless explicitly read-only;
+- `X-Correlation-Id` or platform equivalent;
+- authenticated actor or service identity;
+- request timestamp;
+- reason code for admin/control actions;
+- policy version or server-resolved policy reference for publication-sensitive actions;
+- bounded payloads that do not embed arbitrary private source data into public report content.
 
-### 13.1.2 `GET /v1/transparency/reports/{report_id}`
-**Purpose:** retrieve one published transparency report detail  
-**Caller Type:** public  
-**Response Summary:**
-- public detail view
-- reporting period metadata
-- publication status
-- version summary
-- supersession/replacement guidance where relevant
-- public artifact references
-**Side Effects:** none
+Public read requests MAY include filters such as `report_family`, `period_type`, `year`, `state`, `version`, `current_only`, `include_superseded`, `artifact_type`, and pagination fields. Public filters MUST be bounded and abuse-controlled.
 
-### 13.1.3 `GET /v1/transparency/periods`
-**Purpose:** list reporting periods with published-report availability  
-**Caller Type:** public  
-**Query Parameters Summary:**
-- optional `period_type`
-- optional `state`
-- pagination
-**Response Summary:** reporting-period summaries and report availability metadata
-**Side Effects:** none
+## Response Model
 
-### 13.1.4 `GET /v1/transparency/periods/{reporting_period_id}`
-**Purpose:** retrieve one reporting-period detail with published report references  
-**Caller Type:** public  
-**Response Summary:** period detail, published report links, and bounded status summaries
-**Side Effects:** none
+### Public Read Responses
+MUST include:
 
-## 13.2 Internal Service APIs
+- stable public report ID;
+- report family;
+- public title/summary;
+- reporting period/cycle/event window;
+- publication state;
+- current version;
+- publication timestamp;
+- correction/supersession/retraction guidance where applicable;
+- public artifact references;
+- cache/projection freshness where relevant.
 
-### 13.2.1 `POST /internal/v1/transparency/reports`
-**Purpose:** create draft transparency report for a reporting period  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
-- `report_type`
-- `reporting_period_id`
-- optional `draft_summary`
-- optional `publication_target`
-- `idempotency_key`
-**Response Summary:** draft report summary and current version summary
-**Side Effects:** creates report draft and initial version lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** sensitive reporting-ingest audit
-**Emitted Events:** `transparency.report_created`
+MUST NOT include private source records, operator notes, raw audit events, draft versions, hidden policy decisions, private wallet inventories, private payout records, or unsafe operational details.
 
-### 13.2.2 `POST /internal/v1/transparency/reports/{report_id}/source-snapshots`
-**Purpose:** attach approved source snapshot lineage to report draft or generated version  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `source_type`
-- `source_reference`
-- `snapshot_reference`
-- optional `snapshot_summary`
-- `idempotency_key`
-**Response Summary:** source-snapshot summary and updated report-state summary
-**Side Effects:** creates source-snapshot lineage for report
-**Idempotency Behavior:** required
-**Audit Requirements:** source-lineage audit
-**Emitted Events:** `transparency.source_snapshot_attached`
+### Mutation Responses
+MUST include:
 
-### 13.2.3 `POST /internal/v1/transparency/reports/{report_id}/generate`
-**Purpose:** generate report artifact and current version from bound source snapshots  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `generation_profile`
-- `idempotency_key`
-**Response Summary:** generated report-version summary and artifact summary
-**Side Effects:** creates or updates generated version and export-prep lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** report-generation audit
-**Emitted Events:** `transparency.report_generated`
+- operation ID;
+- resulting resource ID;
+- resulting state;
+- idempotency outcome (`applied`, `previously_applied`, `accepted`, or `conflicted`);
+- correlation ID;
+- audit reference where allowed;
+- async status URL or operation reference when work is deferred.
 
-### 13.2.4 `POST /internal/v1/transparency/reports/{report_id}/attestations`
-**Purpose:** attach attestation or verification metadata to report version  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `attestation_type`
-- `attestation_summary`
-- `idempotency_key`
-**Response Summary:** attestation summary
-**Side Effects:** creates attestation lineage and may advance verification state
-**Idempotency Behavior:** required
-**Audit Requirements:** attestation audit
-**Emitted Events:** `transparency.report_attested`
+### Async Accepted Responses
+MUST use accepted-state semantics and include `operation_id`, `status`, `status_url`, `retry_after_if_applicable`, and expected terminal state categories without promising final business success.
 
-### 13.2.5 `POST /internal/v1/transparency/exports`
-**Purpose:** generate or push derived public transparency artifact from canonical report truth  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `report_id`
-- optional `export_scope`
-- optional `target_artifact`
-- `idempotency_key`
-**Response Summary:** export-record summary
-**Side Effects:** creates export lineage and may generate public artifact
-**Idempotency Behavior:** required
-**Audit Requirements:** export audit where sensitivity requires
-**Emitted Events:** `transparency.export_generated`, `transparency.export_failed`
+## Error / Result / Status Model
 
-### 13.2.6 `GET /internal/v1/transparency/reports/{report_id}`
-**Purpose:** retrieve canonical transparency-report truth for trusted services  
-**Caller Type:** internal trusted service  
-**Response Summary:** full report, versions, source snapshots, attestations, publication, supersession, and export lineage
-**Side Effects:** none
+Structured problem-details responses MUST include:
 
-## 13.3 Admin / Control-Plane APIs
-
-### 13.3.1 `POST /admin/v1/transparency/reports/{report_id}/publish`
-**Purpose:** publish generated/verified transparency report to public read surfaces  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** published report summary
-**Side Effects:** publication state moves to published, report becomes visible on public routes
-**Audit Requirements:** critical audit
-**Emitted Events:** `transparency.report_published`
-
-### 13.3.2 `POST /admin/v1/transparency/reports/{report_id}/supersede`
-**Purpose:** supersede one published report with a corrected or newer report version  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_report_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates supersession linkage and updates public current/preferred state
-**Audit Requirements:** critical audit
-**Emitted Events:** `transparency.report_superseded`
-
-### 13.3.3 `POST /admin/v1/transparency/reports/{report_id}/correct`
-**Purpose:** apply correction-safe metadata or bounded public correction note to one report  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `correction_type`
-- `correction_summary`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** corrected report summary
-**Side Effects:** may create new version or attach bounded correction lineage according to policy
-**Audit Requirements:** critical audit
-**Emitted Events:** `transparency.report_corrected`
-
-### 13.3.4 `POST /admin/v1/transparency/reports/{report_id}/retract`
-**Purpose:** retract a published report under exceptional controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `public_explanation_summary`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** retracted report summary
-**Side Effects:** publication state moves to retracted/hidden according to policy with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `transparency.report_retracted`
-
-### 13.3.5 `POST /admin/v1/transparency/discrepancies`
-**Purpose:** resolve transparency reporting discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may publish, supersede, correct, retract, or retry export with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `transparency.discrepancy_resolved`
-
----
-
-## 14. Request Rules
-
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive reporting mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored transparency truth as authoritative input
-
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- report generation for public publication
-- source-snapshot binding changes after generation
-- publication, correction, supersession, or retraction
-- export generation and retry
-- discrepancy-resolution actions
-
-Heightened validation may include:
-- reporting-period integrity checks
-- source-snapshot completeness checks
-- publication-state checks
-- operator role confirmation
-- governance/finance/security case linkage for sensitive reports
-
-### 14.3 Scope integrity rule
-Transparency-report mutations must target valid and authorized reports, periods, and source references. Services and operators must not mutate unrelated or unauthorized reporting state.
-
-### 14.4 Public-private separation rule
-Only explicitly published public-safe metadata and artifacts may appear on public routes. Internal preparation notes, operator notes, private source details, or raw sensitive ledgers must remain out of public responses.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- reporting-period summaries
-- publication/version summaries where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If generation, export, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target report, version, period, or export
-- mutation type
-- resulting report/publication state
-- correction, supersession, or retraction effects where relevant
-- whether public views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical report truth on internal routes
-- public-safe report views on public routes
-- publication status
-- supersession/correction guidance where relevant
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
 - `type`
 - `title`
 - `status`
@@ -707,717 +640,416 @@ The API uses structured problem-details style error responses.
 - `detail`
 - `instance`
 - `correlation_id`
+- `retryable`
+- optional `operation_id`
+- optional `policy_reference`
 
-### 16.2 Common error codes
+### Required Error Codes
 
-#### Authorization / permission errors
+- `TRANSPARENCY_REPORT_NOT_FOUND`
+- `TRANSPARENCY_REPORT_NOT_PUBLIC`
 - `TRANSPARENCY_PERMISSION_DENIED`
 - `TRANSPARENCY_OPERATOR_PERMISSION_DENIED`
 - `TRANSPARENCY_SERVICE_PERMISSION_DENIED`
-
-#### State conflict errors
 - `TRANSPARENCY_REPORT_STATE_INVALID`
 - `TRANSPARENCY_REPORT_ALREADY_PUBLISHED`
 - `TRANSPARENCY_REPORT_ALREADY_RETRACTED`
-- `TRANSPARENCY_SUPERSESSION_CONFLICT`
-- `TRANSPARENCY_EXPORT_CONFLICT`
-
-#### Policy / safety errors
 - `TRANSPARENCY_SOURCE_SNAPSHOT_REQUIRED`
+- `TRANSPARENCY_SOURCE_REFERENCE_INVALID`
 - `TRANSPARENCY_VERIFICATION_REQUIRED`
 - `TRANSPARENCY_PUBLICATION_FORBIDDEN`
 - `TRANSPARENCY_CORRECTION_NOT_ALLOWED`
+- `TRANSPARENCY_SUPERSESSION_CONFLICT`
 - `TRANSPARENCY_PRIVATE_METADATA_FORBIDDEN`
-
-#### Request integrity errors
 - `TRANSPARENCY_IDEMPOTENCY_KEY_REQUIRED`
-- `TRANSPARENCY_REQUEST_INVALID`
-- `TRANSPARENCY_REQUEST_UNPROCESSABLE`
-
-#### Dependency or provider errors
+- `TRANSPARENCY_IDEMPOTENCY_CONFLICT`
+- `TRANSPARENCY_RATE_LIMITED`
 - `TRANSPARENCY_EXPORT_UNAVAILABLE`
-- `TRANSPARENCY_STORAGE_UNAVAILABLE`
 - `TRANSPARENCY_GENERATION_UNAVAILABLE`
+- `TRANSPARENCY_PROJECTION_STALE`
 
-### 16.3 Error handling rules
-- do not expose hidden internal finance/security or private source detail in public responses
-- do not imply payout or treasury execution from report publication
-- distinguish unpublished/no-match from forbidden/internal visibility
-- distinguish source-snapshot-required from generic invalid state
-- include retry guidance only where safe
-
----
-
-## 17. Idempotency and Mutation Safety
-
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- report creation
-- source-snapshot attachment
-- report generation
-- attestation creation
-- export generation
-- publish
-- supersede
-- correct
-- retract
-- discrepancy resolution
-
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
-
-### 17.3 Mutation safety rules
-- one current public report per report type and reporting period under current-publication policy unless explicit supersession lineage exists
-- publication must not occur before required source lineage and verification state
-- corrections and supersession must preserve old-to-new lineage
-- retraction must preserve trust-oriented historical trace
-- exports must derive from canonical reporting truth, not bypass it
-
----
-
-## 18. Versioning and Compatibility Rules
-
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
-
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to published, superseded, corrected, or retracted states
-- new report types, period types, and artifact references may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
-
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of published/superseded/retracted states
-- changing public report-version semantics incompatibly
-- removing critical period or replacement fields
-- changing historical lookup semantics incompatibly
-
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public and first-party consumers
-
----
-
-## 19. Event Emission and Webhook Behavior
-
-This domain is event-capable.
-
-### 19.1 Internal events
-The Transparency Reporting domain must emit canonical internal events such as:
-- `transparency.report_created`
-- `transparency.source_snapshot_attached`
-- `transparency.report_generated`
-- `transparency.report_attested`
-- `transparency.report_published`
-- `transparency.report_superseded`
-- `transparency.report_corrected`
-- `transparency.report_retracted`
-- `transparency.export_generated`
-- `transparency.export_failed`
-- `transparency.discrepancy_resolved`
-
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- report ID
-- report type
-- reporting period summary
-- version reference where relevant
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound transparency-report webhooks by default. Any future outbound transparency-report webhook surface must be narrow, security-reviewed, and governed by a separate contract.
-
----
-
-## 20. Audit and Activity Requirements
-
-The following actions must generate durable audit events:
-
-- report creation and generation
-- source-snapshot attachment for published or publishable reports
-- attestation creation
-- publication
-- correction, supersession, or retraction
-- export generation or failure where sensitivity requires
-- discrepancy resolution
-- other sensitive transparency-domain mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target report / version / export / discrepancy reference as applicable
-- action type
-- before/after transparency summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
-Public-facing activity may show selected publication events, but canonical internal audit truth remains durable and immutable.
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `transparency_reporting_periods`
-- `id` PK
-- `period_type`
-- `period_label`
-- `period_start_at`
-- `period_end_at`
-- `state`
-- `created_at`
-- `updated_at`
-- `published_at` nullable
-
-**Constraints:**
-- unique (`period_type`, `period_start_at`, `period_end_at`)
-- index on `state`
-
-### 21.2 `transparency_reports`
-- `id` PK
-- `report_type`
-- `reporting_period_id` FK -> `transparency_reporting_periods.id`
-- `state`
-- `current_publication_state`
-- `display_title`
-- `public_summary_json`
-- `created_at`
-- `updated_at`
-- `published_at` nullable
-- `retracted_at` nullable
-
-**Constraints:**
-- index on (`report_type`, `state`)
-- index on (`reporting_period_id`, `current_publication_state`)
-
-### 21.3 `transparency_report_versions`
-- `id` PK
-- `transparency_report_id` FK -> `transparency_reports.id`
-- `version_number`
-- `state`
-- `artifact_reference`
-- `created_at`
-- `published_at` nullable
-- `superseded_at` nullable
-
-**Constraints:**
-- unique (`transparency_report_id`, `version_number`)
-- index on `state`
-
-### 21.4 `transparency_source_snapshots`
-- `id` PK
-- `transparency_report_id` FK -> `transparency_reports.id`
-- `source_type`
-- `source_reference`
-- `snapshot_reference`
-- `snapshot_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `transparency_report_id`
-- index on (`source_type`, `source_reference`)
-
-### 21.5 `transparency_attestations`
-- `id` PK
-- `transparency_report_version_id` FK -> `transparency_report_versions.id`
-- `attestation_type`
-- `attestation_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `transparency_report_version_id`
-
-### 21.6 `transparency_publication_states`
-- `id` PK
-- `transparency_report_id` FK -> `transparency_reports.id`
-- `state`
-- `reason_code` nullable
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- index on `transparency_report_id`
-- index on `state`
-
-### 21.7 `transparency_supersession_links`
-- `id` PK
-- `from_report_id` FK -> `transparency_reports.id`
-- `to_report_id` FK -> `transparency_reports.id`
-- `reason_code`
-- `created_at`
-
-**Constraints:**
-- unique (`from_report_id`, `to_report_id`)
-- index on `from_report_id`
-- index on `to_report_id`
-
-### 21.8 `transparency_export_records`
-- `id` PK
-- `report_id` nullable FK -> `transparency_reports.id`
-- `export_scope`
-- `target_artifact`
-- `state`
-- `source_snapshot_reference`
-- `created_at`
-- `completed_at` nullable
-- `failed_at` nullable
-
-### 21.9 `transparency_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.10 `transparency_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.11 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.12 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical reporting truth stays in reporting periods, reports, versions, source snapshots, attestations, publication states, and supersession links
-- public list/detail routes must derive from canonical current published state
-- private preparation notes or raw source data must remain outside public response shapes
-- public artifact exports remain derived from canonical transparency-report truth
-
-### Reconciliation notes
-- one current public report should reconcile to one current reporting period and report type under current-publication policy
-- corrected or superseded reports must preserve replacement lineage
-- export records must reconcile to canonical report/version snapshots
-- missing or conflicting source-snapshot conditions must be explicitly reviewable
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    ReportAPI[Transparency Reporting API<br/>fuze-backend-api]
-    PeriodStore[(transparency_reporting_periods)]
-    ReportStore[(transparency_reports)]
-    VersionStore[(transparency_report_versions)]
-    SourceStore[(transparency_source_snapshots)]
-    AttestStore[(transparency_attestations)]
-    PubStore[(transparency_publication_states)]
-    SupersedeStore[(transparency_supersession_links)]
-    ExportStore[(transparency_export_records)]
-    InternalSvc[Internal FUZE Services]
-
-    PublicUser --> ReportAPI
-    WebApp --> ReportAPI
-    AdminUI --> ReportAPI
-    InternalSvc --> ReportAPI
-
-    ReportAPI --> PeriodStore
-    ReportAPI --> ReportStore
-    ReportAPI --> VersionStore
-    ReportAPI --> SourceStore
-    ReportAPI --> AttestStore
-    ReportAPI --> PubStore
-    ReportAPI --> SupersedeStore
-    ReportAPI --> ExportStore
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    transparency_reporting_periods ||--o{ transparency_reports : contains
-    transparency_reports ||--o{ transparency_report_versions : versions
-    transparency_reports ||--o{ transparency_source_snapshots : sources
-    transparency_report_versions ||--o{ transparency_attestations : attests
-    transparency_reports ||--o{ transparency_publication_states : publishes
-    transparency_reports ||--o{ transparency_supersession_links : replaces
-    transparency_reports ||--o{ transparency_mutation_actions : tracks
-
-    transparency_reporting_periods {
-        uuid id PK
-        string period_type
-        string period_label
-        datetime period_start_at
-        datetime period_end_at
-        string state
-        datetime created_at
-        datetime updated_at
-    }
-
-    transparency_reports {
-        uuid id PK
-        string report_type
-        uuid reporting_period_id FK
-        string state
-        string current_publication_state
-        string display_title
-        datetime created_at
-        datetime updated_at
-        datetime published_at
-    }
-
-    transparency_report_versions {
-        uuid id PK
-        uuid transparency_report_id FK
-        int version_number
-        string state
-        string artifact_reference
-        datetime created_at
-        datetime published_at
-    }
-
-    transparency_source_snapshots {
-        uuid id PK
-        uuid transparency_report_id FK
-        string source_type
-        string source_reference
-        string snapshot_reference
-        datetime created_at
-    }
-
-    transparency_attestations {
-        uuid id PK
-        uuid transparency_report_version_id FK
-        string attestation_type
-        datetime created_at
-    }
-
-    transparency_publication_states {
-        uuid id PK
-        uuid transparency_report_id FK
-        string state
-        datetime created_at
-        datetime updated_at
-    }
-
-    transparency_supersession_links {
-        uuid id PK
-        uuid from_report_id FK
-        uuid to_report_id FK
-        string reason_code
-        datetime created_at
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path — generate and publish report
-1. internal service creates draft transparency report for a reporting period
-2. approved source snapshots are attached
-3. report artifact is generated and versioned
-4. attestation metadata is attached if required
-5. admin publishes the report
-6. report becomes visible on public list/detail/period routes
-7. audit and transparency events are emitted
-
-### 24.2 Happy path — public historical lookup
-1. public actor lists reports or periods
-2. backend returns current and historical published report summaries
-3. public actor opens one published report detail
-4. public-safe artifact references and bounded metadata are returned
-5. if superseded, replacement guidance is included
-
-### 24.3 Alternate path — correct and supersede
-1. published report later requires correction
-2. corrected report version or replacement report is generated
-3. admin supersedes older public report
-4. older report remains historically visible with supersession guidance
-5. new report becomes current public reference
-
-### 24.4 Failure path — missing source lineage
-1. generate or publish action is attempted
-2. backend detects missing or insufficient source-snapshot or attestation state
-3. request is rejected
-4. no public visibility change occurs
-
-### 24.5 Failure and remediation path — discrepancy or failed export
-1. report or export fails, becomes stale, or conflicts with expected reporting state
-2. admin opens discrepancy resolution
-3. backend preserves existing lineage
-4. report may be corrected, superseded, retracted, or export retried
-5. discrepancy closes with preserved history
-
-### 24.6 Retraction path
-1. published report requires exceptional retraction
-2. admin applies retraction with public explanation summary
-3. public state moves to retracted/hidden according to policy
-4. historical lineage remains queryable internally and public trust messaging remains explicit
-
-### 24.7 Retry behavior
-- duplicate report creation returns same draft report result
-- duplicate source-snapshot attach returns same lineage result where applicable
-- duplicate generate/publish/supersede/correct returns same terminal action result
-- duplicate export/discrepancy actions return same terminal action result
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Transparency Reporting API
-    participant RPT as Report Store
-    participant SRC as Source Snapshot Store
-    participant VER as Version Store
-    participant ATT as Attestation Store
-    participant PUB as Publication Store
-
-    S->>API: POST /internal/v1/transparency/reports
-    API->>RPT: Create draft report
-    API-->>S: draft report summary
-
-    S->>API: POST /internal/v1/transparency/reports/{report_id}/source-snapshots
-    API->>SRC: Create source snapshot lineage
-    API-->>S: source summary
-
-    S->>API: POST /internal/v1/transparency/reports/{report_id}/generate
-    API->>VER: Create generated version
-    API-->>S: generated version summary
-
-    S->>API: POST /internal/v1/transparency/reports/{report_id}/attestations
-    API->>ATT: Create attestation
-    API-->>S: attestation summary
-
-    participant A as Admin Operator
-    A->>API: POST /admin/v1/transparency/reports/{report_id}/publish
-    API->>PUB: Update publication state
-    API-->>A: published report summary
-```
-
----
-
-## 26. Security and Risk Controls
-
-1. **Transparency-report truth is backend-owned**  
-   Frontends and informal surfaces may not authoritatively define public transparency-report truth.
-
-2. **Public reports are distinct from raw internal data**  
-   The API must keep published reports separate from private ledgers, private notes, and raw source data.
-
-3. **Source-lineage-before-publication**  
-   Publication must require explicit source-snapshot lineage and required verification state according to policy.
-
-4. **Least privilege**  
-   Internal write and admin publication routes must be limited to authorized services and operators.
-
-5. **Immutable lineage for public trust changes**  
-   Corrections, supersession, and retraction must preserve historical lineage rather than erase prior disclosures.
-
-6. **Public-private field separation**  
-   Public routes must never expose internal preparation notes, raw sensitive source data, or operator/security details.
-
-7. **Problem-details discipline**  
-   Error bodies must be structured and safe, without exposing hidden internal-only details.
-
-8. **Audit immutability**  
-   Sensitive reporting actions require durable immutable audit lineage.
-
-9. **Replay resistance**  
-   Report creation, source binding, generation, publication, correction, and export actions must be idempotent and replay-safe.
-
-10. **Public trust messaging control**  
-    Superseded or retracted reports must guide readers clearly without silently disappearing when historical visibility is still required.
-
----
-
-## 27. Operational Considerations
-
-- public report list/detail routes should be highly available and cache-friendly
-- publication and correction flows are correctness-sensitive and must preserve trust integrity
-- export generation and public artifact sync should be observable and retryable
-- missing-source-lineage and conflicting-period anomalies should surface clearly to ops views
-- monitoring should alert on:
-  - failed report generation attempts
-  - publication failures
-  - export generation failures
-  - unusual supersession or retraction volume
-  - public lookup failures
-  - canonical report vs export drift
-
----
-
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between transparency reporting truth and raw internal source data.
-2. Only `fuze-backend-api` owns canonical transparency reporting and publication truth.
-3. Reporting periods, reports, versions, source snapshots, attestations, and publication state are durable and backend-owned.
-4. Public routes expose only published public-safe report metadata and artifacts.
-5. Source lineage and required verification are enforced before publication.
-6. Correction, supersession, and retraction preserve immutable lineage.
-7. Publication, correction, and export actions are idempotent and auditable.
-8. Internal and admin transparency routes are least-privilege and backend-only.
-9. Admin routes require reason-coded privileged authorization.
-10. Event emissions exist for major transparency-report mutations.
-11. Response and error semantics are stable and machine-readable.
-12. Database schema separates periods, reports, versions, source snapshots, attestations, publication states, and supersession layers.
-13. Public consumers can rely on canonical published report routes without needing hidden internal context.
-14. Discrepancy handling is supported and safely replayable.
-15. Mermaid diagrams remain consistent with prose and data model.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-1. Internal service creates draft transparency report successfully.
-2. Internal service attaches source snapshot successfully.
-3. Internal service generates report version successfully.
-4. Internal service attaches attestation successfully.
-5. Admin publishes verified/generated report successfully.
-6. Public actor lists published reports successfully.
-7. Public actor reads published report detail successfully.
-8. Admin supersedes old report successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access internal draft report detail.
-10. Internal service without write privilege cannot create report.
-11. Publish without required source lineage returns `TRANSPARENCY_SOURCE_SNAPSHOT_REQUIRED`.
-12. Publish without required verification returns `TRANSPARENCY_VERIFICATION_REQUIRED`.
-13. Attempt to supersede with invalid replacement state returns state conflict.
-14. Public lookup for unpublished report returns no-match or unpublished-safe result.
-
-### 29.3 Authorization cases
-15. Ordinary public user cannot call admin publish/correct/retract routes.
-16. Internal service without export privilege cannot trigger export.
-17. Operator without publication privilege cannot publish report.
-18. Report publication does not authorize payout, treasury, or governance execution.
-
-### 29.4 Idempotency and replay cases
-19. Repeating report creation with same idempotency key returns original draft report result.
-20. Repeating source-snapshot attachment with same idempotency key returns original source-lineage result.
-21. Repeating publish with same idempotency key returns original publish result.
-22. Repeating export or discrepancy resolution with same idempotency key returns original action result.
-
-### 29.5 Concurrency cases
-23. Concurrent publish and supersede actions preserve one explicit current public lineage.
-24. Concurrent duplicate draft creation attempts on same report type and period produce one canonical current draft lineage and one duplicate-safe outcome where policy requires uniqueness.
-25. Concurrent correct and retract actions preserve explicit lineage without hidden overwrite.
-
-### 29.6 Recovery / admin cases
-26. Superseded report remains historically queryable with replacement guidance.
-27. Export failure can be retried under controlled policy with explicit export lineage.
-28. Discrepancy resolution closes source-lineage or publication conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful report creation emits `transparency.report_created`.
-30. Successful source-snapshot attach emits `transparency.source_snapshot_attached`.
-31. Successful publication emits `transparency.report_published`.
-32. Successful supersession emits `transparency.report_superseded`.
-33. Successful discrepancy resolution emits `transparency.discrepancy_resolved` with critical audit lineage.
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact report-type taxonomy for all future transparency disclosures is deferred.
-2. Exact attestation requirements by report class are deferred.
-3. Exact public export format and sync cadence to derived public surfaces are deferred.
-4. Exact historical visibility policy for retracted reports is deferred.
-5. Exact public-safe field set for every report type is deferred.
-6. Exact discrepancy taxonomy for transparency-report conflicts is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  transparency-reporting/
-  public-registry/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep reporting-period identity, report/version lineage, source snapshot binding, attestation, publication, and supersession lineage in one canonical domain service
-- perform report-period integrity and source-lineage completeness checks inside the commit boundary
-- keep publication, correction, supersession, and retraction actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public report views from canonical truth; do not let derived exports mutate canonical reporting state
-
----
-
-## 32. Frontend Consumption Notes
-
-### For `fuze-frontend-webapp`
-- may read public report lists, detail pages, and period pages
-- must not infer unpublished or draft transparency truth from frontend configuration alone
-- must treat backend public transparency responses as authoritative
-- should clearly distinguish current, superseded, corrected, and retracted reports when publicly visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged publish, supersede, correct, retract, export-retry, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical transparency-report truth client-side
-- should present immutable publication lineage and correction history separately from current public view
-
----
-
-## 33. Contract Derivation Notes
-
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public list, detail, and reporting-period operations
-- internal report creation, source binding, generation, attestation, and export operations
-- admin publish / supersede / correct / retract / discrepancy operations
-- shared problem-details schema
-- transparency-report lifecycle events in AsyncAPI
-
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public transparency-report lookup helpers
-- typed report, period, and status models
-- public supersession/correction guidance helpers
-- problem-error models for transparency-report outcomes
-
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+## Idempotency / Retry / Replay Model
+
+Idempotency is required for:
+
+- create report;
+- attach source snapshot;
+- generate report;
+- create attestation;
+- generate export;
+- publish report;
+- correct report;
+- supersede report;
+- retract or restrict report;
+- resolve discrepancy.
+
+The idempotency store MUST record key, scope, actor, route family, request hash, target resource, operation result, terminal status, correlation ID, and expiration. Replays with identical semantic request return the original result. Replays with conflicting payloads return `TRANSPARENCY_IDEMPOTENCY_CONFLICT`. Retry-safe operations MUST avoid duplicate report versions, duplicate publication actions, duplicate correction lineage, duplicate exports, duplicate events, and duplicate audit actions.
+
+## Rate Limit / Abuse-Control Model
+
+Public list/detail routes MUST be rate-limited, cache-aware, and protected against scraping patterns that could amplify operational load. Public errors MUST not reveal private report existence. Admin and internal routes MUST use stricter behavioral controls, anomaly detection, and monitoring for repeated failed mutations, publication attempts, or export retries.
+
+## Endpoint / Route Family Model
+
+Route names are contract-family guidance. Downstream OpenAPI MAY refine exact path parameters while preserving semantics.
+
+### Public Read Routes
+
+- `GET /v1/transparency/reports`
+- `GET /v1/transparency/reports/{report_id}`
+- `GET /v1/transparency/reports/{report_id}/versions/{version_id}`
+- `GET /v1/transparency/periods`
+- `GET /v1/transparency/periods/{period_id}`
+- `GET /v1/transparency/artifacts/{artifact_id}`
+- `GET /v1/transparency/feed`
+
+Public routes are read-only and expose published public-safe views only.
+
+### First-Party Read Routes
+
+- `GET /app/v1/transparency/reports`
+- `GET /app/v1/transparency/reports/{report_id}`
+- `GET /app/v1/transparency/reporting-status`
+
+First-party routes MAY include bounded caller-context hints but MUST NOT expose unpublished report truth unless explicitly authorized by internal/admin policy.
+
+### Internal Service Routes
+
+- `POST /internal/v1/transparency/reports`
+- `GET /internal/v1/transparency/reports/{report_id}`
+- `POST /internal/v1/transparency/reports/{report_id}/source-snapshots`
+- `POST /internal/v1/transparency/reports/{report_id}/generate`
+- `POST /internal/v1/transparency/reports/{report_id}/attestations`
+- `POST /internal/v1/transparency/exports`
+- `GET /internal/v1/transparency/operations/{operation_id}`
+- `POST /internal/v1/transparency/projections/refresh`
+
+Internal routes require service identity, least privilege, idempotency for mutations, and audit linkage where sensitive.
+
+### Admin / Control-Plane Routes
+
+- `POST /admin/v1/transparency/reports/{report_id}/publish`
+- `POST /admin/v1/transparency/reports/{report_id}/correct`
+- `POST /admin/v1/transparency/reports/{report_id}/supersede`
+- `POST /admin/v1/transparency/reports/{report_id}/retract`
+- `POST /admin/v1/transparency/reports/{report_id}/restrict`
+- `POST /admin/v1/transparency/exports/{export_id}/retry`
+- `POST /admin/v1/transparency/discrepancies`
+- `POST /admin/v1/transparency/discrepancies/{case_id}/resolve`
+
+Admin routes require privileged operator identity, reason codes, policy checks, correlation IDs, idempotency, and critical audit.
+
+## Public API Considerations
+
+Public responses MUST be stable, narrow, public-safe, cacheable where appropriate, and explicit about correction/supersession state. Public APIs MUST NOT expose unpublished report existence, hidden source references, private operator notes, raw ledger/audit data, private wallet inventories, or non-public governance/treasury detail.
+
+## First-Party Application API Considerations
+
+First-party clients consume the same public-safe reporting truth unless explicitly operating inside an admin/control-plane context. First-party convenience MUST NOT justify broader report truth exposure or direct mutation from UI clients.
+
+## Internal Service API Considerations
+
+Internal APIs enable owner-aligned orchestration across reporting, source domains, workers, export pipelines, and projection systems. Internal service APIs MUST use service identity and MUST NOT create hidden broad-write shortcuts to source domains.
+
+## Admin / Control-Plane API Considerations
+
+Admin/control actions are exceptional and trust-sensitive. They MUST be bounded, reason-coded, policy-constrained, audited, observable, and separated from ordinary application APIs. Admin routes MUST NOT silently rewrite history, hide material corrections, or bypass source-domain validation.
+
+## Event / Webhook / Async API Considerations
+
+### Event Families
+
+- `transparency.report.created`
+- `transparency.source_snapshot.attached`
+- `transparency.report.generated`
+- `transparency.report.attested`
+- `transparency.report.published`
+- `transparency.report.corrected`
+- `transparency.report.superseded`
+- `transparency.report.restricted`
+- `transparency.report.retracted`
+- `transparency.export.generated`
+- `transparency.export.failed`
+- `transparency.discrepancy.opened`
+- `transparency.discrepancy.resolved`
+
+Events MUST include event ID, event type, occurred_at, subject references, report family, version reference where applicable, actor/service reference when allowed, correlation ID, causation ID, idempotency reference where applicable, and public-safe payload classification.
+
+Webhooks, if approved, MUST expose only public-safe lifecycle signals and MUST not deliver private report-source, operator-note, or raw-source data.
+
+## Chain-Adjacent API Considerations
+
+Reports may reference chain-adjacent facts, contract addresses, wallet registry entries, transaction hashes, proof references, or cycle identifiers where approved. Such references remain source references. Raw chain state does not become transparency-reporting truth until validated through the relevant source domain and bound as approved source lineage.
+
+## Data Model / Storage Support Implications
+
+Implementation storage MUST support:
+
+- immutable report-version records;
+- explicit publication-state records;
+- source snapshot references and hashes where applicable;
+- attestation/review metadata;
+- correction and supersession links;
+- export records and artifact hashes;
+- idempotency records;
+- operation records for accepted async work;
+- audit references;
+- derived public read-model refresh state;
+- retention and archival state.
+
+Database implementation details may vary, but these distinctions MUST remain representable.
+
+## Read Model / Projection / Reporting Rules
+
+Public read models are derived. They MUST be refreshable from canonical report truth. They MUST expose freshness metadata where stale state could affect trust. Search indexes, feeds, exports, public sites, SDK caches, and static artifacts MUST preserve correction/supersession guidance and MUST NOT present superseded report versions as current.
+
+## Security / Risk / Privacy Controls
+
+- Public endpoints must enforce information minimization.
+- Admin/control endpoints require strong authentication, authorization, reason codes, and audit.
+- Source snapshot payloads must avoid embedding private source data in report records unless required and protected.
+- Report artifacts must be classified before publication.
+- Sensitive source-domain references must be redacted or summarized for public routes.
+- Public report content must pass disclosure-safety checks before publication.
+- Suspicious public scraping, mutation attempts, failed admin actions, and repeated export retries must be monitored.
+
+## Audit / Traceability / Observability Requirements
+
+All sensitive mutations MUST produce audit-linked records, including actor/service identity, action, target, prior state, new state, reason code, policy version, source references, idempotency key, correlation ID, trace ID, and timestamp. Observability MUST cover generation latency, export failures, stale projections, publication errors, correction/supersession actions, public API error rates, rate-limit events, and downstream event delivery failures.
+
+## Failure Handling / Edge Cases
+
+- Missing source lineage blocks publication.
+- Source-domain contradiction blocks publication or triggers discrepancy review.
+- Duplicate generation requests return idempotent results.
+- Conflicting idempotent requests fail with conflict.
+- Export failure does not alter canonical report truth.
+- Public view stale state must be declared or served according to cache policy with explicit freshness.
+- Retracted reports must preserve lineage and public explanation where policy allows.
+- Unauthorized admin mutation attempts must be denied and audited.
+- Public requests for unpublished reports return public-safe not-found/forbidden behavior without leaking private state.
+- Chain finality or provider uncertainty must be represented as source uncertainty, not report finality.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+- Public route versions MUST preserve stable semantics across compatibility windows.
+- Breaking changes require new versioned route family or documented migration path.
+- Report resource identifiers MUST be stable.
+- Deprecated response fields MUST remain during compatibility windows or be version-gated.
+- Superseded reports remain historically queryable according to retention/publication policy.
+- Migration from API v1 MUST preserve public report lineage, source snapshots, publication state, correction state, and artifact references.
+- OpenAPI and SDK artifacts MUST mark public-safe vs internal/admin fields explicitly.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI derivation MUST:
+
+- separate public, first-party, internal, and admin route groups;
+- mark admin/control routes as privileged;
+- include problem-details error schemas and required error codes;
+- model idempotency headers and correlation IDs;
+- distinguish accepted async responses from terminal mutation responses;
+- include public-safe response schemas separate from internal canonical schemas;
+- preserve correction/supersession fields.
+
+AsyncAPI/event derivation MUST:
+
+- include event families listed above;
+- define subject, correlation, causation, replay, and payload classification rules;
+- preserve event idempotency and delivery semantics;
+- avoid exposing private fields in public webhook payloads.
+
+SDK derivation MUST not expose internal/admin route helpers in public SDKs unless explicitly approved and access-controlled.
+
+## Implementation-Contract Guardrails
+
+- Do not let frontend clients submit canonical report truth.
+- Do not let export/rendering pipelines become publication-state owners.
+- Do not bypass owner-domain validation for source references.
+- Do not publish reports without source-lineage completeness checks.
+- Do not silently overwrite report versions.
+- Do not use raw chain data, raw analytics, or raw dashboards as report truth without validation and source binding.
+- Do not make public artifacts broader than public API contracts.
+- Do not suppress correction or supersession lineage to simplify UX.
+- Do not reuse ordinary application roles for publication/correction control-plane authority.
+
+## Downstream Execution Staging
+
+1. Align v2 route families with existing v1 transparency reporting routes.
+2. Define canonical schemas for periods, reports, versions, source snapshots, attestations, operations, exports, and public views.
+3. Implement idempotency, operation references, and structured errors.
+4. Implement public-safe read models and cache freshness indicators.
+5. Implement admin/control policy gates and audit linkage.
+6. Implement event emission and projection refresh.
+7. Implement migration scripts preserving v1 public reports and lineage.
+8. Generate OpenAPI/AsyncAPI artifacts and contract tests.
+9. Run production-readiness review with security, audit, runtime, and public-trust stakeholders.
+
+## Required Downstream Specs / Contract Layers
+
+- OpenAPI public route contract
+- OpenAPI internal route contract
+- OpenAPI admin/control route contract
+- AsyncAPI event catalog
+- Report generation worker contract
+- Export/public artifact contract
+- Source snapshot reference contract
+- Admin/control reason-code catalog
+- Public read-model schema contract
+- Audit event mapping contract
+- Migration and compatibility plan
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns include:
+
+- public route mutates report truth;
+- admin route mutates source-domain payout, registry, treasury, governance, or chain truth;
+- report renderer updates publication state directly;
+- public site contains current report meaning not traceable to canonical report version;
+- report version is overwritten without correction/supersession lineage;
+- source snapshot is attached after publication without correction workflow;
+- raw spreadsheet/dashboard is published as canonical report without source binding and review;
+- public API exposes private source detail or operator notes;
+- event consumer treats lifecycle event as canonical report storage;
+- SDK exposes admin routes as ordinary public API helpers.
+
+Boundary violation detection SHOULD produce audit records, monitoring alerts, and remediation cases.
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example
+A quarterly transparency report is created for a closed reporting period, bound to approved registry, payout-ledger, treasury, and governance source snapshots, generated by a worker, attested by required reviewers, published through admin/control route with a reason code, emitted as `transparency.report.published`, and exposed publicly through derived report views with artifact hash and correction lineage fields.
+
+### Anti-Example
+A frontend dashboard exports a PDF directly from analytics tables, uploads it to the public site, labels it the official transparency report, and later replaces the file after discovering errors. This is forbidden because it bypasses canonical report truth, source lineage, publication controls, correction lineage, audit, and public API consistency.
+
+### Canonical Correction Example
+A published report contains a public-safe summary error. Admin/control opens a discrepancy case, validates the corrected content, creates a corrected version or correction note, preserves the original version, publishes the correction with reason code and audit linkage, and updates public read models to show current and prior meaning.
+
+## Acceptance Criteria
+
+1. Public report list returns only published public-safe reports and never returns draft, internal, or restricted records.
+2. Public report detail includes correction/supersession guidance whenever the current report version is corrected, superseded, restricted, or retracted.
+3. Internal report creation requires service identity and idempotency key.
+4. Report generation without required source snapshots is rejected with `TRANSPARENCY_SOURCE_SNAPSHOT_REQUIRED`.
+5. Publish action requires privileged operator identity, reason code, correlation ID, policy check, idempotency key, and audit record.
+6. Replayed publish request with the same idempotency key and same payload returns `previously_applied` without duplicate events or duplicate audit actions.
+7. Replayed mutation with same idempotency key and different payload returns `TRANSPARENCY_IDEMPOTENCY_CONFLICT`.
+8. Correction and supersession actions preserve prior report-version lineage and expose public-safe current/previous guidance.
+9. Export failure does not change canonical report publication state and is visible through operation/export status.
+10. Public API never exposes operator notes, raw source payloads, private wallet inventories, raw audit records, or unpublished report details.
+11. Event payloads include event ID, subject, type, occurred_at, correlation ID, and payload classification.
+12. Public view refresh failures are represented as stale/unavailable state rather than fabricated freshness.
+13. Admin unauthorized mutation attempts are denied and audited.
+14. OpenAPI output separates public, internal, and admin schemas and marks privileged routes.
+15. Migration preserves v1 report identifiers or maps them through durable aliases while preserving publication/correction lineage.
+16. Derived public sites can be rebuilt from canonical report records and export records.
+
+## Test Cases
+
+### Positive Path Tests
+1. Create draft report with valid internal service identity, valid period, valid family, and idempotency key; expect 201 and draft state.
+2. Attach valid source snapshots; expect source lineage bound and audit/event emitted.
+3. Generate report with complete sources; expect 202 accepted or 200/201 generated with operation/report-version reference.
+4. Publish verified report through admin route; expect published state, audit record, event emission, and public view refresh.
+5. Retrieve public published report; expect public-safe fields, artifact references, and no private fields.
+
+### Negative Path Tests
+6. Public caller requests unpublished report; expect public-safe not-found/forbidden behavior with no state leakage.
+7. Generate report without source snapshots; expect `TRANSPARENCY_SOURCE_SNAPSHOT_REQUIRED`.
+8. Admin publish without reason code; expect validation/policy denial.
+9. Internal service with insufficient scope attempts source snapshot mutation; expect `TRANSPARENCY_SERVICE_PERMISSION_DENIED`.
+10. Public route attempts mutation; expect method not allowed or permission denial.
+
+### Authorization / Entitlement / Scope Tests
+11. Operator lacking publish permission attempts publish; expect denial and audit.
+12. Operator with correction permission but not retraction permission attempts retract; expect denial and audit.
+13. Service authorized for exports but not source binding attempts source binding; expect denial.
+
+### Idempotency / Retry / Replay Tests
+14. Repeat identical create report request with same key; expect previous result.
+15. Repeat publish after success with same key; expect `previously_applied` and no duplicate event.
+16. Retry export after retryable failure with new authorized retry operation; expect retry operation linked to original failure.
+17. Same idempotency key with different request hash; expect idempotency conflict.
+
+### Conflict / Concurrency Tests
+18. Two admins attempt to publish different versions as current; expect one success and one supersession/publication conflict.
+19. Source-domain contradiction detected after generation but before publish; expect publication blocked and discrepancy case opened.
+20. Correction attempted against already retracted report without allowed policy; expect correction not allowed.
+
+### Rate Limit / Abuse Tests
+21. Public report list scraping exceeds limit; expect rate-limit response with no private state.
+22. Repeated failed admin actions trigger monitoring alert.
+
+### Degraded-Mode / Failure Tests
+23. Export worker fails; expect export `failed_retryable` and canonical report unchanged.
+24. Public projection stale; expect stale metadata or fallback public-safe response according to policy.
+25. Event bus unavailable during publish; expect transaction/outbox behavior preserving eventual event delivery or clear retry status.
+
+### Audit / Traceability Tests
+26. Publish audit record includes actor, role, reason code, policy version, source references, prior/new state, idempotency key, correlation ID, and timestamp.
+27. Correction audit record links original version, corrected version, discrepancy case, and public explanation.
+
+### Migration / Compatibility Tests
+28. v1 public report route remains compatible or redirects to v2 mapping during compatibility window.
+29. Deprecated field remains present until announced removal window ends.
+30. Legacy report records migrate with version lineage and source-reference placeholders rather than losing history.
+
+### Boundary-Violation Tests
+31. Export pipeline attempts direct publication-state write; expect blocked and audited.
+32. Public site submits report content as canonical truth; expect rejected.
+33. Event consumer attempts to infer current report state from event only; contract tests require canonical read confirmation.
+
+## Dependencies / Cross-Spec Links
+
+This API depends on active refined registry governance, transparency reporting semantics, transparency model semantics, public API posture, API architecture posture, internal service API posture, event/webhook semantics, idempotency/versioning rules, migration compatibility rules, audit/activity rules, security/risk controls, monitoring/incident posture, data classification and retention rules, public contract/wallet registry semantics, payout-ledger and profit-participation semantics, treasury/governance/vault/multisig semantics, and chain-architecture boundaries.
+
+## Explicitly Deferred Items
+
+- Exact machine-readable OpenAPI and AsyncAPI files.
+- Exact report family enumeration beyond canonical family semantics.
+- Exact artifact rendering engine and template implementation.
+- Exact legal disclaimer language.
+- Exact external assurance provider integration workflow.
+- Exact public CDN/static-site infrastructure.
+- Exact retention duration for all report artifacts where not already governed by retention policy.
+- Exact UI workflows for admin/control screens.
+
+## Final Normative Summary
+
+The FUZE Transparency Reporting API is the interface-contract layer for recurring, source-linked, public-safe, correction-safe transparency reporting. It does not own the underlying registry, payout, treasury, governance, chain, audit, accounting, or analytics facts that reports reference. It owns how report records, versions, source snapshots, publication state, correction lineage, exports, public-safe reads, admin mutations, events, audit linkage, and derived views are exposed and governed through APIs.
+
+All downstream implementations MUST preserve source-domain separation, public/private boundary discipline, idempotent mutation safety, accepted-state semantics, correction visibility, admin/control auditability, and derived-read subordination.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting/export, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain versus off-chain responsibilities are explicit where relevant.
+- [x] Accepted-state versus final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behaviors are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design diagram uses Mermaid syntax and distinguishes canonical from derived data.
+- [x] Flow View includes synchronous, async, failure, retry, audit, admin/operator, and finalization paths where relevant.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax and distinguish accepted state from final outcome.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases include positive, negative, authorization, entitlement/scope, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation coverage.

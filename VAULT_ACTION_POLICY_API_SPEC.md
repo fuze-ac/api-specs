@@ -1,1533 +1,1000 @@
-# VAULT_ACTION_POLICY_API_SPEC
+# FUZE Vault Action Policy API Specification
+
+## Document Metadata
+
+- **Document Name:** `VAULT_ACTION_POLICY_API_SPEC.md`
+- **Document Type:** API SPEC v2 production-grade interface-contract specification
+- **Status:** Draft canonical API SPEC v2
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Vault Action Policy Domain; named individual owner not explicitly specified in retrieved governing materials
+- **Approval Authority:** Not explicitly specified in retrieved governing materials; governed by FUZE refined registry and approval workflow
+- **Review Cadence:** Quarterly and whenever treasury-control posture, Foundation stewardship posture, multisig/timelock posture, payout-funding posture, reserve architecture, tokenomics vault composition, public-trust reporting posture, or chain-adjacent control posture materially changes
+- **Governing Layer:** API contract layer derived from the platform governance / reserve-behavior policy architecture / vault-meaning and vault-behavior control layer
+- **Parent Registry:** API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend engineering, contracts engineering, treasury and finance stakeholders, governance/control-plane authors, security engineering, audit/compliance, transparency/reporting authors, implementation-contract authors, OpenAPI/AsyncAPI/SDK authors, QA and production-readiness reviewers
+- **Primary Purpose:** Define the production-grade interface contract for FUZE vault-action policy APIs so vault purpose, category-aware action allowance, destination and timing discipline, vault-sensitive action lineage, and correction/supersession behavior remain enforceable through public-safe, first-party, internal, admin/control-plane, event, reporting, and chain-adjacent API surfaces.
+- **Primary Upstream References:** `REFINED_SYSTEM_SPEC_INDEX.md`; `DOCS_SPEC_INDEX.md`; `SYSTEM_SPEC_INDEX.md`; `API_SPEC_INDEX.md`; `VAULT_ACTION_POLICY_SPEC.md`; `TREASURY_CONTROL_POLICY_SPEC.md`; `FOUNDATION_GOVERNANCE_SPEC.md`; `GOVERNANCE_MODEL_SPEC.md`; `MULTISIG_AND_TIMELOCK_SPEC.md`; `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`; `TRANSPARENCY_MODEL_SPEC.md`; `TRANSPARENCY_REPORTING_SPEC.md`; `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`; `CHAIN_ARCHITECTURE_SPEC.md`; `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`; `AUDIT_LOG_AND_ACTIVITY_SPEC.md`; `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`; `SECURITY_AND_RISK_CONTROL_SPEC.md`; `EVENT_MODEL_AND_WEBHOOK_SPEC.md`; `IDEMPOTENCY_AND_VERSIONING_SPEC.md`; `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`.
+- **Primary Downstream Dependents:** OpenAPI contracts for vault-action policy routes; AsyncAPI contracts for vault-action policy events; admin/control-plane implementation contracts; vault-sensitive treasury/governance workflows; multisig/timelock control-reference contracts; transparency/public reporting read models; public-safe vault summary APIs; discrepancy/remediation runbooks; QA and regression test suites.
+- **API Surface Families Covered:** Public-read, first-party authenticated read, internal service, admin/control-plane, event/async, reporting/export, chain-adjacent reference APIs.
+- **API Surface Families Excluded:** Raw contract ABI APIs, raw signer/key-custody APIs, final treasury accounting exports, full Foundation governance APIs, full treasury-control APIs, full multisig/timelock APIs, full payout execution APIs, full transparency-report composition APIs.
+- **Canonical System Owner(s):** Vault Action Policy Domain for vault-purpose semantics, category-aware action allowance semantics, destination/timing legibility, vault-sensitive action meaning, and vault-policy correction/supersession lineage.
+- **Canonical API Owner:** Vault Action Policy API Domain implemented through backend-owned canonical APIs.
+- **Supersedes:** Historical `VAULT_ACTION_POLICY_API_SPEC.md` v1 interface material where it is weaker, underspecified, or inconsistent with active refined semantics.
+- **Superseded By:** Not applicable.
+- **Related Decision Records:** Not explicitly specified in retrieved governing materials.
+- **Canonical Status Note:** This API spec is subordinate to refined system semantics. It expresses vault-action policy truth at the interface-contract layer and MUST NOT redefine vault meaning, treasury control, Foundation stewardship, multisig/timelock enforcement, profit-participation truth, chain execution truth, reporting truth, or public registry truth.
+- **Implementation Status:** Ready for downstream implementation-contract derivation after review.
+- **Approval Status:** Draft pending FUZE approval workflow.
+- **Change Summary:** Upgrades the v1 vault-action API material into API SPEC v2 format; makes public/internal/admin/event boundaries explicit; strengthens request/response/error/status/idempotency/audit/versioning rules; adds diagrams, flow view, acceptance criteria, test cases, and non-canonical pattern guardrails.
+
+## Purpose
+
+This document defines the FUZE Vault Action Policy API contract. The API exists because FUZE does not treat separated vaults as sufficient by themselves. Vault architecture answers where reserve-class capital resides; vault-action policy answers what each vault may meaningfully do over time. The API therefore exposes and mutates only the interface-level expression of vault-action policy semantics: vault policy versions, vault-sensitive action records, category-aware action classifications, destination and timing validations, control references, execution references, reporting references, discrepancy cases, and correction/supersession lineage.
+
+The API MUST preserve the refined principle that every vault action is evaluated against the vault category’s published economic role. The same apparent action MAY be allowed for one vault category, restricted for another, and disallowed or exceptional for a trust-sensitive category. The API MUST NOT collapse vaults into an omnibus reserve pool or treat vault labels as presentation-only metadata.
+
+## Scope
+
+This API spec governs:
+
+- public-safe reads of vault policy and vault-action summaries;
+- first-party authenticated reads of bounded vault-related state;
+- internal creation, classification, validation, linking, and canonical reads of vault-sensitive actions;
+- admin/control-plane approval, rejection, pause, escalation, exceptional treatment, supersession, and discrepancy resolution;
+- event emission and async processing for vault-action policy lifecycle changes;
+- reporting/export posture for public-safe and internal vault-action views;
+- chain-adjacent reference linkage to contracts, wallets, multisig/timelock queues, execution artifacts, and public registry records;
+- request, response, error, status, idempotency, retry, replay, authorization, audit, observability, migration, and SDK derivation rules for this API domain.
+
+## Out of Scope
+
+This API spec does not govern:
+
+- full treasury-control approval mechanics;
+- full Foundation governance semantics;
+- final signer identities, threshold numbers, timelock durations, or raw key custody;
+- raw vault contract ABI behavior;
+- raw token-transfer execution APIs;
+- full payout-cycle execution mechanics;
+- final transparency-report composition;
+- raw accounting-ledger exports;
+- frontend presentation design beyond contract-safe response obligations.
+
+Those domains MAY reference this API, but they MUST NOT reinterpret vault-action policy truth through local convenience.
+
+## Design Goals
+
+1. Make vault purpose operationally enforceable at the API layer.
+2. Preserve category-aware action allowance and disallowance across all mutation and read surfaces.
+3. Separate semantic truth, API contract truth, policy truth, execution truth, audit truth, reporting truth, public-read truth, and presentation truth.
+4. Ensure every material mutation has explicit authorization, idempotency, correlation, audit, and lineage.
+5. Prevent admin/control-plane shortcuts from becoming hidden broad-write paths.
+6. Provide route-family rules strong enough for OpenAPI, AsyncAPI, SDK, QA, and production readiness work.
+7. Preserve chain-adjacent clarity: execution references and contract events do not replace off-chain policy interpretation.
 
-## 1. Title
+## Non-Goals
 
-**VAULT_ACTION_POLICY_API_SPEC.md**
-
----
-
-## 2. Document Metadata
-
-- **Document Name:** VAULT_ACTION_POLICY_API_SPEC.md
-- **API Classification:** internal, admin, event-driven, public-read, chain-adjacent
-- **Owning Domain:** Vault Action Policy Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** vault policy versions, vault action records, vault category profiles, action-class records, destination validations, approval-path records, control references, exception records, and correction-safe vault-action lineage in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE vault-action policy enforcement, category-aware vault action governance, destination and timing discipline, action sensitivity handling, and structured audit/reporting-safe lifecycle management across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 2.1 API Classification Header
-
-- **API Classification:** internal | admin | event-driven | public-read | chain-adjacent
-- **Owning Domain:** Vault Action Policy Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** vault-action policy and vault-sensitive action governance domain
-
----
-
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE vault-action policy operations. It translates the governing FUZE platform architecture, vault action policy, treasury control policy, multisig and timelock expectations, foundation governance expectations, transparency model, audit requirements, and API architecture rules into an implementation-ready API contract.
-
-This API exists because FUZE does not treat separated vaults as sufficient by themselves. Vault architecture answers where reserve-class capital resides, but not what each vault is meaningfully allowed to do over time. The FUZE vault-action policy establishes action classes, category-aware behavior, destination legibility, sensitivity discipline, timing discipline, emergency narrowness, audit lineage, and reporting compatibility so that vault purpose remains operationally enforceable rather than merely descriptive. The same action may be appropriate for one vault and inappropriate for another, and the API must preserve that distinction rather than collapsing vaults into a flexible omnibus reserve pool. fileciteturn18file0 fileciteturn18file2
-
-Accordingly, this specification defines how vault policy versions, vault action records, vault category profiles, destination validations, approval paths, control references, exception records, and reporting references are represented, and how vault-action behavior remains auditable, idempotent, and architecture-consistent across FUZE.
-
----
-
-## 4. Scope
-
-This specification covers:
-
-- internal APIs for vault policy versioning and vault-sensitive action lifecycle management
-- internal APIs for vault category classification, action-class classification, destination validation, and timing-policy attachment
-- internal APIs for approval-path, multisig/timelock, emergency, and reporting linkage
-- internal read APIs for canonical vault-action policy truth
-- admin/control-plane APIs for approve, reject, pause, escalate, exceptional containment, supersede, and discrepancy resolution
-- public-read APIs for bounded public-safe vault-policy summaries and public-safe vault-action reporting summaries where policy allows
-- event emission requirements for vault-action policy lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+- The API does not make every vault operationally identical.
+- The API does not allow category-specific exceptions to replace policy clarity.
+- The API does not convert emergency handling into general discretionary authority.
+- The API does not expose full internal governance, treasury, Foundation, or control-path detail through public routes.
+- The API does not treat technically possible vault movements as economically appropriate actions.
 
-This specification does **not** redefine:
+## Core Principles
 
-- the full treasury-control policy domain
-- the full foundation governance domain
-- the final multisig signer set or timelock parameters
-- low-level vault contract ABIs
-- final reserve accounting exports
-- final transparency-report composition
-- full beneficiary-release logic for vesting contracts in contract detail
+1. **Refined semantics own truth.** This API expresses vault-action policy truth; it does not create competing semantic truth.
+2. **Vault identity constrains behavior.** Vault category, action class, sensitivity tier, destination category, timing posture, and policy version are mandatory contract concepts for material actions.
+3. **Same shape does not mean same meaning.** Route handlers MUST evaluate category context rather than merely action shape.
+4. **Proposal, approval, control, execution, reporting, and correction remain separate.** No single route or status may collapse these lifecycle concepts.
+5. **Public-read is derived and bounded.** Public summaries explain policy-safe meaning; they do not expose internal control detail and do not become canonical mutation owners.
+6. **Admin action is bounded.** Operator actions MUST be reason-coded, policy-constrained, idempotent, audited, and lineage-preserving.
+7. **Chain-adjacent references are references.** Contract execution, wallet movement, multisig queue state, or timelock readiness may be linked, but they do not by themselves define vault-policy truth.
 
-Those remain governed by their own source-of-truth specifications. fileciteturn18file0 fileciteturn18file7
+## Canonical Definitions
 
----
+- **Vault:** A FUZE reserve or reserve-adjacent capital structure with a published economic role.
+- **Vault Category:** Canonical classification used to interpret purpose, action allowance, sensitivity, reporting posture, and trust meaning.
+- **Vault-Sensitive Action:** Any action that affects vault-controlled value, category meaning, destination routing, timing posture, control posture, or public trust interpretation.
+- **Action Class:** Governed class such as observation, administration, internal coordination, category deployment, beneficiary release, payout-related action, or emergency action.
+- **Sensitivity Tier:** Risk and trust level derived from action class, vault category, destination, timing, payout relevance, Foundation relevance, public visibility, and control-path impact.
+- **Destination Category:** Canonical classification of where value, authority, reference, or execution intent is directed.
+- **Timing Reference:** Policy-relevant launch, vesting, payout, timelock, governance, reporting, emergency, or execution-window context.
+- **Vault Policy Version:** Canonical versioned policy record governing vault-sensitive action interpretation.
+- **Control Reference:** Link to multisig, timelock, governance, emergency authority, or other approved control path.
+- **Execution Reference:** Link to downstream execution artifact; it is not equivalent to approval.
+- **Reporting Reference:** Link to public registry, transparency reporting, investor/community reporting, payout, exception, or public-safe explanation artifact.
 
-## 5. Source-of-Truth Inputs
+## Truth Class Taxonomy
 
-### Primary FUZE docs and specs used
+The API MUST preserve these truth classes:
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+1. **Semantic truth:** Owned by `VAULT_ACTION_POLICY_SPEC.md` and adjacent refined specs.
+2. **API contract truth:** Route families, request/response structures, errors, status values, idempotency, and event contracts defined here.
+3. **Policy truth:** Vault policy versions, category profiles, action-class rules, sensitivity tiers, destination and timing constraints.
+4. **Runtime truth:** Operation records, async jobs, retries, queue states, rate-limit state, and remediation state.
+5. **Execution truth:** Contract, wallet, multisig, timelock, or operational execution artifacts.
+6. **Audit truth:** Immutable audit/activity records for mutations and privileged reads.
+7. **Reporting/public-read truth:** Derived public-safe vault summaries, exports, reports, and registry linkages.
+8. **Provider/input truth:** Chain observations, external explorer data, submitted references, or service callbacks before owner-domain validation.
+9. **Projection truth:** Cached/read-model views optimized for consumers.
+10. **Presentation truth:** UI labels, summaries, copy, and dashboard wording.
 
-#### Primary vault / treasury / governance / control sources
-- `VAULT_ACTION_POLICY_SPEC.md`
-- `TREASURY_CONTROL_POLICY_SPEC.md`
-- `MULTISIG_AND_TIMELOCK_SPEC.md`
-- `FOUNDATION_GOVERNANCE_SPEC.md`
-- `GOVERNANCE_MODEL_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
+Derived, provider-input, projection, reporting, and presentation truth MUST NOT mutate or override semantic truth.
 
-#### Core docs inputs
-- `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
-- `FUZE_TOKENOMICS_TABLES.md`
-- `ALLOCATION_WALLET_MAP.md`
-- tokenomics vault docs under `fuze.ac > docs/tokenomics/`, including:
-  - `FOUNDATION_VAULT.md`
-  - `TREASURY_RESERVE_VAULT.md`
-  - `HOLDER_INCENTIVES_VAULT.md`
-  - `ECOSYSTEM_PARTNERSHIP_VAULT.md`
-  - `LIQUIDITY_OPERATIONS_VAULT.md`
-  - `TRANSPARENCY_STABILITY_VAULT.md`
-  - `TEAM_VESTING_VAULT.md`
-  - `ADVISOR_VESTING_VAULT.md`
-
-#### API and runtime sources
-- `API_ARCHITECTURE_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-
-#### Security and operations sources
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
-
-### Highest-priority interpretation applied
-
-For this file, the most important governing interpretation is:
-
-1. vault action policy governs **what** each vault may meaningfully do, while treasury control governs **how** treasury-sensitive actions are controlled
-2. backend owns canonical vault-action policy truth and vault-sensitive action lifecycle truth
-3. vault purpose must constrain action space, destination, sensitivity, timing, and reporting
-4. the same action may be allowed for one vault category and disallowed or exceptional for another
-5. Foundation, Transparency/Stability, and Liquidity Operations require stronger restraint than ordinary treasury convenience
-6. payout-related vault actions are holder-facing, high-trust events and should not be treated as ordinary transfers
+## Architectural Position in the Spec Hierarchy
 
-These interpretations are grounded in the vault-action policy’s canonical principle, category-aware action profiles, destination rules, timing rules, and relationship to treasury control, Foundation governance, and payout-related behavior. fileciteturn18file0 fileciteturn18file1 fileciteturn18file3 fileciteturn18file5
-
-### Supporting external standards used only as guidance
+This API spec sits below the refined registry and active refined vault-action policy spec. It is a downstream interface-contract document. It consumes the active v1 API registry as historical interface material, but v1 route shapes do not override refined system semantics.
 
-- HTTP semantics for internal mutation and bounded public-read APIs
-- structured problem-details error design
-- general policy-versioning, action-governance, and correction-lineage patterns as supporting guidance
+Upstream semantic owners include:
 
-External guidance does not override FUZE source-of-truth documents.
-
----
-
-## 6. Governing Architecture and Ownership Interpretation
-
-This API belongs to the **Vault Action Policy Domain** because it owns the canonical lifecycle of:
-
-- vault policy version interpretation,
-- vault-sensitive action records,
-- category-aware action-class evaluation,
-- destination legibility validation,
-- sensitivity and timing treatment,
-- governance-path and control-reference linkage,
-- and correction-safe vault-action history.
-
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable vault-policy and vault-action truth
-- vault-sensitive actions require centralized rule enforcement and category-aware validation
-- contract-level vault separation alone is insufficient without explicit off-chain policy interpretation
-- multiple adjacent governance and reporting domains need one canonical policy/action truth source
-- public trust requires structured explanation and lineage in addition to contract execution traces
-
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend only reads bounded public-safe or first-party-safe summaries
-- `fuze-frontend-admin`, because admin may propose, approve, pause, or escalate actions but must not own canonical policy truth
-- `fuze-contracts`, because vault contracts enforce or execute some actions but do not own the full policy interpretation of what those actions mean
-- treasury-control policy domain, because treasury control governs control posture while vault action policy governs vault-meaningful allowed behavior
-- Foundation governance domain, because Foundation governance intensifies stewardship constraints but does not replace vault-action policy for all vaults
-- product domains, because vault action policy is reserve-architecture governance, not product administration
-
-### Architectural implications
-
-- every material vault action must preserve explicit vault category context
-- every material vault action must preserve action class, destination category, sensitivity tier, and approval-path meaning
-- destination ambiguity is itself a policy risk and must be modeled explicitly
-- timing-sensitive actions such as vesting release, payout-cycle funding, program launch allocation, timelock-gated deployment, and emergency containment require explicit timing treatment
-- emergency pathways should remain narrow and recovery-oriented rather than becoming general discretionary overrides
-- corrections and supersession must preserve historical governance meaning rather than silently rewriting records
-
----
-
-## 7. Domain Responsibilities
-
-The Vault Action Policy API domain is responsible for:
-
-1. maintaining canonical vault policy versions and vault-sensitive action records
-2. classifying vault actions by vault category, action class, sensitivity tier, destination category, and timing posture
-3. validating whether a proposed action remains consistent with the published purpose of the source vault
-4. preserving distinct action profiles for Foundation, Treasury Reserve, Team Vesting, Advisor Vesting, Holder Incentives, Ecosystem Partnership, Liquidity Operations, and Transparency / Stability vaults
-5. recording proposal, approval, execution, emergency, and reporting-path linkage for vault-sensitive actions
-6. linking vault actions to public reporting, registry, payout-cycle, and exception references where applicable
-7. supporting admin approve, reject, pause, escalate, exceptional containment, supersede, and discrepancy workflows
-8. emitting vault-action policy lifecycle events
-9. generating audit lineage for sensitive vault-action policy mutations
-10. preserving separation between vault policy, treasury control, multisig/timelock control, and downstream execution truth
-
-The domain is not responsible for:
-
-- owning raw vault contract execution state
-- replacing treasury control policy
-- replacing multisig/timelock technical enforcement
-- replacing Foundation governance
-- replacing transparency reports
-- allowing broad discretionary reuse of vault capital outside category meaning
-
----
-
-## 8. Out of Scope
-
-The following are out of scope for this API specification:
-
-- low-level signer-management or quorum configuration
-- raw token transfer execution APIs
-- full vesting-claim mechanics in contract detail
-- raw reserve accounting exports
-- end-user UI design for vault reporting
-- generic product budget approvals that are not vault-sensitive
-- external explorer integration specifics
-- exact blocked-destination registry model and exact disclosure thresholds, which remain downstream refinements
-
----
-
-## 9. Canonical Entities and Data Ownership
-
-### Durable entities
-
-#### 9.1 vault_policy_versions
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** canonical policy versions governing vault-sensitive actions
-- **Nature:** source-of-truth durable entity
-
-#### 9.2 vault_action_records
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** canonical vault-sensitive action records
-- **Nature:** source-of-truth durable entity
-
-#### 9.3 vault_category_profiles
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** category-aware meaning and action-profile records for each vault category
-- **Nature:** source-of-truth durable entity
-
-#### 9.4 vault_action_classifications
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** explicit classification of action class, sensitivity tier, timing sensitivity, and purpose-consistency evaluation
-- **Nature:** source-of-truth durable entity
-
-#### 9.5 vault_action_destinations
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** destination category, destination reference, use rationale, and destination-legibility validation posture
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.6 vault_action_approval_paths
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** explicit proposal, approval, and execution role-path records
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.7 vault_action_control_references
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** structured references to multisig, timelock, emergency authority, or other bounded control paths
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.8 vault_action_reporting_references
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** references to transparency reports, public registry references, payout-cycle references, and exception records
-- **Nature:** durable reporting-lineage entity
-
-#### 9.9 vault_exception_records
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** exceptional or emergency vault-action records with post-incident review requirements
-- **Nature:** durable exceptional-case entity
-
-#### 9.10 vault_discrepancy_cases
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** review and remediation records for invalid, stale, miscategorized, or misreported vault-sensitive actions
-- **Nature:** durable review/remediation entity
-
-#### 9.11 vault_mutation_actions
-- **Owner:** Vault Action Policy Domain
-- **Purpose:** high-level action records for create, approve, reject, pause, escalate, exceptional, supersede, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.12 vault_audit_events
-- **Owner:** Audit / Activity domain, sourced by Vault Action Policy Domain
-- **Purpose:** immutable trail for sensitive vault-action policy actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.13 vault_public_policy_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe vault policy and vault-action summaries
-- **Nature:** derived
-
-#### 9.14 vault_internal_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** trusted vault-action and approval-path operational summaries
-- **Nature:** derived
-
-#### 9.15 vault_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into stale, invalid, or miscategorized vault-sensitive conditions
-- **Nature:** derived
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 vault policy version lifecycle
-
-Possible states:
-
-- `draft`
-- `active`
-- `deprecated`
-- `superseded`
-- `archived`
-
-### 10.2 vault action lifecycle
-
-Possible states:
-
-- `draft`
-- `proposed`
-- `under_review`
-- `approved`
-- `rejected`
-- `ready_for_execution`
-- `executed_reference_linked`
-- `reported`
-- `paused`
-- `superseded`
-- `closed`
-
-### 10.3 approval-path lifecycle
-
-Possible states:
-
-- `proposal_recorded`
-- `approval_pending`
-- `approved`
-- `rejected`
-- `execution_linked`
-- `closed`
-
-### 10.4 exceptional-action lifecycle
-
-Possible states:
-
-- `declared`
-- `containment_active`
-- `post_review_pending`
-- `closed`
-- `superseded`
-
-### 10.5 discrepancy lifecycle
-
-Possible states:
-
-- `opened`
-- `under_review`
-- `resolved`
-- `failed`
-- `closed`
-
-Lifecycle notes:
-- approval is distinct from execution linkage
-- reported is distinct from executed_reference_linked
-- exceptional treatment must remain explicitly narrower than normal action authorization
-- supersession must preserve prior category meaning and public explanation
-
----
-
-## 11. API Surface Overview
-
-The API surface is divided into four families:
-
-### 11.1 Public-read APIs
-Used by public users, holders, and community observers for:
-- reading bounded vault-policy summaries
-- reading public-safe vault-action summaries
-- reading category-aware and destination-aware public explanations where policy allows
-
-### 11.2 First-party authenticated read APIs
-Used by `fuze-frontend-webapp` and approved first-party clients for:
-- reading bounded vault-related public-safe and first-party-safe summaries where policy allows
-- reading linked payout or reporting references without exposing internal-only governance detail
-
-### 11.3 Internal service APIs
-Used by trusted internal services for:
-- creating vault actions
-- validating categories, action classes, destinations, and timing sensitivity
-- recording approval paths and control references
-- linking execution and reporting references
-- reading canonical truth
-
-### 11.4 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- approve, reject, pause, escalate, exceptional containment, supersede, and discrepancy actions
-- control-path repair and policy-governed remediation workflows
-
----
-
-## 12. Authentication and Authorization Model
-
-### 12.1 Authentication posture by route family
-
-#### Public-read routes
-No authentication required:
-- list public-safe vault policy summaries
-- read public-safe vault-action summaries and references where published
-
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded first-party-safe vault-related summaries where actor has visibility under policy
-
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create vault actions
-- classify actions
-- record destinations, approval paths, control references, and reporting links
-- read canonical truth
-
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- approve, reject, pause, escalate, declare exceptional treatment, supersede, and resolve discrepancy cases
-
-### 12.2 Authorization checkpoints
-
-Authorization must evaluate:
-- caller identity and route family
-- whether target action is public-safe, first-party-safe, or privileged internal state
-- whether internal service has create/classify/link/read privilege
-- whether admin/operator role is present for sensitive governance actions
-- whether current action state allows requested mutation
-- whether vault category and sensitivity tier require stronger control-path validation
-
-### 12.3 Sensitive action rules
-
-The following require heightened checks:
-- approval of material vault-sensitive actions
-- Foundation-sensitive actions
-- Transparency / Stability and Liquidity Operations actions
-- payout-related vault actions
-- destination changes after action enters under_review or approved state
-- escalation or exceptional treatment
-- discrepancy-resolution actions
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-## 13.1 Public-Read APIs
-
-### 13.1.1 `GET /v1/vault-action-policy/policies`
-**Purpose:** list published public-safe vault policy summaries  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `state`
-- pagination
-**Response Summary:**
-- policy version summaries
-- active/superseded posture
-- public-safe category and action-class summaries
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
-
-### 13.1.2 `GET /v1/vault-action-policy/actions`
-**Purpose:** list published public-safe vault-action summaries  
-**Caller Type:** public  
-**Query Parameters Summary:**
-- optional `vault_category`
-- optional `action_class`
-- optional `sensitivity_tier`
-- pagination
-**Response Summary:**
-- public-safe action summaries
-- vault category, action class, destination category, and status
-- bounded reporting and registry references
-**Side Effects:** none
-
-### 13.1.3 `GET /v1/vault-action-policy/actions/{vault_action_id}`
-**Purpose:** retrieve one public-safe vault-action detail  
-**Caller Type:** public  
-**Response Summary:**
-- public-safe action detail
-- vault category and sensitivity summary
-- destination-category summary
-- reporting and public registry references where published
-- correction or supersession guidance where relevant
-**Side Effects:** none
-
-## 13.2 First-Party Authenticated Read APIs
-
-### 13.2.1 `GET /v1/vault-action-policy/me/actions`
-**Purpose:** retrieve bounded first-party-safe vault-related action summaries where actor has policy visibility  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `reference_type`
-- pagination
-**Response Summary:**
-- bounded vault-related summaries
-- linked public reporting or payout guidance where applicable
-**Side Effects:** none
-
-## 13.3 Internal Service APIs
-
-### 13.3.1 `POST /internal/v1/vault-action-policy/actions`
-**Purpose:** create draft vault-sensitive action record  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
-- `vault_category`
-- `action_class`
-- `sensitivity_tier`
-- `policy_version_reference`
-- optional `proposal_summary`
-- `idempotency_key`
-**Response Summary:** vault-action summary
-**Side Effects:** creates draft/proposed vault action and classification record
-**Idempotency Behavior:** required
-**Audit Requirements:** sensitive vault-action creation audit
-**Emitted Events:** `vault_action_policy.action_created`
-
-### 13.3.2 `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/destinations`
-**Purpose:** attach destination and use-rationale metadata to one vault action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `destination_category`
-- `destination_reference`
-- `use_classification`
-- optional `timing_reference`
-- `idempotency_key`
-**Response Summary:** destination summary and validation posture
-**Side Effects:** creates destination linkage and destination-legibility validation record
-**Idempotency Behavior:** required
-**Audit Requirements:** destination-link audit
-**Emitted Events:** `vault_action_policy.destination_validated`
-
-### 13.3.3 `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/approval-paths`
-**Purpose:** record proposal, approval, and execution-path structure for one vault action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `proposer_role`
-- `approver_role`
-- `executor_role`
-- optional `approval_path_summary`
-- `idempotency_key`
-**Response Summary:** approval-path summary
-**Side Effects:** creates approval-path lineage and may move action into under_review
-**Idempotency Behavior:** required
-**Audit Requirements:** approval-path audit
-**Emitted Events:** `vault_action_policy.approval_path_recorded`
-
-### 13.3.4 `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/control-references`
-**Purpose:** attach multisig, timelock, emergency, or exceptional control references to one action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `multisig_reference`
-- optional `timelock_reference`
-- optional `emergency_authority_reference`
-- optional `control_summary`
-- `idempotency_key`
-**Response Summary:** control-reference summary
-**Side Effects:** creates control-path linkage
-**Idempotency Behavior:** required
-**Audit Requirements:** control-reference audit
-**Emitted Events:** `vault_action_policy.control_linked`
-
-### 13.3.5 `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/reporting-references`
-**Purpose:** attach transparency, registry, payout, or exception references to one vault action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `transparency_report_reference`
-- optional `public_registry_reference`
-- optional `payout_cycle_reference`
-- optional `exception_reference`
-- `idempotency_key`
-**Response Summary:** reporting-reference summary
-**Side Effects:** creates reporting and trust-surface linkage
-**Idempotency Behavior:** required
-**Audit Requirements:** reporting-link audit
-**Emitted Events:** `vault_action_policy.reporting_linked`
-
-### 13.3.6 `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/execution-references`
-**Purpose:** link downstream execution reference to one vault action  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `execution_reference_type`
-- `execution_reference_id`
-- optional `execution_summary`
-- `idempotency_key`
-**Response Summary:** execution-reference summary and updated action state
-**Side Effects:** creates execution linkage and may move action into executed_reference_linked
-**Idempotency Behavior:** required
-**Audit Requirements:** execution-link audit
-**Emitted Events:** `vault_action_policy.execution_linked`
-
-### 13.3.7 `GET /internal/v1/vault-action-policy/actions/{vault_action_id}`
-**Purpose:** retrieve canonical vault-action policy truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full vault action, vault category profile, classification, destination, approval-path, control references, execution references, reporting references, and discrepancy lineage
-**Side Effects:** none
-
-## 13.4 Admin / Control-Plane APIs
-
-### 13.4.1 `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/approve`
-**Purpose:** approve vault-sensitive action under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** approved action summary
-**Side Effects:** action moves to approved or ready_for_execution if checks pass
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.action_approved`
-
-### 13.4.2 `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/reject`
-**Purpose:** reject vault-sensitive action under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** rejected action summary
-**Side Effects:** action moves to rejected
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.action_rejected`
-
-### 13.4.3 `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/pause`
-**Purpose:** pause vault-sensitive action under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** paused action summary
-**Side Effects:** action moves to paused
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.action_paused`
-
-### 13.4.4 `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/escalate`
-**Purpose:** escalate vault-sensitive action to stronger governance/control path  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `escalation_type`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** escalation summary
-**Side Effects:** action control path strengthens, for example through stronger timelock or approval posture
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.action_escalated`
-
-### 13.4.5 `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/exceptional`
-**Purpose:** declare emergency or exceptional vault treatment under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `exception_type`
-- `public_or_internal_summary`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** exceptional-action summary
-**Side Effects:** creates exception record and may restrict ordinary action path until review completes
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.exception_declared`
-
-### 13.4.6 `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/supersede`
-**Purpose:** supersede one vault-sensitive action with a replacement record under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_vault_action_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates old-to-new supersession linkage and updates current policy-visible preference
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.action_superseded`
-
-### 13.4.7 `POST /admin/v1/vault-action-policy/discrepancies`
-**Purpose:** resolve vault-action policy discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, pause, escalate, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `vault_action_policy.discrepancy_resolved`
-
----
-
-## 14. Request Rules
-
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive vault-action policy mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored vault-policy truth as authoritative input
-
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- proposal or approval of material vault-sensitive actions
-- Foundation-sensitive actions
-- Transparency / Stability actions
-- Liquidity Operations actions
-- payout-related vault actions
-- destination or use changes after action enters under_review or approved state
-- escalation or exceptional treatment
-- discrepancy-resolution actions
-
-Heightened validation may include:
-- vault-category and action-class consistency checks
-- destination-category restriction checks
-- timing-sensitivity checks
-- control-path completeness checks
-- operator role confirmation
-- governance/finance/security case linkage for sensitive actions
-
-### 14.3 Scope integrity rule
-Vault-action policy mutations must target valid and authorized policy versions, action records, destination records, control references, and discrepancy records. Services and operators must not mutate unrelated or unauthorized vault-policy state.
-
-### 14.4 Layer-separation rule
-Vault-action policy must remain the meaning-and-behavior layer for reserve-class vaults. It must not collapse:
-- treasury-control meaning,
-- multisig/timelock execution,
-- vesting contract behavior,
-- payout-cycle execution,
-- or transparency reporting
-into one ambiguous state object.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- action, category, or destination summaries where relevant
-- control-path and reporting-reference summaries where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If escalation, exceptional review, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target action or discrepancy
-- mutation type
-- resulting policy/action/control-path state
-- pause, escalation, exceptional, supersession, or closure effects where relevant
-- whether public-safe views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal vault-policy truth
-- public-safe vault-policy summaries
-- public-safe vault-action reporting views
-- execution references versus final downstream execution outcomes
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
-- `type`
-- `title`
-- `status`
-- `code`
-- `detail`
-- `instance`
-- `correlation_id`
-
-### 16.2 Common error codes
-
-#### Authorization / permission errors
-- `VAULT_ACTION_POLICY_PERMISSION_DENIED`
-- `VAULT_ACTION_POLICY_OPERATOR_PERMISSION_DENIED`
-- `VAULT_ACTION_POLICY_SERVICE_PERMISSION_DENIED`
-- `VAULT_ACTION_POLICY_AUDIENCE_PERMISSION_DENIED`
-
-#### State conflict errors
-- `VAULT_ACTION_POLICY_ACTION_STATE_INVALID`
-- `VAULT_ACTION_POLICY_POLICY_STATE_INVALID`
-- `VAULT_ACTION_POLICY_APPROVAL_PATH_INVALID`
-- `VAULT_ACTION_POLICY_SUPERSESSION_CONFLICT`
-- `VAULT_ACTION_POLICY_ESCALATION_CONFLICT`
-
-#### Policy / safety errors
-- `VAULT_ACTION_POLICY_DESTINATION_NOT_ALLOWED`
-- `VAULT_ACTION_POLICY_POLICY_VERSION_REQUIRED`
-- `VAULT_ACTION_POLICY_APPROVAL_REQUIRED`
-- `VAULT_ACTION_POLICY_EXCEPTION_NOT_ALLOWED`
-- `VAULT_ACTION_POLICY_FOUNDATION_RESTRICTION`
-
-#### Request integrity errors
-- `VAULT_ACTION_POLICY_IDEMPOTENCY_KEY_REQUIRED`
-- `VAULT_ACTION_POLICY_REQUEST_INVALID`
-- `VAULT_ACTION_POLICY_REQUEST_UNPROCESSABLE`
-
-#### Dependency or provider errors
-- `VAULT_ACTION_POLICY_EXECUTION_UNAVAILABLE`
-- `VAULT_ACTION_POLICY_STORAGE_UNAVAILABLE`
-- `VAULT_ACTION_POLICY_RECONCILIATION_UNAVAILABLE`
-
-### 16.3 Error handling rules
-- do not expose hidden internal governance, treasury, or security detail in public or low-privilege responses
-- do not imply permitted execution merely because a draft or proposed vault action exists
-- distinguish destination-restriction failure from generic invalid state
-- distinguish policy-version-required from generic invalid request
-- include retry guidance only where safe
-
----
-
-## 17. Idempotency and Mutation Safety
-
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- vault-action creation
-- destination attachment
-- approval-path recording
-- control-reference attachment
-- reporting-reference attachment
-- execution-reference linking
-- approve
-- reject
-- pause
-- escalate
-- exceptional
-- supersede
-- discrepancy resolution
-
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
-
-### 17.3 Mutation safety rules
-- one canonical visible vault action per current action lineage unless explicit supersession exists
-- destination and control-path records must remain referentially consistent with vault category, action class, and sensitivity tier
-- approval, execution linkage, and reporting linkage must preserve proposal/approval/execution separation
-- corrections and supersession must preserve prior vault-action lineage
-- exceptional treatment must not silently normalize into routine vault behavior
-
----
-
-## 18. Versioning and Compatibility Rules
-
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
-
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to proposed, approved, ready_for_execution, executed_reference_linked, reported, paused, or superseded states
-- new vault categories, action classes, destination types, or control-reference types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
-
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of vault-action lifecycle states
-- changing public-safe vault-policy visibility semantics incompatibly
-- removing critical category, destination, or control-path fields
-- changing exceptional-treatment or supersession semantics incompatibly
-
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
-
----
-
-## 19. Event Emission and Webhook Behavior
-
-This domain is event-capable.
-
-### 19.1 Internal events
-The Vault Action Policy domain must emit canonical internal events such as:
+- `VAULT_ACTION_POLICY_SPEC.md` for vault-purpose and allowed-behavior semantics;
+- `TREASURY_CONTROL_POLICY_SPEC.md` for treasury-sensitive approval and restriction posture;
+- `FOUNDATION_GOVERNANCE_SPEC.md` for Foundation stewardship and principal-protection posture;
+- `GOVERNANCE_MODEL_SPEC.md` for governance-sensitive classification and higher-order approval discipline;
+- `MULTISIG_AND_TIMELOCK_SPEC.md` for shared authorization, delay, queue, threshold, execution-window, override, correction, and control-path semantics;
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md` for chain-committed versus off-chain policy/reporting separation;
+- `TRANSPARENCY_MODEL_SPEC.md` and `TRANSPARENCY_REPORTING_SPEC.md` for public-trust interpretation and recurring reporting;
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` for public designation truth of official contracts and wallets.
+
+## API Surface Families
+
+### Public-Read API
+
+Public-read APIs MAY expose only public-safe policy summaries, public-safe action summaries, current/superseded status, correction indicators, and approved reporting/registry references. Public routes MUST NOT reveal internal approval notes, privileged operator identities, sensitive control-path details, private destination intelligence, or unsafe incident details.
+
+### First-Party Application API
+
+First-party APIs MAY expose bounded authenticated views where the actor has legitimate visibility. They MUST NOT let frontend clients author canonical policy truth. First-party clients may submit intent only through backend-governed workflows that revalidate all semantics server-side.
+
+### Internal Service API
+
+Internal service APIs own canonical mutation pathways for creating action records, classification, destination validation, control-reference linkage, execution-reference linkage, reporting-reference linkage, canonical reads, and projection refresh. They require service identity, least privilege, correlation IDs, and idempotency keys for mutations.
+
+### Admin / Control-Plane API
+
+Admin APIs support approve, reject, pause, escalate, declare exceptional treatment, supersede, correct, and resolve discrepancy. They require privileged operator identity, policy authorization, reason code, operator note, idempotency key, correlation ID, and audit record.
+
+### Event / Webhook / Async API
+
+Internal events communicate accepted or completed owner-domain outcomes. Public webhooks, if later introduced, MUST be narrower than internal event production and MUST expose only public-safe state.
+
+### Reporting / Export API
+
+Reporting and export APIs are derived views. They MUST identify source policy version, source action IDs, correction/supersession posture, generated-at time, and export scope.
+
+### Chain-Adjacent API
+
+Chain-adjacent APIs MAY link official contract, wallet, transaction, multisig, timelock, and execution references. They MUST preserve the distinction between chain-committed facts and off-chain policy interpretation.
+
+## System / API Boundaries
+
+The API governs interface contracts for vault-action policy. It does not own refined semantics, raw contract execution, treasury accounting, Foundation policy, multisig/timelock internals, payout execution, or transparency-report composition.
+
+Mutation boundaries:
+
+- Only the Vault Action Policy API may create or mutate canonical vault action records.
+- Treasury, Foundation, governance, multisig/timelock, payout, and reporting services MAY attach validated references through approved internal contracts, but MAY NOT overwrite vault-policy meaning.
+- Public and presentation layers MUST NOT mutate canonical state.
+- Admin/control-plane routes MUST operate through explicit state transitions and MUST NOT update canonical records by arbitrary patch.
+
+Read boundaries:
+
+- Canonical reads come from the owner-domain API.
+- Derived public, reporting, export, and dashboard views MUST include source references.
+- Caches and projections MAY lag but MUST NOT present stale derived views as canonical current truth.
+
+## Adjacent API Boundaries
+
+- `TREASURY_CONTROL_POLICY_API_SPEC.md` owns treasury-sensitive control posture; this API owns vault-specific allowed behavior.
+- `FOUNDATION_GOVERNANCE_API_SPEC.md` owns Foundation stewardship posture; this API preserves Foundation vault category constraints when vault actions are involved.
+- `GOVERNANCE_MODEL_API_SPEC.md` owns higher-order governance classification and approval discipline; this API consumes approved governance context.
+- `MULTISIG_AND_TIMELOCK_API_SPEC.md` owns threshold, queue, timelock, and control-path lifecycle; this API stores and validates references.
+- `PROFIT_PARTICIPATION_API_SPEC.md`, `PAYOUT_LEDGER_API_SPEC.md`, and `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md` own payout and execution truth; this API identifies payout-related vault action meaning.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` owns public registry designation; this API links only approved registry references.
+- `TRANSPARENCY_MODEL_API_SPEC.md` and `TRANSPARENCY_REPORTING_API_SPEC.md` own transparency interpretation and report composition; this API supplies source-grounded vault-action references.
+
+## Conflict Resolution Rules
+
+1. Active refined registry and higher constitutional specs override narrower docs.
+2. Top-level boundary, ownership, and architecture specs win on ownership and mutation boundaries.
+3. `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md` wins on chain-native versus off-chain policy separation.
+4. Narrower source-domain refined specs win on their canonical semantic truth.
+5. `VAULT_ACTION_POLICY_SPEC.md` wins on vault category, allowed behavior, destination/timing discipline, payout-related vault treatment, correction, and supersession.
+6. This API spec wins only on interface-contract expression for the vault-action policy API.
+7. Public dashboards, admin panels, spreadsheets, exports, SDKs, and generated OpenAPI files never override canonical API or refined semantic truth.
+8. If ambiguity remains, the API MUST choose the more conservative trust-preserving interpretation and require review.
+
+## Default Decision Rules
+
+- Missing vault category, action class, sensitivity tier, destination category, timing reference, policy version, or approval path makes a material action incomplete.
+- Ambiguous action classes default to the higher-sensitivity or narrower-allowance treatment.
+- Ambiguous destination/use rationale defaults to review-required or disallowed.
+- Foundation, Transparency/Stability, Liquidity Operations, payout-related, and emergency actions default to stronger review and disclosure-lineage requirements.
+- Public exposure defaults to narrower public-safe summary.
+- Emergency handling defaults to short-lived containment and mandatory post-review.
+- Idempotency conflicts default to no mutation until caller intent can be proven equivalent.
+- Derived view conflict defaults to canonical owner-domain read.
+
+## Roles / Actors / API Consumers
+
+- **Public observer:** Reads public-safe summaries only.
+- **Authenticated first-party user:** Reads bounded views tied to legitimate visibility.
+- **Internal service:** Creates, classifies, links, validates, reads, and refreshes owner-domain state under least privilege.
+- **Admin/operator:** Performs reason-coded privileged transitions through control-plane APIs.
+- **Governance reviewer:** Supplies approved governance context but does not directly bypass API state transitions.
+- **Treasury/Foundation stakeholder:** Supplies domain-specific review context through adjacent APIs.
+- **Reporting author/service:** Consumes source references for public-safe reports.
+- **Contracts/chain service:** Supplies normalized execution references and chain observations.
+- **Audit/security/runtime systems:** Consume immutable audit and observability streams.
+
+## Resource / Entity Families
+
+Canonical resources:
+
+- `vault_policy_version`
+- `vault_category_profile`
+- `vault_action`
+- `vault_action_classification`
+- `vault_action_destination`
+- `vault_action_approval_path`
+- `vault_action_control_reference`
+- `vault_action_execution_reference`
+- `vault_action_reporting_reference`
+- `vault_exception_record`
+- `vault_discrepancy_case`
+- `vault_operation`
+- `vault_idempotency_record`
+- `vault_audit_event`
+
+Derived resources:
+
+- `vault_public_policy_view`
+- `vault_public_action_view`
+- `vault_internal_status_view`
+- `vault_reporting_export`
+- `vault_discrepancy_view`
+
+## Ownership Model
+
+The Vault Action Policy API owns canonical write APIs for vault policy versions and vault-sensitive actions. It MAY consume policy, approval, execution, registry, reporting, and chain references from adjacent domains, but those references remain typed foreign truth. The API MUST record reference provenance and validation state rather than copying adjacent-domain truth into untyped blobs.
+
+## Authority / Decision Model
+
+A valid material vault action requires:
+
+1. semantic eligibility under vault category and action class;
+2. destination and use-rationale validation;
+3. timing posture validation;
+4. approval path determination through governance/treasury/Foundation rules where applicable;
+5. control-path linkage where multisig/timelock or emergency authority is required;
+6. execution-reference linkage only after approval/control requirements are met;
+7. reporting/public-safe linkage where policy requires;
+8. audit and observability records throughout.
+
+## Authentication Model
+
+- Public-read routes MAY be unauthenticated but must be rate-limited.
+- First-party routes require authenticated FUZE account/session identity.
+- Internal service routes require service-to-service authentication and explicit service scopes.
+- Admin routes require authenticated operator identity, privileged role, step-up controls where configured, reason code, and policy authorization.
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+- route family;
+- caller identity and service identity;
+- requested resource and tenant/workspace context if applicable;
+- vault category and sensitivity tier;
+- operation type and current lifecycle state;
+- required policy, approval, and control-path conditions;
+- entitlement or capability-gating where an internal or first-party surface is product-gated;
+- emergency or exceptional authority limitations.
+
+Admin authorization MUST NOT be reduced to a single broad `admin` flag. Sensitive operations require operation-specific permissions and policy checks.
+
+## Entitlement / Capability-Gating Model
+
+Public-safe read access is not entitlement-gated unless abuse controls require it. Internal tooling, reporting/export generation, and privileged workflows MAY be capability-gated, but entitlement never overrides authorization, vault category constraints, or policy truth.
+
+## API State Model
+
+### Vault Policy Version States
+
+`draft`, `active`, `deprecated`, `superseded`, `archived`
+
+### Vault Action States
+
+`draft`, `proposed`, `under_review`, `approved`, `rejected`, `ready_for_execution`, `executed_reference_linked`, `reported`, `paused`, `superseded`, `closed`
+
+### Approval Path States
+
+`proposal_recorded`, `approval_pending`, `approved`, `rejected`, `execution_linked`, `closed`
+
+### Exceptional Action States
+
+`declared`, `containment_active`, `post_review_pending`, `closed`, `superseded`
+
+### Discrepancy States
+
+`opened`, `under_review`, `resolved`, `failed`, `closed`
+
+## Lifecycle / Workflow Model
+
+1. A service proposes a vault-sensitive action with category, action class, policy version, and source references.
+2. The API creates an idempotent operation record and validates basic shape.
+3. The classification engine validates vault category, action class, sensitivity tier, destination category, timing posture, and policy version.
+4. Authorization and policy checks determine whether the action is allowed, restricted, disallowed, or requires review.
+5. Approval path and control references are attached.
+6. Admin/control-plane or governance workflows approve, reject, pause, escalate, or declare exceptional treatment.
+7. If approved, the action becomes ready for execution or awaits multisig/timelock readiness.
+8. Execution reference is linked after downstream execution or queue readiness is validated.
+9. Reporting/public registry/payout references are linked where required.
+10. Events, audit records, projections, and observability signals are emitted.
+11. Corrections, supersessions, discrepancies, and post-review closures preserve lineage.
+
+## Architecture Diagram — Mermaid flowchart
+
+```mermaid
+flowchart TD
+  Public[Public Observers] --> PubAPI[Public-Read Vault API]
+  App[First-Party App] --> AppAPI[Authenticated Vault Read API]
+  Admin[Admin / Control Plane] --> AdminAPI[Admin Vault Action API]
+  Services[Internal Services] --> InternalAPI[Internal Vault Action API]
+
+  PubAPI --> PublicViews[Derived Public Vault Views]
+  AppAPI --> InternalViews[Derived First-Party/Internal Views]
+  AdminAPI --> VaultService[Vault Action Policy Service]
+  InternalAPI --> VaultService
+
+  VaultService --> PolicyStore[(Vault Policy Store)]
+  VaultService --> ActionStore[(Vault Action Store)]
+  VaultService --> IdemStore[(Idempotency / Operation Store)]
+  VaultService --> Audit[Audit / Activity Log]
+  VaultService --> EventBus[Event Bus]
+
+  VaultService --> Treasury[Treasury Control API]
+  VaultService --> Foundation[Foundation Governance API]
+  VaultService --> Governance[Governance Model API]
+  VaultService --> Controls[Multisig / Timelock API]
+  VaultService --> Registry[Public Contract & Wallet Registry API]
+  VaultService --> Reporting[Transparency / Reporting APIs]
+  VaultService --> Payout[Payout / Profit Participation APIs]
+  VaultService --> Chain[Chain / Contract Execution References]
+
+  EventBus --> Workers[Async Workers]
+  Workers --> PublicViews
+  Workers --> InternalViews
+  Workers --> Reporting
+  Workers --> Audit
+
+  classDef derived fill:#f4f4f4,stroke:#999;
+  class PublicViews,InternalViews derived;
+```
+
+## Data Design — Mermaid Diagram
+
+```mermaid
+erDiagram
+  VAULT_POLICY_VERSION ||--o{ VAULT_CATEGORY_PROFILE : governs
+  VAULT_POLICY_VERSION ||--o{ VAULT_ACTION : applies_to
+  VAULT_ACTION ||--|| VAULT_ACTION_CLASSIFICATION : has
+  VAULT_ACTION ||--o{ VAULT_ACTION_DESTINATION : targets
+  VAULT_ACTION ||--o{ VAULT_ACTION_APPROVAL_PATH : requires
+  VAULT_ACTION ||--o{ VAULT_ACTION_CONTROL_REFERENCE : links
+  VAULT_ACTION ||--o{ VAULT_ACTION_EXECUTION_REFERENCE : links
+  VAULT_ACTION ||--o{ VAULT_ACTION_REPORTING_REFERENCE : publishes
+  VAULT_ACTION ||--o{ VAULT_EXCEPTION_RECORD : may_have
+  VAULT_ACTION ||--o{ VAULT_DISCREPANCY_CASE : may_have
+  VAULT_ACTION ||--o{ VAULT_OPERATION : mutates_through
+  VAULT_OPERATION ||--|| IDEMPOTENCY_RECORD : protected_by
+  VAULT_ACTION ||--o{ AUDIT_EVENT : emits
+  VAULT_ACTION ||--o{ PUBLIC_VAULT_ACTION_VIEW : derives
+  VAULT_POLICY_VERSION ||--o{ PUBLIC_VAULT_POLICY_VIEW : derives
+
+  VAULT_POLICY_VERSION {
+    string id
+    string state
+    string version
+    datetime effective_at
+    string supersedes_id
+  }
+  VAULT_ACTION {
+    string id
+    string state
+    string vault_category
+    string action_class
+    string sensitivity_tier
+    string policy_version_id
+  }
+  VAULT_ACTION_DESTINATION {
+    string id
+    string destination_category
+    string destination_reference
+    string validation_state
+  }
+  VAULT_OPERATION {
+    string id
+    string operation_type
+    string actor_type
+    string correlation_id
+  }
+  PUBLIC_VAULT_ACTION_VIEW {
+    string id
+    string source_action_id
+    string public_state
+    datetime generated_at
+  }
+```
+
+## Flow View
+
+### Synchronous Mutation Path
+
+1. Caller submits request with authenticated identity, service scope or operator role, correlation ID, and idempotency key.
+2. API validates schema, route family, content type, policy version, target resource, current state, and authorization.
+3. Idempotency service checks whether the same intent has already been accepted or completed.
+4. Vault Action Policy service validates category, action class, sensitivity tier, destination, timing, and adjacent-domain references.
+5. Mutation is applied only through allowed state transition.
+6. Audit, operation, and observability records are written in the same logical operation boundary.
+7. API returns accepted/completed status with operation reference and current resource state.
+
+### Async / Finalization Path
+
+1. Accepted mutation emits internal domain event.
+2. Workers refresh read models, reporting references, and public-safe projections.
+3. Adjacent services validate control, execution, registry, payout, or reporting references.
+4. Final state is linked back through typed references.
+5. Corrections, supersessions, discrepancy cases, or failed projections create explicit remediation state.
+
+### Failure / Retry Path
+
+1. Retried idempotent request returns previous equivalent result.
+2. Conflicting idempotency key returns conflict with prior operation reference.
+3. Partial async failure keeps canonical mutation intact and opens remediation/retry state.
+4. Public projections remain stale-with-source metadata until refreshed; they MUST NOT claim canonical freshness.
+
+### Admin / Exceptional Path
+
+1. Operator submits reason-coded request.
+2. API verifies operation-specific permission, policy authorization, current state, emergency eligibility, and required supporting references.
+3. Exceptional action creates explicit exception record with post-review obligation.
+4. Public-safe reporting linkage is generated only when policy allows.
+
+## Data Flows — Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+  participant C as Caller
+  participant API as Vault Action API
+  participant Auth as Auth/AuthZ
+  participant Idem as Idempotency Store
+  participant V as Vault Policy Service
+  participant Adj as Adjacent Domain APIs
+  participant DB as Canonical Stores
+  participant Audit as Audit Log
+  participant Bus as Event Bus
+  participant W as Projection Workers
+  participant Pub as Public/Reporting Views
+
+  C->>API: Submit vault-sensitive action request
+  API->>Auth: Authenticate and authorize route/action
+  Auth-->>API: Allowed with scopes/policy context
+  API->>Idem: Check idempotency key + request fingerprint
+  Idem-->>API: New or equivalent operation
+  API->>V: Validate category/action/destination/timing
+  V->>Adj: Validate treasury/foundation/governance/control references
+  Adj-->>V: Reference validation results
+  V->>DB: Persist canonical action/operation state
+  V->>Audit: Write audit/activity record
+  V->>Bus: Emit vault_action_policy.* event
+  API-->>C: 202 Accepted or 200 Completed with operation/resource refs
+  Bus->>W: Process event
+  W->>Pub: Refresh derived public/reporting views
+  W->>Audit: Record projection outcome
+```
+
+## Request Model
+
+All mutation requests MUST include:
+
+- `idempotency_key` or `Idempotency-Key` header;
+- `correlation_id` or trace context;
+- actor identity from authentication context;
+- explicit target resource identifiers;
+- operation-specific payload;
+- policy version or policy-resolution instruction where material;
+- reason code and operator note for admin/control-plane operations;
+- source reference and provenance for adjacent-domain references.
+
+Material vault-action creation MUST include or derive:
+
+- `vault_category`;
+- `action_class`;
+- `sensitivity_tier` or sensitivity inputs;
+- `destination_category` when a destination is relevant;
+- `timing_reference` when timing is relevant;
+- `policy_version_reference`;
+- `source_domain_reference`;
+- `requested_public_visibility` if publication is requested.
+
+The API MUST reject requests that rely on untyped text to define policy meaning.
+
+## Response Model
+
+Successful mutation responses MUST include:
+
+- stable resource ID;
+- operation ID;
+- current state;
+- accepted versus completed indicator;
+- correlation ID;
+- idempotency result;
+- applied policy version;
+- relevant validation summaries;
+- audit reference or audit correlation reference;
+- next allowed actions where safe to expose.
+
+Read responses MUST identify whether the response is canonical, derived, public-safe, cached, reporting/export, or presentation-oriented. Derived responses MUST include source resource IDs and generated-at timestamps.
+
+## Error / Result / Status Model
+
+Errors MUST use stable machine-readable codes and structured problem details. Required error classes include:
+
+- `authentication_required`
+- `authorization_denied`
+- `scope_denied`
+- `entitlement_denied`
+- `policy_version_required`
+- `invalid_policy_version`
+- `vault_category_required`
+- `invalid_vault_category`
+- `action_class_required`
+- `action_not_allowed_for_vault_category`
+- `sensitivity_tier_required`
+- `destination_required`
+- `destination_not_legible`
+- `timing_reference_required`
+- `approval_path_incomplete`
+- `control_reference_required`
+- `execution_reference_not_allowed_yet`
+- `reporting_reference_invalid`
+- `state_transition_not_allowed`
+- `idempotency_key_required`
+- `idempotency_conflict`
+- `rate_limited`
+- `public_exposure_denied`
+- `adjacent_domain_reference_invalid`
+- `chain_reference_unverified`
+- `discrepancy_open`
+- `migration_incompatible`
+
+HTTP status guidance:
+
+- `200 OK` for completed reads and completed idempotent equivalent mutations;
+- `201 Created` for newly created canonical resources where synchronous creation completes;
+- `202 Accepted` for accepted async workflows or queued finalization;
+- `400 Bad Request` for malformed requests;
+- `401 Unauthorized` for missing authentication;
+- `403 Forbidden` for denied permissions or exposure;
+- `404 Not Found` for unavailable or non-exposable resources;
+- `409 Conflict` for state, idempotency, or policy conflicts;
+- `422 Unprocessable Entity` for semantically invalid category/action/destination/timing;
+- `429 Too Many Requests` for rate limits;
+- `500/503` for server/degraded-mode failures.
+
+## Idempotency / Retry / Replay Model
+
+All mutation routes MUST require idempotency. Idempotency records MUST bind:
+
+- caller identity or service identity;
+- route family;
+- target resource;
+- request fingerprint;
+- operation type;
+- correlation ID;
+- resulting resource/operation ID;
+- completion or accepted state;
+- expiry policy.
+
+Equivalent retries MUST return the original result. Same key with different intent MUST return `idempotency_conflict`. Admin and exceptional routes MUST be replay-safe and MUST NOT create duplicate approvals, exceptions, supersessions, or discrepancy resolutions.
+
+## Rate Limit / Abuse-Control Model
+
+- Public routes MUST be rate-limited by IP, user agent, and abuse signals.
+- Authenticated routes MUST be rate-limited by account/session and route family.
+- Internal service routes MUST be rate-limited by service identity and operation type.
+- Admin routes SHOULD use stricter throttles, step-up controls, and anomaly detection.
+- Repeated probing for non-public vault-action details MUST return safe denials without confirming sensitive existence.
+
+## Endpoint / Route Family Model
+
+Canonical route families SHOULD follow these patterns. Exact versioning MAY be refined in OpenAPI, but derived contracts MUST preserve boundaries.
+
+### Public-Read
+
+- `GET /v1/vault-action-policy/policies`
+- `GET /v1/vault-action-policy/policies/{policy_version_id}`
+- `GET /v1/vault-action-policy/actions`
+- `GET /v1/vault-action-policy/actions/{vault_action_id}`
+- `GET /v1/vault-action-policy/categories`
+
+### First-Party Authenticated
+
+- `GET /v1/vault-action-policy/me/actions`
+- `GET /v1/vault-action-policy/me/reporting-references`
+
+### Internal Service
+
+- `POST /internal/v1/vault-action-policy/actions`
+- `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/classify`
+- `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/destinations`
+- `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/approval-paths`
+- `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/control-references`
+- `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/execution-references`
+- `POST /internal/v1/vault-action-policy/actions/{vault_action_id}/reporting-references`
+- `GET /internal/v1/vault-action-policy/actions/{vault_action_id}`
+- `POST /internal/v1/vault-action-policy/projections/refresh`
+
+### Admin / Control-Plane
+
+- `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/approve`
+- `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/reject`
+- `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/pause`
+- `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/escalate`
+- `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/exceptional`
+- `POST /admin/v1/vault-action-policy/actions/{vault_action_id}/supersede`
+- `POST /admin/v1/vault-action-policy/discrepancies`
+
+## Public API Considerations
+
+Public APIs MUST be narrow, stable, and safe. They MAY expose:
+
+- active policy summary;
+- vault category descriptions;
+- public-safe action status;
+- correction/supersession indicators;
+- reporting references;
+- official registry references;
+- public-safe chain/execution references after validation.
+
+They MUST NOT expose internal notes, operator identities, full approval-path detail, internal risk assessments, private destinations, incident internals, raw security signals, or unvalidated chain observations.
+
+## First-Party Application API Considerations
+
+First-party clients may display status and public-safe guidance but MUST NOT become policy authors. They MUST treat `accepted` as different from `completed` and MUST display stale projection status where supplied.
+
+## Internal Service API Considerations
+
+Internal services MUST call owner-domain APIs rather than writing vault-policy records directly. Internal service APIs MUST validate service scopes, input provenance, adjacent-domain reference types, and allowed state transitions.
+
+## Admin / Control-Plane API Considerations
+
+Admin actions MUST be bounded by state transition, reason code, operator note, audit reference, idempotency, and policy authorization. Admin APIs MUST NOT provide arbitrary JSON patch or direct database mutation endpoints.
+
+## Event / Webhook / Async API Considerations
+
+Internal event names SHOULD include:
+
 - `vault_action_policy.action_created`
+- `vault_action_policy.action_classified`
 - `vault_action_policy.destination_validated`
 - `vault_action_policy.approval_path_recorded`
 - `vault_action_policy.control_linked`
-- `vault_action_policy.reporting_linked`
-- `vault_action_policy.execution_linked`
 - `vault_action_policy.action_approved`
 - `vault_action_policy.action_rejected`
 - `vault_action_policy.action_paused`
 - `vault_action_policy.action_escalated`
 - `vault_action_policy.exception_declared`
+- `vault_action_policy.execution_linked`
+- `vault_action_policy.reporting_linked`
 - `vault_action_policy.action_superseded`
+- `vault_action_policy.discrepancy_opened`
 - `vault_action_policy.discrepancy_resolved`
+- `vault_action_policy.public_view_refreshed`
 
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- vault action ID
-- vault category
-- action class
-- sensitivity tier
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound vault-action-policy webhooks by default. Any future outbound vault-status webhook surface must be narrow, security-reviewed, and governed by a separate contract.
-
----
-
-## 20. Audit and Activity Requirements
-
-The following actions must generate durable audit events:
-
-- vault-action creation
-- destination validation
-- approval-path recording
-- approve, reject, pause, escalate, and exceptional treatment
-- execution-reference and reporting-reference linkage for material actions
-- supersession and discrepancy-resolution actions
-- other sensitive vault-action policy mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target action / category / destination / control path / discrepancy reference as applicable
-- action type
-- before/after summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `vault_policy_versions`
-- `id` PK
-- `policy_version`
-- `state`
-- `policy_summary_json`
-- `created_at`
-- `activated_at` nullable
-- `superseded_at` nullable
-
-**Constraints:**
-- unique `policy_version`
-- index on `state`
-
-### 21.2 `vault_action_records`
-- `id` PK
-- `vault_category`
-- `action_class`
-- `sensitivity_tier`
-- `policy_version_reference`
-- `state`
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-**Constraints:**
-- index on (`vault_category`, `action_class`)
-- index on `state`
-
-### 21.3 `vault_category_profiles`
-- `id` PK
-- `vault_category`
-- `allowed_profile_json`
-- `restricted_profile_json`
-- `disallowed_profile_json`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- unique `vault_category`
-
-### 21.4 `vault_action_classifications`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `purpose_consistency_state`
-- `timing_sensitivity`
-- `classification_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `vault_action_record_id`
-
-### 21.5 `vault_action_destinations`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `destination_category`
-- `destination_reference`
-- `use_classification`
-- `timing_reference` nullable
-- `validation_state`
-- `created_at`
-
-**Constraints:**
-- index on `vault_action_record_id`
-- index on `validation_state`
-
-### 21.6 `vault_action_approval_paths`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `proposer_role`
-- `approver_role`
-- `executor_role`
-- `state`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- index on `vault_action_record_id`
-- index on `state`
-
-### 21.7 `vault_action_control_references`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `multisig_reference` nullable
-- `timelock_reference` nullable
-- `emergency_authority_reference` nullable
-- `created_at`
-
-**Constraints:**
-- index on `vault_action_record_id`
-
-### 21.8 `vault_action_reporting_references`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `transparency_report_reference` nullable
-- `public_registry_reference` nullable
-- `payout_cycle_reference` nullable
-- `exception_reference` nullable
-- `created_at`
-
-**Constraints:**
-- index on `vault_action_record_id`
-
-### 21.9 `vault_action_execution_references`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `execution_reference_type`
-- `execution_reference_id`
-- `execution_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `vault_action_record_id`
-- index on (`execution_reference_type`, `execution_reference_id`)
-
-### 21.10 `vault_exception_records`
-- `id` PK
-- `vault_action_record_id` FK -> `vault_action_records.id`
-- `exception_type`
-- `summary_json`
-- `state`
-- `created_at`
-- `closed_at` nullable
-
-### 21.11 `vault_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.12 `vault_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.13 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.14 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical vault-policy truth stays in policy versions, action records, category profiles, classifications, destinations, approval paths, control references, execution references, and discrepancy records
-- treasury-control, Foundation governance, and multisig/timelock truth remain external and are referenced rather than duplicated
-- public-safe views must derive from canonical vault-policy truth filtered by disclosure policy
-- execution and reporting references remain explicit rather than embedded as opaque strings
-
-### Reconciliation notes
-- one visible vault action should reconcile to one current action lineage under current preference
-- destination restrictions and action class must reconcile with vault-category meaning
-- approval paths must reconcile to required control-path posture
-- payout-related vault actions must reconcile to payout-cycle and reporting references where applicable
-- discrepancy cases must preserve review lineage for failed or conflicting vault-action-policy conditions
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    VAPI[Vault Action Policy API<br/>fuze-backend-api]
-    PolicyStore[(vault_policy_versions)]
-    ActionStore[(vault_action_records)]
-    CategoryStore[(vault_category_profiles)]
-    DestinationStore[(vault_action_destinations)]
-    ApprovalStore[(vault_action_approval_paths)]
-    ControlStore[(vault_action_control_references)]
-    InternalSvc[Internal FUZE Services]
-
-    PublicUser --> VAPI
-    AuthUser --> WebApp
-    WebApp --> VAPI
-    AdminUI --> VAPI
-    InternalSvc --> VAPI
-
-    VAPI --> PolicyStore
-    VAPI --> ActionStore
-    VAPI --> CategoryStore
-    VAPI --> DestinationStore
-    VAPI --> ApprovalStore
-    VAPI --> ControlStore
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    vault_policy_versions ||--o{ vault_action_records : governs
-    vault_action_records ||--o{ vault_action_classifications : classifies
-    vault_action_records ||--o{ vault_action_destinations : targets
-    vault_action_records ||--o{ vault_action_approval_paths : routes
-    vault_action_records ||--o{ vault_action_control_references : controls
-    vault_action_records ||--o{ vault_action_reporting_references : reports
-    vault_action_records ||--o{ vault_action_execution_references : executes
-    vault_action_records ||--o{ vault_exception_records : excepts
-    vault_action_records ||--o{ vault_mutation_actions : tracks
-
-    vault_policy_versions {
-        uuid id PK
-        string policy_version
-        string state
-        datetime created_at
-        datetime activated_at
-        datetime superseded_at
-    }
-
-    vault_action_records {
-        uuid id PK
-        string vault_category
-        string action_class
-        string sensitivity_tier
-        string policy_version_reference
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime closed_at
-    }
-
-    vault_action_classifications {
-        uuid id PK
-        uuid vault_action_record_id FK
-        string purpose_consistency_state
-        string timing_sensitivity
-        datetime created_at
-    }
-
-    vault_action_destinations {
-        uuid id PK
-        uuid vault_action_record_id FK
-        string destination_category
-        string destination_reference
-        string use_classification
-        string validation_state
-        datetime created_at
-    }
-
-    vault_action_approval_paths {
-        uuid id PK
-        uuid vault_action_record_id FK
-        string proposer_role
-        string approver_role
-        string executor_role
-        string state
-        datetime created_at
-        datetime updated_at
-    }
-
-    vault_action_control_references {
-        uuid id PK
-        uuid vault_action_record_id FK
-        string multisig_reference
-        string timelock_reference
-        string emergency_authority_reference
-        datetime created_at
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path — propose, approve, execute, report
-1. internal service creates draft vault-sensitive action
-2. destination and use rationale are attached and validated
-3. proposal, approval, and execution roles are recorded
-4. control references such as multisig and timelock are linked where required
-5. admin approves the action
-6. downstream execution reference is linked after execution path proceeds
-7. reporting and public registry references are attached
-8. public-safe vault-action view becomes explainable and historically traceable
-
-### 24.2 Happy path — payout-related vault action
-1. payout-related vault action is proposed for treasury or other explicitly allowed category
-2. system validates vault-category meaning and stronger trust implications
-3. approval path and control references are recorded
-4. admin approves action after payout preparation is ready
-5. payout-cycle reference and reporting reference are attached
-6. public-safe vault-action summary shows category-aware, holder-facing context
-
-### 24.3 Alternate path — Foundation-sensitive escalation
-1. action touches Foundation-sensitive capital or other stewardship-sensitive category
-2. destination validation and policy checks require stronger restraint
-3. operator escalates to stronger governance/control path
-4. additional review or stronger timelock/multisig posture is linked
-5. action proceeds only if higher-control requirements are satisfied
-
-### 24.4 Failure path — destination or category violation
-1. vault action is created or modified
-2. backend detects destination-category mismatch, category drift risk, or disallowed use classification
-3. request is rejected or paused
-4. no effective approval or public reporting is produced
-
-### 24.5 Failure and remediation path — discrepancy or misreporting
-1. vault action, category, destination, or reporting linkage becomes stale or inconsistent
-2. admin opens discrepancy-resolution flow
-3. backend preserves existing lineage
-4. corrected or superseding vault action or linkage is created
-5. discrepancy closes with preserved history
-
-### 24.6 Exceptional-action path
-1. emergency or exceptional condition is detected
-2. operator declares exceptional treatment with explicit reason and narrow containment posture
-3. ordinary governance shortcuts are not normalized into standing authority
-4. post-incident review remains required
-5. exceptional record closes only after structured review
-
-### 24.7 Retry behavior
-- duplicate vault-action creation returns same canonical action result
-- duplicate destination or control-reference attachment returns same lineage result where applicable
-- duplicate approve/reject/pause/escalate/exceptional/supersede/discrepancy actions return same terminal action result
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Vault Action Policy API
-    participant ACT as Action Store
-    participant DST as Destination Store
-    participant APP as Approval Store
-    participant CTRL as Control Store
-    participant EXE as Execution Reference Store
-
-    S->>API: POST /internal/v1/vault-action-policy/actions
-    API->>ACT: Create vault action
-    API-->>S: action summary
-
-    S->>API: POST /internal/v1/vault-action-policy/actions/{action_id}/destinations
-    API->>DST: Create destination validation record
-    API-->>S: destination summary
-
-    S->>API: POST /internal/v1/vault-action-policy/actions/{action_id}/approval-paths
-    API->>APP: Create approval-path record
-    API-->>S: approval-path summary
-
-    S->>API: POST /internal/v1/vault-action-policy/actions/{action_id}/control-references
-    API->>CTRL: Create control-path linkage
-    API-->>S: control summary
-
-    S->>API: POST /internal/v1/vault-action-policy/actions/{action_id}/execution-references
-    API->>EXE: Create execution linkage
-    API-->>S: execution summary
-```
-
----
-
-## 26. Security and Risk Controls
-
-1. **Vault-action policy truth is backend-owned**  
-   Frontends and informal channels may not authoritatively define vault-sensitive action truth.
-
-2. **Purpose consistency is mandatory**  
-   A vault action must remain consistent with the published purpose of the source vault category.
-
-3. **Explicit authorization is mandatory**  
-   No material vault action should occur based solely on operator convenience.
-
-4. **Destination legibility is mandatory**  
-   A vault action must have a destination and use rationale that can be explained structurally.
-
-5. **Audit lineage is mandatory**  
-   A vault action must preserve enough metadata, governance linkage, and reporting context to remain explainable later.
-
-6. **Category preservation is mandatory**  
-   A vault action should preserve category meaning rather than erode it.
-
-7. **Emergency narrowness is mandatory**  
-   Emergency controls should protect the vault without becoming a backdoor for ordinary discretionary use.
-
-8. **Reporting compatibility is mandatory**  
-   Material vault actions must remain compatible with transparency reporting and reserve-architecture visibility.
-
-9. **Foundation-sensitive restraint**  
-   Foundation actions should receive the strongest ordinary restraint among non-vesting categories.
-
-10. **Recovery should restore clarity**  
-    Recovery should restore structural clarity rather than quietly rewrite history.
-
----
-
-## 27. Operational Considerations
-
-- vault-action and approval-path reads for trusted operators should be highly available
-- destination validation, category consistency, timing treatment, and control-reference integrity are correctness-sensitive
-- Foundation-sensitive, Transparency/Stability-sensitive, Liquidity Operations-sensitive, and payout-related actions should surface clearly to ops views
-- exceptional-treatment and discrepancy workflows should be observable and reviewable
-- monitoring should alert on:
-  - missing approval-path records for material vault actions
-  - destination mismatches or policy violations
-  - control-reference omissions for high-sensitivity actions
-  - unusual exceptional-treatment frequency
-  - reporting-link gaps for executed material actions
-  - public-safe view inconsistency versus canonical vault-policy state
-
----
-
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between vault-action policy truth, treasury-control truth, Foundation governance truth, execution truth, and transparency-report truth.
-2. Only `fuze-backend-api` owns canonical vault policy version and vault-action truth.
-3. Vault policy versions, action records, category profiles, classifications, destinations, approval paths, control references, execution references, and discrepancy records are durable and backend-owned.
-4. Public and first-party routes expose only bounded safe vault-policy views.
-5. Category-aware destination and use restrictions are explicit and validated.
-6. Proposal, approval, and execution separation is preserved for material vault actions.
-7. Foundation-sensitive, Transparency/Stability-sensitive, Liquidity-sensitive, and payout-related actions are handled with stronger policy sensitivity.
-8. Approval, escalation, exceptional treatment, correction, and discrepancy actions preserve immutable lineage.
-9. Vault-action policy mutation actions are idempotent and auditable.
-10. Internal and admin vault-action policy routes are least-privilege and backend-only.
-11. Admin routes require reason-coded privileged authorization.
-12. Event emissions exist for major vault-action-policy mutations.
-13. Database schema separates policy versions, actions, category profiles, classifications, destinations, approval paths, control references, execution references, and discrepancy layers.
-14. Public-safe consumers can rely on vault-policy views without needing hidden internal governance detail.
-15. Mermaid diagrams remain consistent with prose and data model.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-1. Internal service creates draft vault action successfully.
-2. Internal service validates destination successfully.
-3. Internal service records approval path successfully.
-4. Internal service links control references successfully.
-5. Internal service links reporting references successfully.
-6. Admin approves vault action successfully.
-7. Admin escalates Foundation-sensitive action successfully.
-8. Public actor reads published public-safe vault-action summary successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access internal vault-policy truth or discrepancy detail.
-10. Internal service without write privilege cannot create vault action.
-11. Vault action without policy version returns `VAULT_ACTION_POLICY_POLICY_VERSION_REQUIRED`.
-12. Disallowed destination returns `VAULT_ACTION_POLICY_DESTINATION_NOT_ALLOWED`.
-13. Foundation-sensitive action violating stronger restraint returns `VAULT_ACTION_POLICY_FOUNDATION_RESTRICTION`.
-14. Exceptional treatment in ineligible state returns `VAULT_ACTION_POLICY_EXCEPTION_NOT_ALLOWED`.
-
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call vault-policy admin APIs.
-16. Internal service without destination-validation privilege cannot attach destination records.
-17. Operator without approval privilege cannot approve vault action.
-18. Approved vault action does not prove downstream execution or payout completion by itself.
-
-### 29.4 Idempotency and replay cases
-19. Repeating vault-action creation with same idempotency key returns original action result.
-20. Repeating control-reference attachment with same idempotency key returns original linkage result.
-21. Repeating approve or pause with same idempotency key returns original terminal action result.
-22. Repeating exceptional or discrepancy resolution with same idempotency key returns original terminal action result.
-
-### 29.5 Concurrency cases
-23. Concurrent destination updates preserve one explicit current validation lineage and duplicate-safe outcomes where appropriate.
-24. Concurrent approve and escalate actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent supersede and pause actions preserve explicit visible lineage without ambiguity.
-
-### 29.6 Recovery / admin cases
-26. Stale or misreported vault action can be corrected under controlled policy with explicit lineage.
-27. Superseded vault action remains historically linked to the original record.
-28. Discrepancy resolution closes category, destination, or reporting conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful vault action creation emits `vault_action_policy.action_created`.
-30. Successful destination validation emits `vault_action_policy.destination_validated`.
-31. Successful approval emits `vault_action_policy.action_approved`.
-32. Successful exceptional declaration emits `vault_action_policy.exception_declared`.
-33. Successful discrepancy resolution emits `vault_action_policy.discrepancy_resolved` with critical audit lineage.
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact vault-category and action-class taxonomy code sets are deferred.
-2. Exact destination-category taxonomy and validation matrix are deferred.
-3. Exact sensitivity-tier to multisig/timelock mapping rules are deferred.
-4. Exact public-safe disclosure depth for vault actions by category is deferred.
-5. Exact exceptional-treatment rollback taxonomy is deferred.
-6. Exact discrepancy taxonomy for vault-policy conflicts is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  vault-action-policy/
-  treasury-control/
-  governance/
-  payout-ledger/
-  transparency-reporting/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep policy versions, vault actions, category/destination validation, classification logic, approval-path logic, and control-reference linkage in one canonical domain service
-- perform category, destination, sensitivity, timing, and control-path completeness checks inside the commit boundary
-- keep approve, reject, pause, escalate, exceptional, supersede, and discrepancy actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public-safe vault-policy views from canonical truth; do not let derived views mutate vault-policy state
-
----
-
-## 32. Frontend Consumption Notes
-
-### For `fuze-frontend-webapp`
-- may read public-safe vault policy and vault-action summaries where approved
-- must not infer vault-category permissibility from isolated contract transfers alone
-- must treat backend vault-policy responses as authoritative for structured vault-governance status
-- should clearly distinguish proposed, approved, executed-reference-linked, reported, paused, corrected, and superseded states when visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged approve, reject, pause, escalate, exceptional, supersede, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical vault-policy truth client-side
-- should present immutable vault-action history and correction lineage separately from current visible state
-
----
-
-## 33. Contract Derivation Notes
-
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public policy/action read operations and bounded first-party-safe summary operations
-- internal vault-action creation, destination, approval-path, control-reference, reporting-reference, and execution-reference operations
-- admin approve / reject / pause / escalate / exceptional / supersede / discrepancy operations
-- shared problem-details schema
-- vault-action-policy lifecycle events in AsyncAPI
-
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public vault-policy lookup helpers
-- public-safe vault-action summary helpers
-- typed vault-action, vault category, and sensitivity summary models
-- problem-error models for vault-action-policy outcomes
-
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+Events MUST include event ID, event type, occurred-at, producer, schema version, source resource ID, operation ID, correlation ID, actor/service context, and public-exposure classification. Public webhooks are deferred unless separately approved.
+
+## Chain-Adjacent API Considerations
+
+Chain observations, wallet movements, explorer data, contract calls, multisig transactions, and timelock states are provider/input or execution truth until normalized and linked by the owner domain. The API MUST NOT infer policy validity solely from transaction success.
+
+## Data Model / Storage Support Implications
+
+Implementation storage MUST support:
+
+- immutable operation records;
+- versioned policy records;
+- action lifecycle records;
+- typed adjacent-domain references;
+- idempotency records;
+- audit correlation;
+- derived public and internal views;
+- correction/supersession lineage;
+- discrepancy/remediation cases;
+- migration compatibility mappings.
+
+Storage schemas are implementation-contract concerns, but they MUST preserve the resource families and truth separation in this spec.
+
+## Read Model / Projection / Reporting Rules
+
+- Public views are derived from canonical vault policy/action truth.
+- Reporting exports MUST include source IDs, generated-at timestamps, policy version, correction/supersession status, and projection version.
+- Derived views MUST never accept writes that mutate canonical state.
+- Stale projections MUST show stale or unknown freshness rather than claiming current truth.
+- Correction and supersession must be visible where public trust requires it and safe to disclose.
+
+## Security / Risk / Privacy Controls
+
+- Sensitive vault actions require least-privilege authorization.
+- Public routes must avoid inference leaks.
+- Admin routes require heightened logging and anomaly monitoring.
+- Internal references must be validated and typed.
+- Emergency/exceptional actions require explicit reason, narrow duration, and post-review.
+- Private governance notes, security posture, and raw operational details are not public API data.
+
+## Audit / Traceability / Observability Requirements
+
+Every mutation MUST produce audit and trace records containing:
+
+- actor/service identity;
+- operation type;
+- target resource;
+- policy version;
+- request fingerprint;
+- idempotency key hash;
+- correlation and trace IDs;
+- reason code where applicable;
+- previous and resulting state;
+- adjacent-domain reference validation result;
+- event IDs emitted.
+
+Observability MUST track mutation latency, validation failures, idempotency conflicts, projection lag, event delivery health, public-read error rates, discrepancy counts, and admin action frequency.
+
+## Failure Handling / Edge Cases
+
+- Missing policy version: reject unless explicit safe resolver is approved.
+- Stale policy version: reject or require migration path.
+- Destination ambiguity: reject or route to review-required state.
+- Adjacent-domain reference unavailable: return accepted-pending only if safe; otherwise reject.
+- Execution succeeded but policy linkage failed: open discrepancy; do not silently mark action completed.
+- Public projection failed: keep canonical state, mark projection stale, retry async.
+- Emergency action: create exception record and require post-review closure.
+- Conflicting supersession: require explicit resolution and preserved lineage.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+- v1 route shapes MAY be retained temporarily through compatibility adapters.
+- Compatibility adapters MUST call v2 owner-domain logic and MUST NOT preserve weaker semantics.
+- Deprecated states and aliases MUST map to canonical states with migration records.
+- Historical vault labels MAY be preserved as lineage but MUST NOT override current interpretation.
+- Public API changes MUST follow additive/stable-contract discipline unless a security or governance issue requires deprecation.
+- OpenAPI and SDK versions MUST not hide accepted/final outcome distinctions.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI MUST preserve route-family separation, auth requirements, idempotency headers, reason-code requirements, error codes, canonical vs derived response markers, and accepted/completed distinctions. AsyncAPI MUST preserve event names, schema versions, exposure classification, correlation IDs, and source resource IDs. SDKs MUST NOT expose unsafe shortcut methods that bypass reason codes, policy versioning, or idempotency.
+
+## Implementation-Contract Guardrails
+
+Downstream implementation MUST preserve:
+
+1. vault action policy as distinct from treasury control and downstream execution;
+2. explicit vault category, action class, sensitivity tier, destination category, timing posture, and policy version;
+3. proposal, approval, control, execution, reporting, and correction as distinct lifecycle concepts;
+4. public-safe views as derived, not canonical;
+5. admin operations as bounded, audited, reason-coded, and idempotent;
+6. chain references as typed references, not policy truth;
+7. correction/supersession lineage;
+8. no local shadow stores that mint vault-policy truth.
+
+## Downstream Execution Staging
+
+1. Stabilize canonical resource and state definitions.
+2. Implement internal service APIs with policy validation and idempotency.
+3. Implement admin/control-plane APIs with reason-coded audit.
+4. Implement event contracts and projection workers.
+5. Implement public-safe read models and reporting/export references.
+6. Integrate treasury, Foundation, governance, multisig/timelock, payout, registry, and transparency references.
+7. Add discrepancy/remediation tooling and migration adapters.
+8. Generate OpenAPI/AsyncAPI/SDK artifacts and contract tests.
+
+## Required Downstream Specs / Contract Layers
+
+- OpenAPI contract for Vault Action Policy API
+- AsyncAPI contract for `vault_action_policy.*` events
+- Admin/control-plane implementation contract
+- Internal service authorization matrix
+- Vault discrepancy/remediation runbook
+- Public-safe vault reporting contract
+- Projection freshness and export contract
+- Migration adapter contract for v1 route compatibility
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns:
+
+- direct database writes to vault action records;
+- generic admin patch routes for vault policy state;
+- frontend-authored vault-policy truth;
+- treating contract transaction success as policy approval;
+- untyped destination strings as destination validation;
+- treating payout-related vault action as ordinary transfer;
+- publishing internal control-path details through public routes;
+- reclassifying Foundation-sensitive actions under ordinary treasury convenience;
+- hiding corrections by overwriting historical records;
+- local treasury/reporting/admin shadow stores that define vault action truth.
+
+Detection SHOULD include schema linting, route review, audit anomaly checks, projection-source validation, and integration tests that simulate boundary violations.
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Examples
+
+- A Foundation Vault action is proposed with explicit category, action class, destination, timing, control reference, and reporting reference; it enters heightened review before execution linkage.
+- A Treasury Reserve deployment is approved only after category-aware policy validation and treasury-control approval reference.
+- A payout-cycle funding transfer records payout-related vault treatment and reporting lineage rather than appearing as an ordinary internal movement.
+- A public vault summary shows a supersession indicator and links to approved public-safe reporting material.
+
+### Anti-Examples
+
+- An admin dashboard directly changes an action from `draft` to `executed_reference_linked` without approval, control, or audit.
+- A public API exposes internal operator notes or private destination intelligence.
+- A chain transaction hash is treated as proof the vault action was policy-valid.
+- A Transparency/Stability vault funds ordinary campaign activity through a broad exception.
+- A compatibility route accepts old labels and silently maps them to current categories without migration lineage.
+
+## Acceptance Criteria
+
+1. Every mutation route rejects requests missing idempotency key, correlation ID, or required authentication.
+2. Material vault action creation fails if vault category, action class, sensitivity tier, policy version, or required destination/timing reference is absent.
+3. The API rejects an action class that is not allowed for the specified vault category.
+4. Admin approve/reject/pause/escalate/exceptional/supersede routes require operation-specific permission, reason code, operator note, and audit record.
+5. Retrying an equivalent mutation with the same idempotency key returns the original operation result without duplicate state change.
+6. Reusing an idempotency key with a different request fingerprint returns `idempotency_conflict`.
+7. Execution reference linkage is denied before approval/control requirements are satisfied.
+8. Public routes expose only public-safe fields and never expose internal notes, private control details, or unsafe destination intelligence.
+9. Derived views include source IDs, generated-at timestamps, and canonical/derived markers.
+10. Chain references remain unverified/provider-input until normalized and linked by the owner domain.
+11. Projection failures do not roll back canonical mutations; they create retry/remediation state.
+12. Correction/supersession preserves historical records and public-safe lineage where applicable.
+13. Events include event ID, schema version, source resource ID, operation ID, and correlation ID.
+14. Migration adapters route through v2 semantics and do not preserve weaker v1 behavior.
+15. Boundary-violation tests detect direct-write, frontend-truth, and generic-admin-patch shortcuts.
+
+## Test Cases
+
+### Positive Tests
+
+1. Create a Treasury Reserve vault action with valid category, action class, sensitivity tier, destination, timing, and policy version; expect `201` or `202`, operation ID, audit reference, and `action_created` event.
+2. Attach a valid multisig/timelock control reference to an approved high-sensitivity action; expect control linkage and event emission.
+3. Link a public-safe reporting reference after action reaches reportable state; expect derived public view refresh event.
+4. Retrieve public action summary; verify only public-safe fields are present.
+
+### Negative / Validation Tests
+
+5. Submit action with invalid vault category; expect `422 invalid_vault_category`.
+6. Submit action with destination omitted for a destination-sensitive action; expect `422 destination_required`.
+7. Attempt disallowed action for Transparency/Stability vault; expect `422 action_not_allowed_for_vault_category`.
+8. Attempt execution linkage before approval; expect `409 execution_reference_not_allowed_yet`.
+
+### Authentication / Authorization / Entitlement Tests
+
+9. Call internal create route without service identity; expect `401` or `403`.
+10. Call admin approve route with generic admin but without operation permission; expect `403 authorization_denied`.
+11. Authenticated first-party user attempts privileged canonical read; expect denied or redacted response.
+
+### Idempotency / Retry / Replay Tests
+
+12. Retry same create request with same key and fingerprint; expect original result.
+13. Retry same key with changed destination; expect `409 idempotency_conflict`.
+14. Retry admin exceptional route; verify no duplicate exception record.
+
+### Conflict / Concurrency Tests
+
+15. Two operators attempt conflicting approve/reject transitions; one succeeds, the other receives `409 state_transition_not_allowed`.
+16. Supersede an action already superseded by another replacement; expect explicit conflict requiring discrepancy resolution.
+
+### Rate Limit / Abuse Tests
+
+17. Public client enumerates non-public action IDs; expect safe 404/403 behavior and rate-limit escalation.
+18. Internal service exceeds mutation budget; expect `429` and no partial mutation.
+
+### Failure / Degraded-Mode Tests
+
+19. Adjacent treasury-control service unavailable during validation; expect safe pending/retry only if allowed, otherwise reject with retryable error.
+20. Projection worker fails after canonical mutation; verify canonical state remains and projection is marked stale.
+21. Chain reference cannot be verified; expect provider-input state and no policy-valid execution mark.
+
+### Audit / Observability Tests
+
+22. Admin pause creates audit record with operator, reason code, previous state, resulting state, operation ID, correlation ID, and event ID.
+23. Metrics record validation failure, idempotency conflict, projection lag, and admin action frequency.
+
+### Migration / Compatibility Tests
+
+24. v1 compatibility route maps historical state to canonical v2 state with migration lineage.
+25. Historical vault label is preserved as lineage but cannot override active category interpretation.
+
+### Boundary-Violation Tests
+
+26. Attempt direct DB mutation through implementation test harness; fail CI policy.
+27. Attempt SDK method without idempotency key; generated client rejects request.
+28. Attempt public exposure of internal operator note; schema contract test fails.
+
+## Dependencies / Cross-Spec Links
+
+This API spec depends on:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `VAULT_ACTION_POLICY_SPEC.md`
+- `TREASURY_CONTROL_POLICY_SPEC.md`
+- `FOUNDATION_GOVERNANCE_SPEC.md`
+- `GOVERNANCE_MODEL_SPEC.md`
+- `MULTISIG_AND_TIMELOCK_SPEC.md`
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
+- `PAYOUT_LEDGER_SPEC.md`
+- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+- `TRANSPARENCY_MODEL_SPEC.md`
+- `TRANSPARENCY_REPORTING_SPEC.md`
+- `CHAIN_ARCHITECTURE_SPEC.md`
+- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+
+## Explicitly Deferred Items
+
+- Exact allowed-use matrix per vault category.
+- Exact quorum thresholds and timelock durations.
+- Exact public disclosure depth by action class.
+- Exact blocked-destination registry model.
+- Exact emergency rollback runbook.
+- Exact low-level database schema and index definitions.
+- Public webhooks for vault-action changes.
+- Machine-readable policy matrix export.
+
+## Final Normative Summary
+
+The Vault Action Policy API is the canonical interface-contract layer for FUZE vault-policy and vault-sensitive action operations. It MUST preserve category-aware allowed behavior, destination and timing discipline, approval/control/execution/reporting separation, public-safe derived-read boundaries, idempotency, auditability, observability, correction/supersession lineage, and chain-adjacent truth separation. It MUST NOT become a broad treasury shortcut, Foundation shortcut, multisig/timelock replacement, public reporting owner, raw execution API, or presentation-owned source of truth.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event, reporting/export, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit.
+- [x] Accepted-state vs final-success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behavior is explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI, AsyncAPI, and SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture diagram uses Mermaid flowchart syntax.
+- [x] Data design diagram uses Mermaid syntax and separates canonical from derived data.
+- [x] Flow View covers synchronous, async, retry, failure, audit, admin, and finalization paths.
+- [x] Data Flows use Mermaid sequenceDiagram syntax.
+- [x] Acceptance criteria are concrete and testable.
+- [x] Test cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

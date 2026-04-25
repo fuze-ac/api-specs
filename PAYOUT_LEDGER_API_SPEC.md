@@ -1,755 +1,765 @@
-# PAYOUT_LEDGER_API_SPEC
+# PAYOUT_LEDGER_API_SPEC.md
+
+## Document Metadata
+
+- **Document Name:** `PAYOUT_LEDGER_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 — Production-Grade Interface Contract Specification
+- **Status:** Draft production-grade API specification
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Payout Ledger Domain; named individual owner not explicitly specified in retrieved governing materials
+- **Approval Authority:** FUZE API governance / platform architecture approval workflow; explicit named authority not yet specified
+- **Review Cadence:** Quarterly and whenever profit-participation policy, snapshot/eligibility lineage, Base payout execution posture, treasury-control posture, transparency/reporting posture, registry posture, correction posture, or implementation-contract posture materially changes
+- **Governing Layer:** API contract layer for payout-cycle ledger truth, cycle-history publication, reconciliation, correction, and public-safe payout visibility
+- **Parent Registry:** API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Backend/API engineers, platform architects, contracts engineers, finance/treasury operators, public-trust/reporting authors, frontend and admin-console implementers, security/audit/operations teams, OpenAPI/AsyncAPI/SDK authors, QA and contract-validation reviewers
+- **Primary Purpose:** Define the production-grade API contract for creating, linking, publishing, correcting, superseding, reconciling, and exposing FUZE payout-ledger cycle records while preserving refined payout-ledger semantics and adjacent ownership boundaries
+- **Primary Upstream References:** `PAYOUT_LEDGER_SPEC.md`, `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`, `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`, `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`, `TREASURY_CONTROL_POLICY_SPEC.md`, `TRANSPARENCY_MODEL_SPEC.md`, `TRANSPARENCY_REPORTING_SPEC.md`, `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`, `CHAIN_ARCHITECTURE_SPEC.md`, `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`, `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`, `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`, `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`, `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- **Primary Downstream Dependents:** Payout-ledger implementation contracts, payout-cycle storage contracts, public payout-status surfaces, holder-safe payout views, admin cycle-control tooling, reconciliation jobs, transparency reporting inputs, public registry-linked views, Base payout execution reconciliation, finance/treasury reconciliation workflows, audit/event pipelines, OpenAPI / AsyncAPI / SDK artifacts
+- **API Surface Families Covered:** Public read, first-party authenticated read, internal service, admin/control-plane, event/async, reporting/export, chain-adjacent reference consumption, implementation-facing contract surfaces
+- **API Surface Families Excluded:** Raw Base payout contract ABI, raw claim-proof construction, treasury accounting books, full transparency-report composition schema, full public registry schema, private claimant receipt explorer UX, generic audit-log schema, wallet-link/account/session semantics except as dependency constraints
+- **Canonical System Owner(s):** Payout Ledger Domain for payout-cycle ledger semantics; adjacent semantic owners remain Profit Participation, Snapshot and Eligibility, Base Payout Execution, Treasury/Accounting, Transparency Reporting, Public Contract and Wallet Registry, Audit, Security/Risk, and Operations domains
+- **Canonical API Owner:** FUZE Backend/API Platform under Payout Ledger Domain governance
+- **Supersedes:** Earlier v1 `PAYOUT_LEDGER_API_SPEC.md` interpretations that predate API SPEC v2 structure, omit full truth-class taxonomy, omit complete diagram/test/acceptance requirements, or under-specify API surface-family separation
+- **Superseded By:** None currently defined
+- **Related Decision Records:** Not explicitly specified in retrieved governing materials
+- **Canonical Status Note:** Refined system specs own semantic truth. This API spec owns interface-contract expression of payout-ledger truth and MUST NOT redefine refined payout-ledger, profit-participation, eligibility, execution, treasury, reporting, registry, audit, or chain semantics.
+- **Implementation Status:** Draft governing API contract; downstream implementation, OpenAPI/AsyncAPI, SDK, service, storage, event, admin-console, and QA artifacts MUST align before production readiness
+- **Approval Status:** Pending explicit FUZE approval workflow
+- **Change Summary:** Upgraded payout-ledger API material into API SPEC v2 format; normalized public/first-party/internal/admin/event/reporting/chain-adjacent surfaces; strengthened mutation boundaries, idempotency, correction/supersession, reconciliation, visibility, audit, projection, failure-handling, migration, and QA rules.
+
+## Purpose
+
+This specification defines the FUZE Payout Ledger API contract.
+
+The Payout Ledger API is the interface layer for the structured cycle-history record of FUZE profit-participation payout cycles. It allows approved services and operators to create payout-cycle ledger records, attach policy, eligibility, funding, execution, claim-state, reporting, and registry references, publish bounded public or holder-safe views, preserve correction and supersession lineage, and reconcile discrepancies across treasury, eligibility, Base execution, reporting, and registry systems.
+
+The API MUST preserve the refined payout-ledger rule that the ledger is the durable, correction-safe, explainable cycle record. It MUST NOT collapse payout-ledger truth into raw Base contract activity, treasury/accounting books, eligibility datasets, audit logs, transparency reports, public registry entries, user claim history, spreadsheets, dashboards, exports, or UI presentation labels.
+
+## Scope
+
+This API spec governs:
+
+- public-safe payout-cycle listing and detail retrieval
+- first-party authenticated holder-safe cycle status retrieval where policy allows
+- internal creation and lifecycle management of payout-cycle ledger records
+- attachment of policy, snapshot, eligibility, funding, execution, claim-aggregate, reporting, and registry references
+- admin/control-plane publication, correction, supersession, closure, restriction, cancellation, and discrepancy-resolution actions
+- event emission for payout-ledger lifecycle and reference changes
+- accepted-state and async behavior for reconciliation, aggregate refresh, projection, publication, and discrepancy workflows
+- request, response, error, result, status, idempotency, retry, replay, authorization, audit, observability, migration, and versioning expectations
+- read-model, projection, export, reporting, public-read, and cache constraints for payout-ledger-derived state
+- OpenAPI, AsyncAPI, SDK, implementation-contract, storage-contract, and QA derivation guardrails
+
+## Out of Scope
+
+This API spec does not define:
+
+- the semantic business meaning of profit participation cycles beyond referencing `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
+- snapshot block selection, raw holder dataset construction, address classification, eligibility treatment, proof-root construction, or entitlement-input algorithms
+- Base payout contract ABI, claim-proof verification, raw claim transaction execution, or execution receipt mechanics
+- treasury accounting methodology, distributable-profit calculation, reserves, vault movement authority, or funding approval policy
+- public contract/wallet registry publication truth beyond linking to registry references
+- full transparency-report schema, narrative report composition, cadence, or publication workflow beyond ledger-reference integration
+- wallet-link, account, session, workspace, or product-entitlement semantics beyond access-control constraints
+- full audit-log schema, incident runbooks, queue topology, database physical topology, infrastructure layout, or UI rendering detail
+
+## Design Goals
+
+1. Preserve payout-cycle ledger records as durable trust-bearing objects.
+2. Make payout-cycle history easier to interpret than raw contract activity alone.
+3. Preserve linkage among profit-participation cycle meaning, eligibility basis, treasury funding lineage, Base execution references, claim-state posture, reporting references, registry references, and correction lineage.
+4. Keep ledger truth distinct from execution truth, eligibility truth, accounting truth, audit truth, reporting truth, registry truth, projection truth, and presentation truth.
+5. Provide narrow mutation contracts rather than generic update shortcuts.
+6. Support bounded public transparency without unsafe internal detail leakage.
+7. Require strong idempotency, retry safety, correlation, auditability, and observability for trust-sensitive mutations.
+8. Preserve correction and supersession lineage rather than silently rewriting published history.
+9. Enable OpenAPI / AsyncAPI / SDK derivation without permitting downstream reinterpretation of ownership or lifecycle semantics.
+10. Provide concrete acceptance criteria and test cases for production readiness.
+
+## Non-Goals
+
+This API spec is not intended to:
+
+- turn the payout ledger into a treasury ledger
+- turn the payout ledger into a Base contract indexer
+- allow API consumers to infer eligibility, funding authority, or execution finality from narrative reporting alone
+- expose full private claimant-level data through public cycle records
+- allow frontend, dashboards, exports, spreadsheets, or reports to become mutation owners
+- provide unbounded admin repair shortcuts
+- flatten cycle state, funding state, claim state, visibility state, correction state, and presentation labels into one generic status field
 
-## 1. Title
+## Core Principles
 
-**PAYOUT_LEDGER_API_SPEC.md**
+### Principle 1 — Refined Semantics Own Meaning
 
----
+`PAYOUT_LEDGER_SPEC.md` owns payout-ledger semantics. This API owns how those semantics are exposed, mutated, linked, protected, and validated through interface contracts.
 
-## 2. Document Metadata
+### Principle 2 — Ledger Truth Links Domains Without Absorbing Them
 
-- **Document Name:** PAYOUT_LEDGER_API_SPEC.md
-- **API Classification:** internal, admin, public-read, event-driven, chain-adjacent
-- **Owning Domain:** Payout Ledger Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts` and approved Base payout execution state references
-- **Primary System of Record:** payout cycles, payout cycle versions, funding records, claim-state aggregates, execution references, reporting references, correction lineage, and visibility-safe payout-ledger records in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for FUZE payout-ledger cycle recording, funding and claim-state linkage, public and first-party-safe payout cycle status disclosure, reconciliation-safe correction behavior, and structured cycle-history trust surfaces across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
-
----
-
-## 2.1 API Classification Header
-
-- **API Classification:** internal | admin | public-read | event-driven | chain-adjacent
-- **Owning Domain:** Payout Ledger Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary Chain-Adjacent Dependency:** `fuze-contracts`
-- **Primary System of Record:** payout cycle ledger and payout-cycle visibility domain
+The API MUST link profit-participation, eligibility, treasury, Base execution, reporting, registry, and audit references without allowing the payout-ledger API to redefine those domains.
 
----
+### Principle 3 — Mutation Boundaries Are Narrow
 
-## 3. Purpose
-
-This document defines the canonical API specification for FUZE payout ledger operations. It translates the governing FUZE platform architecture, payout ledger rules, Base payout execution rules, snapshot and eligibility rules, profit participation rules, transparency expectations, public registry expectations, audit requirements, and API architecture rules into an implementation-ready API contract.
-
-This API exists because FUZE profit participation is not a single transfer event. It is a multi-stage cycle involving:
-- treasury and accounting finalization,
-- Ethereum-derived holder eligibility,
-- Base-based stablecoin funding,
-- cycle-specific claim execution,
-- closure and reporting,
-- and trust-sensitive public explanation.
+The API MUST use explicit command surfaces for cycle creation, reference attachment, funding registration, claim-aggregate refresh, publication, correction, supersession, closure, restriction, discrepancy handling, and projection refresh. A generic `PATCH /payout-ledger/cycles/{id}` that can mutate arbitrary ledger truth is non-canonical.
 
-Raw contract state alone is not sufficient to explain these cycles. A dedicated payout ledger is therefore required to preserve formal cycle identity, funding records, eligibility basis references, claim-state visibility, correction lineage, and structured linkage to reporting and governance references. The payout ledger must remain distinct from the payout contract, distinct from internal audit records, and distinct from narrative transparency reports, while still linking to all of them.
+### Principle 4 — Public Transparency Is Structured and Bounded
 
-Accordingly, this specification defines how payout cycles, versions, funding records, execution references, claim-state aggregates, reporting links, corrections, and public-safe visibility are represented, and how payout-ledger behavior remains auditable, idempotent, and architecture-consistent across FUZE.
+Public outputs SHOULD make payout cycles intelligible, but MUST be filtered by visibility policy and MUST NOT leak restricted operational, treasury, incident, security, claimant-private, or audit-only detail.
 
----
+### Principle 5 — Historical Integrity Beats Convenience
 
-## 4. Scope
+Published or trust-sensitive payout history MUST NOT be silently overwritten. Correction, cancellation, restriction, and supersession MUST preserve reason-coded lineage.
 
-This specification covers:
+### Principle 6 — Reconciliation Is an API Obligation
 
-- internal APIs for payout-cycle ledger creation and lifecycle management
-- internal APIs for funding records, execution references, claim-state aggregates, and reporting linkage
-- internal read APIs for canonical payout-cycle ledger truth
-- admin/control-plane APIs for publish, correct, supersede, close, re-open-if-policy-allows, or close discrepancy actions
-- public-read APIs for published payout-cycle summaries and detail
-- first-party authenticated read APIs for bounded holder-safe cycle status views where policy allows
-- event emission requirements for payout-ledger lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+The API MUST expose and preserve enough stable references to reconcile ledger state with eligibility, treasury, Base execution, reporting, registry, and audit sources. Inconsistent state MUST enter discrepancy posture rather than inferred success.
 
-This specification does **not** redefine:
+## Canonical Definitions
 
-- snapshot and eligibility calculation logic in full detail
-- Base payout execution contract ABI or claim-proof detail in full detail
-- treasury authorization procedures in full detail
-- raw internal audit-log schema in full detail
-- full transparency-report publication schema
-- wallet registry semantics in full detail
-- user-specific raw claim history interfaces in full detail
+- **Payout Ledger:** Canonical off-chain structured cycle-record layer for payout-cycle identity, lifecycle, linkage, visibility posture, correction lineage, and reconciliation references.
+- **Payout Cycle Ledger Record:** The API-facing resource representing one formal profit-participation payout cycle in ledger form.
+- **Cycle Identifier:** Stable unique identifier for a payout cycle. It MUST remain stable across correction and supersession lineage.
+- **Cycle Version:** Immutable or append-only representation of a material version of a payout-cycle record.
+- **Ledger State:** Lifecycle state of the ledger record itself, distinct from execution state, claim state, funding state, reporting state, and visibility state.
+- **Visibility State:** Audience and publication posture of a ledger record or field family.
+- **Funding Reference:** Structured linkage to approved treasury/funding lineage and relevant execution funding reference.
+- **Eligibility Basis Reference:** Structured linkage to approved snapshot/eligibility lineage.
+- **Execution Reference:** Structured linkage to Base payout execution run, batch, request, receipt, claim-state, or reconciliation reference.
+- **Claim-State Summary:** Ledger-visible cycle-level aggregate claim posture derived from execution truth.
+- **Reporting Reference:** Link to transparency-reporting or other approved public explanatory artifacts.
+- **Registry Reference:** Link to public contract/wallet registry entries relevant to a cycle.
+- **Correction:** Reason-coded lineage-preserving change to a ledger record or reference.
+- **Supersession:** Relationship that marks one record/version as replaced by another because current meaning cannot safely be represented as a simple correction.
+- **Discrepancy:** Explicit state representing unresolved mismatch, missing linkage, stale projection, unsafe publication, execution mismatch, or reconciliation failure.
+- **Accepted State:** API acknowledgement that a requested operation has been accepted for asynchronous processing; it is not final business success.
 
-Those remain governed by their own source-of-truth specifications.
+## Truth Class Taxonomy
 
----
+The API MUST preserve these truth classes:
 
-## 5. Source-of-Truth Inputs
+1. **Semantic truth:** Payout-ledger meaning owned by `PAYOUT_LEDGER_SPEC.md`; cycle semantic meaning owned by `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`.
+2. **API contract truth:** Route/resource/request/response/error/idempotency/event/versioning rules defined by this document.
+3. **Policy truth:** Eligibility policy, treasury policy, visibility policy, correction policy, and admin-control policy owned by their respective domains.
+4. **Runtime truth:** Operation state, async jobs, projection refresh, reconciliation runs, provider/chain observation state, incident posture, and runtime health.
+5. **Ledger/storage truth:** Canonical payout-cycle records, versions, references, visibility state, discrepancies, correction/supersession lineage, and idempotency records.
+6. **Eligibility truth:** Snapshot, raw holder, treatment, eligible dataset, and entitlement-input truth owned by the snapshot and eligibility domain.
+7. **Execution truth:** Base funding, claim-window, claim execution, receipt, settlement-status, and execution discrepancy truth owned by Base payout execution.
+8. **Treasury/accounting truth:** Funding authority, distributable-profit finalization, reserve-sensitive context, and finance-book truth owned by treasury/accounting domains.
+9. **Audit truth:** Immutable internal action, decision, operator, investigation, and mutation lineage owned by audit/activity systems.
+10. **Registry truth:** Official public contract and wallet designation owned by the registry domain.
+11. **Transparency/reporting truth:** Public explanatory and recurring report publication truth owned by reporting domains.
+12. **Projection/read-model truth:** Public pages, holder views, admin consoles, exports, caches, indexes, and reporting inputs derived from canonical ledger truth.
+13. **Presentation truth:** Human-readable status labels, UI copy, charts, summary copy, and public narrative framing.
 
-### Primary FUZE docs and specs used
+These truth classes MUST NOT be merged into one generic payout-history object.
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+## Architectural Position in the Spec Hierarchy
 
-#### Primary payout / snapshot / execution / trust sources
-- `PAYOUT_LEDGER_SPEC.md`
-- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md`
-- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md`
-- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `CHAIN_ARCHITECTURE_SPEC.md`
+This API spec sits below refined semantic specs and above downstream implementation-contract artifacts. It consumes the refined payout-ledger rule that the ledger owns structured cycle-history meaning while Base execution owns raw chain execution facts, snapshot/eligibility owns eligibility lineage, treasury owns funding authority, transparency reporting owns report publication, registry owns public contract/wallet designation, and audit owns immutable decision/action lineage.
 
-#### Core docs inputs
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
-- `TOKEN_CONTRACT_ARCHITECTURE_.md`
-- `ALLOCATION_WALLET_MAP.md`
-
-#### API and runtime sources
-- `API_ARCHITECTURE_SPEC.md`
-- `PUBLIC_API_SPEC.md`
-- `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+## Upstream Semantic Owners
 
-#### Security and operations sources
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
+| Upstream owner | API dependency posture |
+| --- | --- |
+| Payout Ledger Domain | Owns ledger record identity, lifecycle, versioning, correction, visibility, reconciliation, and publication semantics consumed directly by this API. |
+| Profit Participation Domain | Owns payout-cycle semantic meaning and policy-finalized payout-cycle posture. |
+| Snapshot and Eligibility Domain | Owns snapshot references, eligible datasets, entitlement inputs, address treatment, and reproducibility. |
+| Base Payout Execution Domain | Owns execution-run, funding-state, claim-window, claim execution, receipt, and execution-reconciliation truth. |
+| Treasury / Accounting / Control Domains | Own funding authority, distributable-profit posture, reserve treatment, and finance-book truth. |
+| Transparency Reporting Domain | Owns explanatory report artifacts and report publication state. |
+| Public Contract and Wallet Registry Domain | Owns official public designation of payout-related contracts and wallets. |
+| Audit / Activity Domain | Owns immutable audit lineage for sensitive ledger actions. |
+| Security / Risk / Operations Domains | Own controls, incident posture, alerting, risk checks, and runtime remediation workflows. |
 
-#### Format guides
-- `The_API_Specification_guide.md`
-- `Database_Schemas_Guide.md`
+## API Surface Families
 
-### Highest-priority interpretation applied
+### Public Read Surface
 
-For this file, the most important governing interpretation is:
+Public routes expose only approved public-safe payout-cycle summaries and details. Public routes MUST NOT expose internal funding controls, operator notes, private claimant detail, internal discrepancy investigations, restricted audit fields, security-sensitive execution routing, or unpublished references.
 
-1. the payout ledger is the structured cycle-level trust record for profit participation
-2. backend owns canonical payout-ledger cycle truth and visibility state
-3. the payout ledger must remain distinct from the Base payout contract, from raw audit logs, and from transparency reports
-4. each payout cycle must link cycle identity, funding, eligibility basis, claim state, and reporting references without collapsing those domains together
-5. corrections and supersession must preserve historical integrity rather than silently rewriting payout history
-6. public visibility should expose cycle-level intelligibility without leaking internal-only operational detail
+### First-Party Authenticated Surface
 
-### Supporting external standards used only as guidance
+First-party routes expose holder-safe or user-contextual cycle views where policy allows. Authentication MAY identify the actor or wallet-aware context, but the first-party surface MUST NOT compute entitlement or redefine ledger truth.
 
-- HTTP semantics for public-read, first-party-read, and controlled mutation APIs
-- structured problem-details error design
-- general cycle-ledger, correction-lineage, and reconciliation-record patterns as supporting guidance
+### Internal Service Surface
 
-External guidance does not override FUZE source-of-truth documents.
+Internal routes create records, attach references, refresh aggregate summaries, read canonical cycle truth, trigger reconciliation, and feed projections. Internal service routes MUST enforce service identity, least privilege, idempotency, correlation, and owner-domain authorization.
 
----
+### Admin / Control-Plane Surface
 
-## 6. Governing Architecture and Ownership Interpretation
+Admin routes publish, restrict, correct, supersede, close, cancel, reopen-if-policy-allows, mark discrepancies, and resolve discrepancies. These routes MUST be reason-coded, policy-constrained, audited, bounded, and separated from ordinary application APIs.
 
-This API belongs to the **Payout Ledger Domain** because it owns the formal cycle-record layer that connects:
+### Event / Async Surface
 
-- snapshot/eligibility basis,
-- treasury/funding authorization references,
-- Base payout execution references,
-- claim-open/claim-close lifecycle posture,
-- reporting references,
-- and correction lineage.
+The API emits and consumes internal event families for lifecycle, reference, aggregate, publication, correction, supersession, closure, discrepancy, reconciliation, and projection changes. Events MUST be replay-safe and MUST preserve owner-domain boundaries.
 
-This API is implemented primarily in `fuze-backend-api` because:
+### Reporting / Export Surface
 
-- backend owns durable payout-ledger truth
-- cycle-level visibility, correction, and publication controls must be centralized
-- multiple adjacent systems must remain linked without one subsuming the others
-- public trust requires structured off-chain records even when execution happens on-chain
-- audit generation and discrepancy handling must be backend-governed
+Reporting/export outputs MAY expose derived cycle data for transparency reports, finance reconciliation, public data exports, and internal review, but MUST remain subordinate to canonical ledger records and MUST preserve correction/supersession lineage.
 
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend only reads public or bounded first-party-safe ledger status
-- `fuze-frontend-admin`, because admin may publish or correct but must not own ledger truth
-- `fuze-contracts`, because Base payout contracts own on-chain execution state, not the full cross-domain explanation layer
-- snapshot and eligibility domain, because it supplies the entitlement basis but is not the payout ledger itself
-- transparency reporting domain, because reports explain cycles narratively but do not own the structured cycle record
-- audit domain, because audit records preserve richer operational lineage but the payout ledger is the bounded cycle-trust surface
-
-### Architectural implications
-
-- every profit-participation cycle must be represented as a formal payout-ledger cycle
-- each cycle must have stable identity independent of announcements or transient UI pages
-- funding, claims-open, claims-close, and closure states must be explicit
-- reporting and registry references must be linkable from the cycle record
-- corrections and supersession must append or supersede transparently rather than erase prior public understanding
-- the payout ledger should preserve cycle-level intelligibility rather than raw per-user operational overload
-
----
-
-## 7. Domain Responsibilities
-
-The Payout Ledger API domain is responsible for:
-
-1. maintaining canonical payout-cycle records
-2. maintaining payout-cycle version and correction lineage
-3. recording funding references and aggregate claim-state summaries
-4. linking eligibility basis, payout execution, reporting, and governance references
-5. exposing public-safe and trusted internal payout-cycle status
-6. supporting admin publish, correct, supersede, close, and discrepancy resolution workflows
-7. emitting payout-ledger lifecycle events
-8. generating audit lineage for sensitive payout-ledger actions
-9. preserving separation between execution truth, eligibility truth, reporting truth, and ledger truth
-10. supporting reconciliation of cycle-level states across domains
-
-The domain is not responsible for:
-
-- executing Base payout claims
-- defining eligibility policy calculations
-- owning treasury authorization policy
-- replacing internal audit systems
-- replacing transparency reports
-- replacing user-specific claim history tooling
-
----
-
-## 8. Out of Scope
-
-The following are out of scope for this API specification:
-
-- payout contract proof verification mechanics
-- user-specific raw claim explorer UX
-- multisig signing flows
-- private governance decision logs
-- raw accounting export formats
-- final transparency report layout
-- external block explorer integration specifics
-- contract ABI documentation
-
-Where later detailed specs are needed, they must remain compatible with this API.
-
----
-
-## 9. Canonical Entities and Data Ownership
-
-### Durable entities
-
-#### 9.1 payout_cycles
-- **Owner:** Payout Ledger Domain
-- **Purpose:** canonical cycle records for stablecoin profit-participation payouts
-- **Nature:** source-of-truth durable entity
-
-#### 9.2 payout_cycle_versions
-- **Owner:** Payout Ledger Domain
-- **Purpose:** immutable version lineage for payout-cycle records
-- **Nature:** source-of-truth durable entity
-
-#### 9.3 payout_cycle_funding_records
-- **Owner:** Payout Ledger Domain
-- **Purpose:** linkage of cycle identity to funded amount, payout asset, payout chain, and funding timestamp/state
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.4 payout_cycle_eligibility_references
-- **Owner:** Payout Ledger Domain
-- **Purpose:** explicit structural references to snapshot and eligibility basis
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.5 payout_cycle_execution_references
-- **Owner:** Payout Ledger Domain
-- **Purpose:** explicit linkage to Base payout execution contract state and downstream execution references
-- **Nature:** durable execution-lineage entity
-
-#### 9.6 payout_cycle_claim_aggregates
-- **Owner:** Payout Ledger Domain
-- **Purpose:** cycle-level aggregate claim status and claim progress summaries
-- **Nature:** source-of-truth durable aggregate entity
-
-#### 9.7 payout_cycle_reporting_references
-- **Owner:** Payout Ledger Domain
-- **Purpose:** structured references to transparency reports and other approved reporting surfaces
-- **Nature:** durable reporting-lineage entity
-
-#### 9.8 payout_cycle_registry_references
-- **Owner:** Payout Ledger Domain
-- **Purpose:** links to public contract and wallet registry entries relevant to the cycle
-- **Nature:** durable registry-lineage entity
-
-#### 9.9 payout_cycle_visibility_states
-- **Owner:** Payout Ledger Domain
-- **Purpose:** publication and visibility state for payout-ledger records
-- **Nature:** source-of-truth durable entity
-
-#### 9.10 payout_cycle_supersession_links
-- **Owner:** Payout Ledger Domain
-- **Purpose:** old-to-new lineage for corrected or superseded payout cycles
-- **Nature:** durable lineage entity
-
-#### 9.11 payout_cycle_discrepancy_cases
-- **Owner:** Payout Ledger Domain
-- **Purpose:** review and remediation records for failed, stale, inconsistent, or mispublished payout-cycle state
-- **Nature:** durable review/remediation entity
-
-#### 9.12 payout_cycle_mutation_actions
-- **Owner:** Payout Ledger Domain
-- **Purpose:** high-level action records for create, publish, correct, supersede, close, reopen_if_policy_allows, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.13 payout_cycle_audit_events
-- **Owner:** Audit / Activity domain, sourced by Payout Ledger Domain
-- **Purpose:** immutable trail for sensitive payout-ledger actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.14 payout_cycle_public_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe cycle summaries and detail representations
-- **Nature:** derived
-
-#### 9.15 payout_cycle_first_party_views
-- **Owner:** derived read-model layer
-- **Purpose:** first-party holder-safe cycle status views
-- **Nature:** derived
-
-#### 9.16 payout_cycle_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into failed, mislinked, stale, or inconsistent payout-cycle conditions
-- **Nature:** derived
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 payout cycle lifecycle
-
-Possible states:
+### Chain-Adjacent Surface
+
+Chain-adjacent behavior is reference-oriented. The API MAY consume Base execution references, payout contract references, transaction hashes, batch references, and claim-state facts, but MUST NOT own raw contract truth or treat contract observation alone as full cycle-history truth.
+
+## System / API Boundaries
+
+The Payout Ledger API governs:
+
+- payout-cycle ledger resource families
+- payout-cycle lifecycle and version resource contracts
+- structured reference attachment and validation contracts
+- visibility and publication contracts
+- correction, supersession, closure, cancellation, restriction, discrepancy, and remediation contracts
+- public-safe and holder-safe read contracts
+- event contracts and async operation references
+- idempotency, audit, correlation, observability, and migration contracts
+
+The Payout Ledger API does not govern:
+
+- eligibility computation
+- raw Base payout execution
+- treasury-funding approval
+- treasury accounting books
+- transparency-report publication truth
+- public registry publication truth
+- account/session/wallet-link/workspace semantics
+- low-level contract ABI, proof format, or queue topology
+
+## Adjacent API Boundaries
+
+- `PROFIT_PARTICIPATION_API_SPEC.md` governs cycle semantic intent, allocation generation, payout intent, and cycle-level participation posture. This API records and exposes structured ledger history for approved cycles.
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_API_SPEC.md` governs deterministic snapshot, address treatment, eligible dataset, and entitlement-input APIs. This API references approved eligibility artifacts.
+- `BASE_PAYOUT_EXECUTION_LAYER_API_SPEC.md` governs execution runs, batch submission, receipts, claim-state facts, and execution reconciliation. This API references execution facts and records ledger-visible claim summaries.
+- `TREASURY_CONTROL_POLICY_API_SPEC.md`, `VAULT_ACTION_POLICY_API_SPEC.md`, and `MULTISIG_AND_TIMELOCK_API_SPEC.md` govern funding authority and controlled release posture. This API records approved funding lineage only.
+- `TRANSPARENCY_REPORTING_API_SPEC.md` governs recurring public reports. This API provides structured ledger references and public-safe cycle status consumed by reports.
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_API_SPEC.md` governs official public designation of contracts and wallets. This API links to registry references but does not define registry publication truth.
+- `PUBLIC_PAYOUT_STATUS_API_SPEC.md` MAY provide public-status views derived from this API and Base execution, but MUST NOT become canonical ledger owner.
+
+## Conflict Resolution Rules
+
+1. The active refined semantic registry wins over older API material.
+2. Higher-order platform boundary, ownership, data-model, and on-chain/off-chain specs win on constitutional interpretation.
+3. `PAYOUT_LEDGER_SPEC.md` wins on ledger record identity, lifecycle, visibility, correction, supersession, reconciliation, and ledger-state semantics.
+4. `PROFIT_PARTICIPATION_SYSTEM_SPEC.md` wins on semantic payout-cycle meaning.
+5. `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` wins on eligibility-basis and entitlement-input meaning.
+6. `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md` wins on Base execution mechanics, funding observation, claim-window, receipt, and claim-state facts.
+7. `TREASURY_CONTROL_POLICY_SPEC.md` and adjacent treasury/vault/multisig specs win on funding authority and control-policy interpretation.
+8. `TRANSPARENCY_REPORTING_SPEC.md` wins on report publication truth.
+9. `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` wins on registry publication truth.
+10. This API spec wins on interface contract expression of payout-ledger truth.
+11. If ambiguity remains, the API MUST choose the most conservative architecture-consistent interpretation and expose discrepancy, restriction, accepted-state, or manual-review posture rather than inferred success.
+
+## Default Decision Rules
+
+1. No stable cycle identifier means no canonical payout-ledger record.
+2. No approved eligibility basis reference means the API MUST NOT expose the cycle as claim-ready or canonically open.
+3. No approved treasury/funding authority reference means the API MUST NOT treat an amount as canonical funded-cycle truth.
+4. No execution reference or execution reconciliation strategy means the API MUST NOT expose claim-state finality.
+5. Execution truth controls raw claim and contract facts; ledger truth controls structured cycle-history meaning.
+6. Reporting copy cannot override ledger references.
+7. Registry publication cannot create payout-cycle existence.
+8. Public or holder-safe reads MUST be narrowed when visibility policy is uncertain.
+9. Claim-state aggregates MUST be labelled delayed, partial, estimated, or final as applicable.
+10. Correction or supersession MUST be used when an update would otherwise erase trust-sensitive history.
+11. Duplicate or conflicting idempotency keys MUST fail closed.
+12. If reconciliation is incomplete, return `accepted` or `discrepancy_under_review`, not final success.
+
+## Roles / Actors / API Consumers
+
+- **Public Reader:** Unauthenticated observer consuming public-safe cycle history.
+- **Authenticated Holder / User:** Authenticated actor consuming permitted holder-safe cycle status.
+- **First-Party Web Client:** FUZE frontend consuming public and first-party read APIs.
+- **Admin Console:** FUZE admin frontend invoking privileged backend-mediated control-plane actions.
+- **Internal Ledger Service:** Service owning payout-cycle record mutations and canonical reads.
+- **Profit Participation Service:** Upstream cycle-intent and allocation-intent source.
+- **Snapshot / Eligibility Service:** Source of approved eligibility references and entitlement-input references.
+- **Base Payout Execution Service:** Source of execution references, claim-state facts, and execution discrepancy events.
+- **Treasury / Finance Service:** Source of approved funding lineage references and finance reconciliation inputs.
+- **Transparency Reporting Service:** Consumer of ledger references and source of reporting-reference links.
+- **Registry Service:** Source of approved contract/wallet registry references.
+- **Audit / Activity Service:** Sink for sensitive mutation audit events.
+- **Operations / Security / Risk:** Monitors discrepancies, abuse controls, incidents, and remediation.
+
+## Resource / Entity Families
+
+### Canonical API Resources
+
+- `payout_cycle`
+- `payout_cycle_version`
+- `payout_cycle_policy_reference`
+- `payout_cycle_eligibility_reference`
+- `payout_cycle_funding_record`
+- `payout_cycle_execution_reference`
+- `payout_cycle_claim_aggregate`
+- `payout_cycle_reporting_reference`
+- `payout_cycle_registry_reference`
+- `payout_cycle_visibility_state`
+- `payout_cycle_correction`
+- `payout_cycle_supersession_link`
+- `payout_cycle_discrepancy_case`
+- `payout_cycle_reconciliation_run`
+- `payout_cycle_public_view`
+- `payout_cycle_holder_view`
+- `payout_cycle_export`
+- `payout_ledger_operation`
+- `idempotency_record`
+- `audit_reference`
+
+### Derived Resources
+
+Derived resources include public cycle-history views, holder-safe cycle-status views, transparency-report input views, registry-linked cycle views, finance reconciliation exports, admin console projections, cache entries, search indexes, and analytics summaries. Derived resources MUST NOT own canonical ledger truth.
+
+## Ownership Model
+
+The Payout Ledger Domain owns canonical payout-ledger records, version lineage, ledger state, visibility posture, correction/supersession lineage, reconciliation posture, discrepancy posture, and API resource contracts for ledger truth. Adjacent domains own the referenced facts and policies. The API MUST validate reference shape and lifecycle compatibility, but MUST NOT reinterpret adjacent domain facts.
+
+## Authority / Decision Model
+
+### Mutation Authority
+
+- Internal services MAY create draft cycles and attach approved references only through explicit service-to-service routes.
+- Admin/control-plane users MAY publish, restrict, correct, supersede, cancel, close, or remediate only through reason-coded, policy-constrained, audited routes.
+- Public and first-party consumers MUST NOT mutate ledger truth.
+- Reporting, registry, frontend, dashboard, export, and analytics systems MUST NOT become mutation owners.
+
+### Approval and Policy Authority
+
+- Publication policy determines whether fields are public, first-party, operator-only, finance-restricted, audit-restricted, or hidden.
+- Treasury policy controls whether funding references can be treated as approved.
+- Eligibility policy controls whether an eligibility basis can be treated as approved.
+- Execution reconciliation controls whether claim-state facts are current, delayed, partial, final, or discrepancy-under-review.
+
+## Authentication Model
+
+- Public-read routes MAY be unauthenticated, rate-limited, and cacheable subject to public-safe visibility policy.
+- First-party holder-safe routes MUST require authenticated session and, where applicable, wallet-aware authorization or actor-visibility checks.
+- Internal service routes MUST require service identity, workload identity, route-family authorization, and least-privilege scopes.
+- Admin/control routes MUST require authenticated operator identity, privileged role, policy authorization, reason code, and correlation ID.
+- Event consumers/producers MUST authenticate service identity and validate event schema, source, and replay semantics.
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+- route family
+- caller identity type
+- service or user scope
+- target resource visibility state
+- ledger lifecycle state
+- required policy references
+- whether a mutation is owner-domain authorized
+- whether admin/control action is permitted in the current state
+- reason-code requirement
+- whether the actor may see restricted fields
+- whether the requested view is public, holder-safe, operator-only, finance-restricted, or audit-restricted
+
+Workspace scope MUST NOT be used as a substitute for payout-cycle truth, public-ledger visibility, eligibility, or claim authority.
+
+## Entitlement / Capability-Gating Model
+
+The payout ledger does not compute entitlement. It references approved eligibility and entitlement-input artifacts. First-party holder-safe views MAY use authenticated context to determine whether the caller can see bounded cycle status or claim-safe summaries, but MUST NOT create or modify entitlement truth. Product capability gates may control UI or feature access; they MUST NOT redefine public payout-cycle existence, ledger publication truth, eligibility truth, or execution truth.
+
+## API State Model
+
+### Ledger Lifecycle States
+
+Allowed top-level ledger states SHOULD include:
 
 - `draft`
-- `initialized`
+- `prepared_internal`
+- `published_internal`
+- `public_published`
 - `funded`
-- `claims_open`
-- `partially_claimed`
+- `open_for_claims`
+- `claims_active`
 - `claims_closed`
 - `closed`
+- `finalized`
+- `discrepancy_under_review`
 - `corrected`
 - `superseded`
-- `cancelled_before_launch`
+- `restricted`
+- `cancelled_pre_funding`
+- `cancelled_pre_publication`
 
-### 10.2 payout cycle version lifecycle
-
-Possible states:
-
-- `draft`
-- `published`
-- `superseded`
-- `archived`
-
-### 10.3 visibility lifecycle
-
-Possible states:
+### Visibility States
 
 - `internal_only`
 - `published_public`
 - `published_first_party`
+- `operator_only`
+- `finance_restricted`
+- `audit_restricted`
 - `restricted`
 - `archived`
 
-### 10.4 discrepancy lifecycle
+### Claim Aggregate States
 
-Possible states:
+- `not_open`
+- `open`
+- `partially_claimed`
+- `fully_claimed`
+- `claims_closed`
+- `aggregate_delayed`
+- `aggregate_partial`
+- `aggregate_unavailable`
+- `execution_discrepancy`
 
-- `opened`
-- `under_review`
-- `resolved`
+### Operation States
+
+- `accepted`
+- `in_progress`
+- `succeeded`
 - `failed`
-- `closed`
+- `blocked`
+- `requires_review`
+- `superseded`
+- `cancelled`
 
-Lifecycle notes:
-- the payout ledger models cycles as lifecycle objects rather than one-time funding events
-- claim-open and claim-close states must remain explicit
-- corrections and supersession must preserve stable identifiers and version lineage
-- public visibility may lag internal initialization according to policy
+Accepted operation state MUST NOT be presented as final business success.
 
----
+## Lifecycle / Workflow Model
 
-## 11. API Surface Overview
+1. **Cycle initialization:** Internal service creates a draft ledger record with stable cycle identifier and idempotency record.
+2. **Structural reference attachment:** Policy, eligibility, funding-planning, execution-environment, reporting, and registry references are attached through explicit commands.
+3. **Readiness validation:** API verifies required references, lifecycle compatibility, visibility policy, and owner-domain constraints.
+4. **Funding registration:** Approved treasury/funding lineage and execution funding references are recorded.
+5. **Execution linkage:** Base payout execution references and claim-window facts are linked.
+6. **Claim aggregate refresh:** Ledger-visible aggregate claim posture is refreshed from execution truth and labelled final/partial/delayed as applicable.
+7. **Publication:** Admin/control-plane publishes public or first-party-safe visibility after policy and safety checks.
+8. **Projection:** Public, holder, reporting, registry-linked, export, and admin projections update asynchronously.
+9. **Reconciliation:** Scheduled or event-driven jobs compare ledger records with eligibility, treasury, execution, reporting, registry, and audit references.
+10. **Discrepancy handling:** Mismatches enter discrepancy state and may be resolved through correction, supersession, restriction, republish, or closure.
+11. **Closure/finalization:** The cycle is closed and finalized only when required references and discrepancies are resolved or explicitly recorded.
+12. **Historical preservation:** Corrections and supersessions preserve old-to-new lineage and reason-coded audit references.
 
-The API surface is divided into four families:
+## Architecture Diagram — Mermaid flowchart
 
-### 11.1 Public-read APIs
-Used by public users, holders, and community observers for:
-- listing public-safe payout cycles
-- retrieving public-safe cycle detail
-- reading funded/open/closed/corrected/superseded cycle status
-- reading public-safe reporting and contract references
+```mermaid
+flowchart LR
+    Public[Public Reader]
+    Holder[Authenticated Holder]
+    Web[First-Party Web App]
+    Admin[Admin Console]
+    Internal[Internal Services]
+    PP[Profit Participation Service]
+    Eligibility[Snapshot & Eligibility Service]
+    Treasury[Treasury / Finance Controls]
+    BaseExec[Base Payout Execution Service]
+    Registry[Public Contract & Wallet Registry]
+    Reporting[Transparency Reporting]
+    API[Payout Ledger API]
+    Store[(Canonical Payout Ledger Store)]
+    Idem[(Idempotency Records)]
+    Audit[(Audit / Activity Log)]
+    Events[(Event Bus)]
+    Projections[(Derived Public / Holder / Reporting Views)]
+    Ops[Monitoring / Reconciliation / Incident Ops]
+    Chain[(Base Chain / Payout Contracts)]
 
-### 11.2 First-party authenticated read APIs
-Used by `fuze-frontend-webapp` and approved first-party clients for:
-- reading bounded cycle status relevant to the actor where policy allows
-- reading first-party-safe cycle detail and status summaries
-- reading bounded claim-state posture without exposing internal-only metadata
+    Public -->|public read| API
+    Holder --> Web -->|holder-safe read| API
+    Admin -->|admin/control-plane commands| API
+    Internal -->|internal service commands| API
+    PP -->|cycle semantic references| API
+    Eligibility -->|approved eligibility references| API
+    Treasury -->|approved funding lineage| API
+    BaseExec -->|execution and claim-state facts| API
+    BaseExec --> Chain
+    Registry -->|registry references| API
+    Reporting -->|reporting references| API
 
-### 11.3 Internal service APIs
-Used by trusted internal services for:
-- creating payout cycles
-- recording funding, eligibility, execution, reporting, and registry references
-- updating claim-state aggregates
-- reading canonical payout-ledger truth
+    API --> Store
+    API --> Idem
+    API --> Audit
+    API --> Events
+    Events --> Projections
+    Store --> Projections
+    API --> Ops
+    Ops --> API
 
-### 11.4 Admin / control-plane APIs
-Used by `fuze-frontend-admin` through backend-only privileged routes for:
-- publish, correct, supersede, close, reopen_if_policy_allows, and discrepancy actions
-- status repair and reconciliation workflows
+    Projections -. derived, not canonical .-> Public
+    Projections -. derived, not canonical .-> Holder
+    Projections -. derived inputs .-> Reporting
+```
 
----
+## Data Design — Mermaid Diagram
 
-## 12. Authentication and Authorization Model
+```mermaid
+erDiagram
+    PAYOUT_CYCLE ||--o{ PAYOUT_CYCLE_VERSION : has_versions
+    PAYOUT_CYCLE ||--o{ POLICY_REFERENCE : links_policy
+    PAYOUT_CYCLE ||--o{ ELIGIBILITY_REFERENCE : links_eligibility
+    PAYOUT_CYCLE ||--o{ FUNDING_RECORD : links_funding
+    PAYOUT_CYCLE ||--o{ EXECUTION_REFERENCE : links_execution
+    PAYOUT_CYCLE ||--o{ CLAIM_AGGREGATE : has_claim_summary
+    PAYOUT_CYCLE ||--o{ REPORTING_REFERENCE : links_reports
+    PAYOUT_CYCLE ||--o{ REGISTRY_REFERENCE : links_registry
+    PAYOUT_CYCLE ||--o{ VISIBILITY_STATE : has_visibility
+    PAYOUT_CYCLE ||--o{ CORRECTION_RECORD : corrected_by
+    PAYOUT_CYCLE ||--o{ SUPERSESSION_LINK : superseded_by
+    PAYOUT_CYCLE ||--o{ DISCREPANCY_CASE : has_discrepancy
+    PAYOUT_CYCLE ||--o{ LEDGER_OPERATION : changed_by
+    LEDGER_OPERATION ||--|| IDEMPOTENCY_RECORD : protected_by
+    LEDGER_OPERATION ||--o{ AUDIT_REFERENCE : audited_by
 
-### 12.1 Authentication posture by route family
+    PAYOUT_CYCLE {
+        uuid id PK
+        string cycle_key
+        string cycle_label
+        string ledger_state
+        string visibility_state
+        string period_reference
+        datetime created_at
+        datetime updated_at
+        datetime published_at
+        datetime closed_at
+    }
 
-#### Public-read routes
-No authentication required:
-- list public-safe payout cycles
-- read public-safe cycle detail and status
+    PAYOUT_CYCLE_VERSION {
+        uuid id PK
+        uuid payout_cycle_id FK
+        int version_number
+        string version_state
+        string change_reason_code
+        datetime created_at
+        datetime superseded_at
+    }
 
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded first-party-safe cycle status
-- read claim-safe summary views for allowed actors
+    ELIGIBILITY_REFERENCE {
+        uuid id PK
+        uuid payout_cycle_id FK
+        string snapshot_reference
+        string eligibility_basis_reference
+        string entitlement_input_reference
+        string policy_version_reference
+        string validation_state
+    }
 
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create cycles
-- bind references
-- update cycle state and aggregates
-- read canonical truth
+    FUNDING_RECORD {
+        uuid id PK
+        uuid payout_cycle_id FK
+        decimal funded_amount
+        string payout_asset
+        string payout_chain
+        string treasury_reference
+        string execution_funding_reference
+        datetime funded_at
+    }
 
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- publish, correct, supersede, close, reopen_if_policy_allows
-- resolve discrepancies
-- repair state or linkage under controlled policy
+    EXECUTION_REFERENCE {
+        uuid id PK
+        uuid payout_cycle_id FK
+        string execution_run_reference
+        string batch_reference
+        string contract_reference
+        string receipt_reference
+        string execution_state
+    }
 
-### 12.2 Authorization checkpoints
+    CLAIM_AGGREGATE {
+        uuid id PK
+        uuid payout_cycle_id FK
+        string aggregate_state
+        decimal claimed_amount_total
+        decimal remaining_amount_total
+        string derivation_state
+        datetime observed_at
+    }
 
-Authorization must evaluate:
-- caller identity and route family
-- whether target cycle is public-safe, first-party-safe, or privileged internal state
-- actor entitlement for first-party-safe views
-- whether internal service has write privilege for lifecycle mutations
-- whether admin/operator role is present for correction or publication actions
-- whether current state allows requested mutation
+    DISCREPANCY_CASE {
+        uuid id PK
+        uuid payout_cycle_id FK
+        string discrepancy_type
+        string severity
+        string state
+        string resolution_code
+        datetime opened_at
+        datetime closed_at
+    }
+```
 
-### 12.3 Sensitive action rules
+## Flow View
 
-The following require heightened checks:
-- cycle publication
-- correction or supersession of visible cycles
-- manual claim-state aggregate changes
-- linkage changes to eligibility or funding references after publication
-- discrepancy-resolution actions
+### Primary Synchronous Creation Flow
 
----
+1. Internal service submits `POST /internal/v1/payout-ledger/cycles` with `Idempotency-Key`, `X-Correlation-ID`, cycle label, period reference, and optional policy reference.
+2. API authenticates service identity and validates route permission.
+3. API checks duplicate cycle identifiers and idempotency scope.
+4. API creates draft payout-cycle record and initial version.
+5. API writes audit/activity event and internal lifecycle event.
+6. API returns `201 Created` with cycle identifier, ledger state, version, operation reference, and correlation ID.
 
-## 13. API Endpoints / Interface Contracts
+### Reference Attachment Flow
 
-## 13.1 Public-Read APIs
+1. Internal service attaches eligibility, funding, execution, reporting, or registry reference through the specific command route.
+2. API validates the reference shape and lifecycle compatibility.
+3. API does not reinterpret external truth; it records linkage and validation state.
+4. API updates ledger state only if required references satisfy lifecycle transition rules.
+5. API emits replay-safe reference-linked event and audit record.
 
-### 13.1.1 `GET /v1/payout-ledger/cycles`
-**Purpose:** list published public-safe payout cycles  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `cycle_status`
-- optional `year`
-- pagination
-**Response Summary:**
-- cycle summaries
-- funded amount summary where public-safe
-- payout asset and chain summary
-- claims-open/closed posture
-- correction or supersession status
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
+### Publication Flow
 
-### 13.1.2 `GET /v1/payout-ledger/cycles/{payout_cycle_id}`
-**Purpose:** retrieve one public-safe payout-cycle detail  
-**Caller Type:** public  
-**Response Summary:**
-- cycle detail
-- funding reference summary
-- eligibility basis summary
-- claim-state aggregate summary
-- reporting and registry references where public-safe
-- correction or supersession guidance where relevant
-**Side Effects:** none
+1. Admin submits publication command with visibility target, reason code, operator note, idempotency key, and correlation ID.
+2. API verifies operator authority, policy, eligibility reference, funding reference where needed, execution reference where needed, restricted-field filtering, and current lifecycle state.
+3. API creates visibility-state record and, when needed, async projection refresh operation.
+4. API returns terminal publication result or `202 Accepted` with operation reference.
+5. Public/holder/reporting projections update asynchronously and MUST preserve correction/supersession lineage.
 
-## 13.2 First-Party Authenticated Read APIs
+### Correction / Supersession Flow
 
-### 13.2.1 `GET /v1/payout-ledger/me/cycles`
-**Purpose:** retrieve bounded first-party-safe payout-cycle summaries for current actor where policy allows  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `cycle_status`
-- pagination
-**Response Summary:**
-- bounded cycle summaries
-- first-party-safe claim status summaries
-- guidance for related first-party payout surfaces if applicable
-**Side Effects:** none
+1. Admin submits correction or supersession request with reason code and target record/version.
+2. API verifies lifecycle state, materiality, allowed correction type, and policy approval.
+3. API creates correction or supersession lineage; it MUST NOT silently overwrite published trust-sensitive history.
+4. API emits event, writes audit record, and triggers projection refresh.
+5. Public and reporting outputs show corrected/superseded posture where omission would mislead.
 
-### 13.2.2 `GET /v1/payout-ledger/me/cycles/{payout_cycle_id}`
-**Purpose:** retrieve one bounded first-party-safe payout-cycle detail  
-**Caller Type:** authenticated user with authorized visibility  
-**Response Summary:**
-- bounded cycle status
-- claim-safe summary
-- related reporting and eligibility-safe references where policy allows
-**Side Effects:** none
+### Reconciliation / Discrepancy Flow
 
-## 13.3 Internal Service APIs
+1. Event, scheduled job, or operator triggers reconciliation across ledger, eligibility, treasury, execution, reporting, registry, and audit references.
+2. API records reconciliation result and marks discrepancy if references are missing, stale, inconsistent, unsafe, delayed, or conflicting.
+3. API returns accepted or terminal remediation state.
+4. Admin resolves discrepancy through bounded actions: restrict, correct, supersede, republish, close, or leave under review.
 
-### 13.3.1 `POST /internal/v1/payout-ledger/cycles`
-**Purpose:** create draft payout-cycle ledger record  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
-- `payout_cycle_label`
-- `period_reference`
-- optional `policy_version_reference`
-- optional `notes_summary`
-- `idempotency_key`
-**Response Summary:** payout-cycle summary
-**Side Effects:** creates draft payout-cycle record and initial version lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** sensitive cycle-creation audit
-**Emitted Events:** `payout_ledger.cycle_created`
+### Failure / Retry Flow
 
-### 13.3.2 `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/funding-records`
-**Purpose:** attach funding record to one cycle  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `funded_amount`
-- `payout_asset`
-- `payout_chain`
-- `funding_reference`
-- `funded_at`
-- `idempotency_key`
-**Response Summary:** funding-record summary and updated cycle state
-**Side Effects:** creates funding linkage and may move cycle to funded state
-**Idempotency Behavior:** required
-**Audit Requirements:** funding-record audit
-**Emitted Events:** `payout_ledger.funding_recorded`
+1. If a mutation fails before durable commit, idempotency record MAY remain retryable according to policy.
+2. If a mutation commits but projection fails, canonical ledger truth remains committed and projection refresh remains async.
+3. If an idempotent replay matches original request hash, original terminal response is returned.
+4. If replay uses same key with different semantic request, API returns idempotency conflict.
+5. If retry risks duplicate funding, duplicate claim aggregate, or misleading publication, API blocks and requires remediation.
 
-### 13.3.3 `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/eligibility-references`
-**Purpose:** attach structural eligibility basis reference to one cycle  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `snapshot_reference`
-- `eligibility_basis_reference`
-- `policy_version_reference`
-- `idempotency_key`
-**Response Summary:** eligibility-reference summary
-**Side Effects:** creates eligibility-basis linkage
-**Idempotency Behavior:** required
-**Audit Requirements:** eligibility-link audit
-**Emitted Events:** `payout_ledger.eligibility_linked`
+## Data Flows — Mermaid sequenceDiagram
 
-### 13.3.4 `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/execution-references`
-**Purpose:** attach Base payout execution reference to one cycle  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `execution_reference_type`
-- `execution_reference_id`
-- optional `execution_summary`
-- `idempotency_key`
-**Response Summary:** execution-reference summary and updated cycle state
-**Side Effects:** creates execution linkage and may advance cycle state
-**Idempotency Behavior:** required
-**Audit Requirements:** execution-link audit
-**Emitted Events:** `payout_ledger.execution_linked`
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Svc as Internal Service
+    participant API as Payout Ledger API
+    participant Auth as AuthZ / Policy Engine
+    participant Idem as Idempotency Store
+    participant Store as Canonical Ledger Store
+    participant Audit as Audit Log
+    participant Bus as Event Bus
+    participant Exec as Base Execution Service
+    participant Proj as Derived Projections
+    participant Admin as Admin Operator
+    participant Pub as Public Reader
 
-### 13.3.5 `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/claim-aggregates`
-**Purpose:** record or refresh cycle-level claim-state aggregate  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `claim_state`
-- `claimed_amount_total`
-- `remaining_amount_total`
-- optional `claim_progress_summary`
-- `idempotency_key`
-**Response Summary:** claim-aggregate summary and updated cycle state
-**Side Effects:** creates or supersedes aggregate claim-state view
-**Idempotency Behavior:** required
-**Audit Requirements:** claim-aggregate audit
-**Emitted Events:** `payout_ledger.claim_aggregate_updated`
+    Svc->>API: POST /internal/v1/payout-ledger/cycles + Idempotency-Key
+    API->>Auth: Validate service identity and scope
+    Auth-->>API: Authorized
+    API->>Idem: Reserve key + request hash
+    API->>Store: Create payout_cycle + version
+    API->>Audit: Write cycle_created audit reference
+    API->>Bus: Emit payout_ledger.cycle_created
+    API-->>Svc: 201 Created + cycle_id + correlation_id
 
-### 13.3.6 `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/reporting-references`
-**Purpose:** attach reporting and registry references to one payout cycle  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- optional `reporting_reference_ids[]`
-- optional `registry_reference_ids[]`
-- `idempotency_key`
-**Response Summary:** reference-link summary
-**Side Effects:** creates reporting and/or registry linkage
-**Idempotency Behavior:** required
-**Audit Requirements:** reporting-link audit where sensitivity requires
-**Emitted Events:** `payout_ledger.references_linked`
+    Exec->>API: POST execution reference / claim aggregate
+    API->>Auth: Validate service and lifecycle
+    API->>Idem: Check replay safety
+    API->>Store: Attach execution reference / aggregate summary
+    API->>Audit: Write execution_linked / aggregate audit
+    API->>Bus: Emit payout_ledger.execution_linked or claim_aggregate_updated
+    API-->>Exec: 200/202 + operation reference
 
-### 13.3.7 `GET /internal/v1/payout-ledger/cycles/{payout_cycle_id}`
-**Purpose:** retrieve canonical payout-cycle ledger truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full cycle, versions, funding, eligibility, execution, claim aggregate, reporting, registry, and discrepancy lineage
-**Side Effects:** none
+    Admin->>API: POST /admin/v1/payout-ledger/cycles/{id}/publish
+    API->>Auth: Validate admin role, reason code, policy, state
+    API->>Store: Create visibility state
+    API->>Audit: Write critical publication audit
+    API->>Bus: Emit payout_ledger.cycle_published
+    Bus->>Proj: Refresh public / holder / reporting views
+    API-->>Admin: 200 or 202 Accepted + operation reference
 
-## 13.4 Admin / Control-Plane APIs
+    Pub->>API: GET /v1/payout-ledger/cycles/{id}
+    API->>Store: Read canonical ledger + visibility filter
+    API-->>Pub: Public-safe cycle detail + correction/supersession posture
+```
 
-### 13.4.1 `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/publish`
-**Purpose:** publish payout-cycle ledger record to public-safe or first-party-safe visibility state  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `visibility_target`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** published cycle summary
-**Side Effects:** visibility state changes to published_public or published_first_party
-**Audit Requirements:** critical audit
-**Emitted Events:** `payout_ledger.cycle_published`
+## Request Model
 
-### 13.4.2 `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/correct`
-**Purpose:** apply correction-safe metadata or summary correction to one payout cycle  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `correction_type`
-- `correction_summary`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** correction summary
-**Side Effects:** creates corrected or superseding version lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `payout_ledger.cycle_corrected`
+### Common Headers
 
-### 13.4.3 `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/supersede`
-**Purpose:** supersede one payout-cycle record with another corrected or replacement cycle record  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_payout_cycle_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates old-to-new supersession linkage and updates current visibility preference
-**Audit Requirements:** critical audit
-**Emitted Events:** `payout_ledger.cycle_superseded`
+- `Authorization` where required by route family
+- `Idempotency-Key` for all material mutation commands
+- `X-Correlation-ID` for all mutations and SHOULD be present for reads initiated by first-party or internal clients
+- `X-Request-ID` for request tracing
+- `Content-Type: application/json` for requests with bodies
+- `Accept: application/json`
 
-### 13.4.4 `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/close`
-**Purpose:** close payout-cycle ledger record under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `closure_reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** closed cycle summary
-**Side Effects:** cycle moves to claims_closed or closed state according to allowed lifecycle
-**Audit Requirements:** critical audit
-**Emitted Events:** `payout_ledger.cycle_closed`
+### Common Mutation Fields
 
-### 13.4.5 `POST /admin/v1/payout-ledger/discrepancies`
-**Purpose:** resolve payout-ledger discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, republish, restrict, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `payout_ledger.discrepancy_resolved`
+Mutation bodies MUST include or derive:
 
----
+- target resource identifier where applicable
+- reason code for admin/control actions
+- operator note for admin/control actions where policy requires
+- reference type and reference identifier for external-domain linkages
+- expected current state or version for concurrency-sensitive mutations
+- operation metadata sufficient for audit and reconciliation
 
-## 14. Request Rules
+### Forbidden Request Patterns
 
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive payout-ledger mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored payout-cycle truth as authoritative input
+- frontend-authored cycle truth as authoritative input
+- generic arbitrary update payloads
+- silently overwriting `cycle_status`, `visibility_state`, `funding_reference`, `eligibility_reference`, or `execution_reference`
+- mutation without idempotency for material state changes
+- admin mutation without reason code and audit context
+- public request fields that imply write authority or hidden field expansion
 
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- publication of payout cycles
-- correction or supersession of visible cycles
-- funding or eligibility linkage changes after publication
-- manual claim-aggregate updates
-- discrepancy-resolution actions
+## Response Model
 
-Heightened validation may include:
-- cycle-state checks
-- funding-reference and eligibility-basis integrity checks
-- execution-reference consistency checks
-- visibility-class checks
-- operator role confirmation
-- governance/finance/security case linkage for sensitive actions
+### Success Responses
 
-### 14.3 Scope integrity rule
-Payout-ledger mutations must target valid and authorized cycles, versions, references, and discrepancy records. Services and operators must not mutate unrelated or unauthorized payout-ledger state.
+Successful responses MUST include:
 
-### 14.4 Layer-separation rule
-The payout ledger must remain the cycle-level record layer and must not collapse:
-- payout contract execution truth,
-- eligibility basis construction,
-- raw audit detail,
-- or transparency reporting
-into one ambiguous state object.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
 - stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- cycle, funding, or claim summaries where relevant
-- visibility and correction/supersession summaries where relevant
-- correlation references for mutations
+- ledger state and visibility state where relevant
+- version or lineage reference where relevant
+- created/updated/published/closed timestamps where relevant
+- public-safe or privileged field filtering according to route family
+- correction and supersession posture where relevant
+- correlation ID for mutations
+- operation reference for async or accepted-state work
 
-### 15.2 Async-accepted response rules
-If claim-aggregate refresh, publication propagation, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
+### Async Accepted Responses
 
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target cycle or discrepancy
-- mutation type
-- resulting cycle/version/visibility state
-- correction, supersession, closure, or publication effects where relevant
-- whether public or first-party views may refresh asynchronously
+When projection, reconciliation, claim-aggregate refresh, publication propagation, or remediation is asynchronous, the API MUST return:
 
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal cycle truth
-- public-safe cycle detail
-- first-party-safe cycle detail
-- execution reference versus actual user-specific claim settlement data
+- `202 Accepted`
+- `operation_id`
+- `operation_state = accepted`
+- target resource reference
+- current known state
+- status endpoint where applicable
+- warning that accepted does not equal final business outcome
 
----
+### Public Read Responses
 
-## 16. Error Model
+Public read responses MUST distinguish:
 
-The API uses structured problem-details style error responses.
+- cycle identity
+- ledger state
+- public-safe funding summary
+- public-safe eligibility basis summary
+- public-safe execution/claim-state posture
+- public-safe reporting and registry references
+- correction/supersession/closure posture
+- whether aggregate data is delayed, partial, derived, or final
 
-### 16.1 Required error fields
+### Internal Canonical Read Responses
+
+Internal canonical reads MAY include full linkage and discrepancy detail according to service authorization, but MUST still identify canonical, derived, restricted, audit-reference, and external-reference fields distinctly.
+
+## Error / Result / Status Model
+
+Errors MUST use structured problem-details-style JSON with:
+
 - `type`
 - `title`
 - `status`
@@ -757,727 +767,709 @@ The API uses structured problem-details style error responses.
 - `detail`
 - `instance`
 - `correlation_id`
+- `retryable`
+- `safe_to_display`
+- `operation_id` where applicable
 
-### 16.2 Common error codes
+### Required Error Families
 
-#### Authorization / permission errors
+#### Authentication / Authorization
+
+- `PAYOUT_LEDGER_AUTHENTICATION_REQUIRED`
 - `PAYOUT_LEDGER_PERMISSION_DENIED`
-- `PAYOUT_LEDGER_OPERATOR_PERMISSION_DENIED`
 - `PAYOUT_LEDGER_SERVICE_PERMISSION_DENIED`
+- `PAYOUT_LEDGER_OPERATOR_PERMISSION_DENIED`
 - `PAYOUT_LEDGER_AUDIENCE_PERMISSION_DENIED`
+- `PAYOUT_LEDGER_FIELD_VISIBILITY_DENIED`
 
-#### State conflict errors
+#### State and Conflict
+
 - `PAYOUT_LEDGER_CYCLE_STATE_INVALID`
-- `PAYOUT_LEDGER_VERSION_STATE_INVALID`
+- `PAYOUT_LEDGER_VERSION_CONFLICT`
 - `PAYOUT_LEDGER_VISIBILITY_STATE_INVALID`
+- `PAYOUT_LEDGER_ALREADY_PUBLISHED`
 - `PAYOUT_LEDGER_SUPERSESSION_CONFLICT`
 - `PAYOUT_LEDGER_CLOSE_CONFLICT`
+- `PAYOUT_LEDGER_DISCREPANCY_UNRESOLVED`
 
-#### Policy / safety errors
-- `PAYOUT_LEDGER_FUNDING_REFERENCE_REQUIRED`
+#### Reference / Lineage
+
+- `PAYOUT_LEDGER_POLICY_REFERENCE_REQUIRED`
 - `PAYOUT_LEDGER_ELIGIBILITY_REFERENCE_REQUIRED`
-- `PAYOUT_LEDGER_PUBLICATION_FORBIDDEN`
-- `PAYOUT_LEDGER_CORRECTION_NOT_ALLOWED`
-- `PAYOUT_LEDGER_PRIVATE_METADATA_FORBIDDEN`
+- `PAYOUT_LEDGER_FUNDING_REFERENCE_REQUIRED`
+- `PAYOUT_LEDGER_EXECUTION_REFERENCE_REQUIRED`
+- `PAYOUT_LEDGER_REPORTING_REFERENCE_INVALID`
+- `PAYOUT_LEDGER_REGISTRY_REFERENCE_INVALID`
+- `PAYOUT_LEDGER_REFERENCE_RECONCILIATION_FAILED`
 
-#### Request integrity errors
+#### Idempotency / Replay
+
 - `PAYOUT_LEDGER_IDEMPOTENCY_KEY_REQUIRED`
+- `PAYOUT_LEDGER_IDEMPOTENCY_CONFLICT`
+- `PAYOUT_LEDGER_REPLAY_BLOCKED`
+
+#### Request Integrity
+
 - `PAYOUT_LEDGER_REQUEST_INVALID`
 - `PAYOUT_LEDGER_REQUEST_UNPROCESSABLE`
+- `PAYOUT_LEDGER_REASON_CODE_REQUIRED`
+- `PAYOUT_LEDGER_OPERATOR_NOTE_REQUIRED`
 
-#### Dependency or provider errors
+#### Dependency / Runtime
+
 - `PAYOUT_LEDGER_EXECUTION_UNAVAILABLE`
-- `PAYOUT_LEDGER_STORAGE_UNAVAILABLE`
+- `PAYOUT_LEDGER_ELIGIBILITY_UNAVAILABLE`
+- `PAYOUT_LEDGER_TREASURY_REFERENCE_UNAVAILABLE`
+- `PAYOUT_LEDGER_PROJECTION_DELAYED`
 - `PAYOUT_LEDGER_RECONCILIATION_UNAVAILABLE`
+- `PAYOUT_LEDGER_STORAGE_UNAVAILABLE`
 
-### 16.3 Error handling rules
-- do not expose hidden internal treasury/security detail in public or low-privilege responses
-- do not imply complete economic explanation from raw funding or raw contract linkage alone
-- distinguish no public cycle from forbidden first-party audience access
-- distinguish missing reference requirements from generic invalid state
-- include retry guidance only where safe
+#### Public Safety
 
----
+- `PAYOUT_LEDGER_PUBLICATION_FORBIDDEN`
+- `PAYOUT_LEDGER_PRIVATE_METADATA_FORBIDDEN`
+- `PAYOUT_LEDGER_PUBLIC_VIEW_RESTRICTED`
 
-## 17. Idempotency and Mutation Safety
+## Idempotency / Retry / Replay Model
 
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
+All material mutations MUST be idempotent, including:
+
 - cycle creation
-- funding-record creation
-- eligibility-reference creation
-- execution-reference creation
-- claim-aggregate refresh
+- policy reference attachment
+- eligibility reference attachment
+- funding record creation
+- execution reference attachment
+- claim aggregate refresh
 - reporting/reference linking
-- publish
-- correct
-- supersede
-- close
-- discrepancy resolution
+- publication
+- restriction
+- correction
+- supersession
+- cancellation
+- closure
+- discrepancy creation/resolution
+- projection refresh requests where externally triggered
 
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
+Idempotency records MUST bind:
 
-### 17.3 Mutation safety rules
-- one canonical visible cycle record per payout cycle identity under current lineage
-- funding, eligibility, and execution linkage must remain referentially consistent
-- claim-aggregate refresh must supersede prior aggregate state cleanly rather than destructively rewriting history
-- corrections must be additive or superseding, not in-place destructive rewrites
-- publication and supersession must preserve historical trust lineage
+- key
+- route family
+- operation family
+- actor/service identity
+- target resource
+- request hash
+- resulting resource/operation reference
+- terminal response hash
+- created/expires timestamps
 
----
+Replay with identical semantic request MUST return the original terminal response or current operation status. Replay with changed semantic payload MUST fail with conflict. Retry MUST be blocked if it may duplicate funding, duplicate ledger creation, duplicate publication, duplicate correction, or mislead public/holder views.
 
-## 18. Versioning and Compatibility Rules
+## Rate Limit / Abuse-Control Model
 
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
+- Public reads MUST be rate-limited and cache-aware.
+- Authenticated holder reads MUST be rate-limited by actor, IP/device signals where applicable, and abuse posture.
+- Internal writes MUST be protected by service identity, route-level quotas, idempotency, and anomaly detection.
+- Admin/control mutations MUST be low-volume, reason-coded, and alertable.
+- Public enumeration of hidden, restricted, unpublished, or private claimant information MUST be prevented.
+- Suspicious repeated publication/correction/discrepancy attempts MUST alert security/operations.
 
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to funded, claims_open, partially_claimed, claims_closed, corrected, or superseded states
-- new reporting-reference or execution-reference types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
+## Endpoint / Route Family Model
 
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of payout-cycle lifecycle states
-- changing public versus first-party visibility semantics incompatibly
-- removing critical funding, eligibility, or execution reference fields
-- changing correction or supersession semantics incompatibly
+### Public Read Routes
 
-Such changes require explicit migration planning and version evolution.
+- `GET /v1/payout-ledger/cycles`
+  - Lists public-safe payout cycles.
+  - Filters MAY include `ledger_state`, `year`, `period_reference`, `payout_asset`, `payout_chain`, `corrected`, `superseded`, and pagination.
+  - MUST NOT expose unpublished, restricted, audit-only, operator-only, or private claimant fields.
 
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
+- `GET /v1/payout-ledger/cycles/{payout_cycle_id}`
+  - Retrieves one public-safe payout-cycle detail.
+  - MUST include correction/supersession status when omission would mislead.
 
----
+- `GET /v1/payout-ledger/cycles/{payout_cycle_id}/lineage`
+  - Retrieves public-safe correction/supersession lineage where approved.
 
-## 19. Event Emission and Webhook Behavior
+### First-Party Authenticated Routes
 
-This domain is event-capable.
+- `GET /v1/payout-ledger/me/cycles`
+  - Retrieves bounded first-party-safe payout-cycle summaries for the authenticated actor where policy allows.
 
-### 19.1 Internal events
-The Payout Ledger domain must emit canonical internal events such as:
+- `GET /v1/payout-ledger/me/cycles/{payout_cycle_id}`
+  - Retrieves bounded holder-safe cycle detail. It MUST NOT expose full private claimant receipt detail unless governed by a separate claimant-history API.
+
+### Internal Service Routes
+
+- `POST /internal/v1/payout-ledger/cycles`
+- `GET /internal/v1/payout-ledger/cycles/{payout_cycle_id}`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/policy-references`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/eligibility-references`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/funding-records`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/execution-references`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/claim-aggregates`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/reporting-references`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/registry-references`
+- `POST /internal/v1/payout-ledger/cycles/{payout_cycle_id}/reconcile`
+- `GET /internal/v1/payout-ledger/discrepancies/{discrepancy_id}`
+
+### Admin / Control-Plane Routes
+
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/publish`
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/restrict`
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/correct`
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/supersede`
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/cancel`
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/close`
+- `POST /admin/v1/payout-ledger/cycles/{payout_cycle_id}/reopen-if-policy-allows`
+- `POST /admin/v1/payout-ledger/discrepancies`
+- `POST /admin/v1/payout-ledger/discrepancies/{discrepancy_id}/resolve`
+
+Admin routes MUST require reason codes, correlation IDs, idempotency keys, operator notes where policy requires, and critical audit records.
+
+### Operation Status Routes
+
+- `GET /internal/v1/payout-ledger/operations/{operation_id}`
+- `GET /admin/v1/payout-ledger/operations/{operation_id}`
+
+Operation status MUST distinguish accepted, running, failed, succeeded, blocked, superseded, and requires-review states.
+
+## Public API Considerations
+
+Public APIs MUST default to narrow, stable, safe contracts. They MAY expose:
+
+- cycle identifier
+- cycle label
+- period reference where public-safe
+- public-safe ledger state
+- public-safe funding summary
+- payout asset and chain
+- public-safe contract/registry references
+- public-safe eligibility-basis summary
+- claim-open/claim-closed/aggregate posture where approved
+- correction/supersession/closure posture
+- reporting references
+- updated/published timestamps
+
+Public APIs MUST NOT expose:
+
+- internal operator notes
+- raw audit trails
+- internal incident details
+- private claimant-level data
+- restricted treasury controls
+- signer/routing/security internals
+- unpublished references
+- raw execution/provider diagnostics
+
+## First-Party Application API Considerations
+
+First-party apps MAY show holder-safe status, but MUST distinguish:
+
+- cycle ledger state
+- claim-state summary
+- user-specific claim/receipt status if consumed from a separate governed claimant API
+- public explanatory labels
+- delayed or partial aggregate state
+
+The first-party app MUST NOT derive eligibility from UI state, wallet link alone, dashboard cache, or public report copy.
+
+## Internal Service API Considerations
+
+Internal services MUST:
+
+- authenticate via service identity
+- use least-privilege route scopes
+- provide idempotency keys on mutations
+- provide correlation IDs
+- use explicit reference attachment routes
+- validate state transitions
+- not perform broad-write shortcuts
+- not mutate adjacent domain truth through ledger routes
+- emit or consume replay-safe events with schema versions
+
+## Admin / Control-Plane API Considerations
+
+Admin/control-plane operations MUST be:
+
+- explicit
+- bounded
+- policy-constrained
+- reason-coded
+- audited
+- idempotent
+- protected by privileged role and contextual authorization
+- unable to silently erase published history
+- visible to operations/security where material
+
+High-risk admin operations include post-publication correction, supersession, restriction, manual aggregate change, funding-reference change, eligibility-reference change, close/reopen, and discrepancy resolution.
+
+## Event / Webhook / Async API Considerations
+
+### Internal Events
+
+Required event families SHOULD include:
+
 - `payout_ledger.cycle_created`
-- `payout_ledger.funding_recorded`
+- `payout_ledger.policy_reference_attached`
 - `payout_ledger.eligibility_linked`
+- `payout_ledger.funding_recorded`
 - `payout_ledger.execution_linked`
 - `payout_ledger.claim_aggregate_updated`
 - `payout_ledger.references_linked`
 - `payout_ledger.cycle_published`
+- `payout_ledger.cycle_restricted`
 - `payout_ledger.cycle_corrected`
 - `payout_ledger.cycle_superseded`
+- `payout_ledger.cycle_cancelled`
 - `payout_ledger.cycle_closed`
+- `payout_ledger.reconciliation_started`
+- `payout_ledger.reconciliation_completed`
+- `payout_ledger.discrepancy_detected`
 - `payout_ledger.discrepancy_resolved`
+- `payout_ledger.projection_refresh_requested`
+- `payout_ledger.projection_refreshed`
 
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
+### Event Payload Minimums
+
+Events MUST include:
+
+- event id
 - event type
+- event version
 - occurred_at
-- payout cycle ID
-- funding or execution reference where relevant
-- actor type
-- correlation ID
+- source service
+- payout_cycle_id where applicable
+- target version/reference/discrepancy id where applicable
+- operation id
+- correlation id
+- causation id where applicable
+- actor/service type
 - reason code where applicable
+- visibility classification
 
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound payout-ledger webhooks by default. Any future outbound cycle-status webhook surface must be narrow, security-reviewed, and governed by a separate contract.
+### External Webhooks
 
----
+No broad third-party outbound payout-ledger webhook surface is approved by default. Future external webhooks MUST be separately specified, narrow, versioned, signed, rate-limited, replay-safe, privacy-reviewed, and public-safe.
 
-## 20. Audit and Activity Requirements
+## Chain-Adjacent API Considerations
 
-The following actions must generate durable audit events:
+The API may store Base chain and payout-contract references as execution references, but:
 
-- cycle creation
-- funding and eligibility linkage
-- publication
-- correction and supersession
-- claim-aggregate correction or refresh for sensitive cycles
-- closure and discrepancy-resolution actions
-- other sensitive payout-ledger mutations
+- Base execution owns raw contract-state facts
+- chain observations alone do not create payout-cycle ledger truth
+- chain transaction presence does not prove eligibility basis, treasury authority, public publication, or ledger closure
+- chain reorg, provider delay, RPC/indexing discrepancy, or receipt mismatch MUST be handled as execution or reconciliation uncertainty
+- public chain links MUST be registry-approved or public-safe before exposure
 
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target cycle / version / funding / execution / discrepancy reference as applicable
+## Data Model / Storage Support Implications
+
+Canonical storage SHOULD maintain durable records for:
+
+- payout cycles
+- cycle versions
+- policy references
+- eligibility references
+- funding records
+- execution references
+- claim aggregates
+- reporting references
+- registry references
+- visibility states
+- corrections
+- supersession links
+- discrepancy cases
+- reconciliation runs
+- operations
+- idempotency records
+- audit references
+
+Storage MUST support append-only or lineage-preserving change semantics for material trust-sensitive state. Physical schema may vary, but implementation MUST preserve logical entity ownership, referential integrity, idempotency, auditability, and lineage.
+
+## Read Model / Projection / Reporting Rules
+
+Derived read models MAY include:
+
+- public payout-cycle history
+- holder-safe payout status
+- admin cycle-control views
+- transparency-report inputs
+- registry-linked public views
+- finance reconciliation exports
+- operations discrepancy queues
+- search and cache indexes
+
+Derived models MUST:
+
+- identify their derivation source and freshness where material
+- preserve correction/supersession lineage where omission would mislead
+- label delayed, partial, estimated, or final aggregates
+- remain subordinate to canonical payout-ledger records
+- not invent cycle existence or meaning from contract observations alone
+- not merge ledger state, funding state, claim state, visibility state, and presentation label into one ambiguous field
+- not become mutation owners
+
+## Security / Risk / Privacy Controls
+
+The API MUST protect against:
+
+- unauthorized cycle mutation
+- unauthorized publication or restriction changes
+- replay or duplicate mutation processing
+- mis-linkage to eligibility, treasury, execution, reporting, or registry references
+- spoofed or unofficial contract/wallet references
+- private claimant data exposure
+- unsafe internal treasury, signer, routing, or security detail exposure
+- silent post-publication rewrite
+- discrepancy suppression
+- abuse of public enumeration routes
+- compromised service or operator credentials
+
+Sensitive mutation paths MUST be monitored, alertable, and subject to privileged access controls stronger than ordinary product write APIs.
+
+## Audit / Traceability / Observability Requirements
+
+Material operations MUST produce audit records including:
+
+- actor/service identity
+- target resource identifiers
 - action type
-- before/after summary where applicable
+- before/after summary where safe and useful
 - reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
-Public-facing activity may show selected cycle publication events through other bounded surfaces, but canonical internal audit truth remains durable and immutable.
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `payout_cycles`
-- `id` PK
-- `payout_cycle_label`
-- `period_reference`
-- `cycle_status`
-- `policy_version_reference` nullable
-- `visibility_state`
-- `created_at`
-- `updated_at`
-- `published_at` nullable
-- `closed_at` nullable
-
-**Constraints:**
-- unique `payout_cycle_label`
-- index on `cycle_status`
-- index on `visibility_state`
-
-### 21.2 `payout_cycle_versions`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `cycle_version`
-- `state`
-- `created_at`
-- `published_at` nullable
-- `superseded_at` nullable
-
-**Constraints:**
-- unique (`payout_cycle_id`, `cycle_version`)
-- index on `state`
-
-### 21.3 `payout_cycle_funding_records`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `funded_amount`
-- `payout_asset`
-- `payout_chain`
-- `funding_reference`
-- `funded_at`
-- `created_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-
-### 21.4 `payout_cycle_eligibility_references`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `snapshot_reference`
-- `eligibility_basis_reference`
-- `policy_version_reference`
-- `created_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-
-### 21.5 `payout_cycle_execution_references`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `execution_reference_type`
-- `execution_reference_id`
-- `execution_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-- index on (`execution_reference_type`, `execution_reference_id`)
-
-### 21.6 `payout_cycle_claim_aggregates`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `claim_state`
-- `claimed_amount_total`
-- `remaining_amount_total`
-- `claim_progress_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-
-### 21.7 `payout_cycle_reporting_references`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `reporting_reference_id`
-- `created_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-
-### 21.8 `payout_cycle_registry_references`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `registry_reference_id`
-- `created_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-
-### 21.9 `payout_cycle_visibility_states`
-- `id` PK
-- `payout_cycle_id` FK -> `payout_cycles.id`
-- `state`
-- `reason_code` nullable
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- index on `payout_cycle_id`
-- index on `state`
-
-### 21.10 `payout_cycle_supersession_links`
-- `id` PK
-- `from_payout_cycle_id` FK -> `payout_cycles.id`
-- `to_payout_cycle_id` FK -> `payout_cycles.id`
-- `reason_code`
-- `created_at`
-
-**Constraints:**
-- unique (`from_payout_cycle_id`, `to_payout_cycle_id`)
-- index on `from_payout_cycle_id`
-- index on `to_payout_cycle_id`
-
-### 21.11 `payout_cycle_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.12 `payout_cycle_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.13 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.14 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical payout-ledger truth stays in cycles, versions, funding records, eligibility references, execution references, claim aggregates, and correction/discrepancy records
-- public and first-party views must derive from canonical cycle truth filtered by disclosure policy
-- raw user claim history and deep audit details remain outside the primary cycle record
-- reporting and registry links remain explicit rather than embedded as opaque strings
-
-### Reconciliation notes
-- one visible cycle should reconcile to one current cycle identity under current lineage
-- funding state must reconcile to payout execution contract funding references
-- eligibility basis must reconcile to snapshot and eligibility outputs
-- claim aggregate state must reconcile to downstream execution summaries
-- discrepancy cases must preserve review lineage for failed or conflicting cycle conditions
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    PLAPI[Payout Ledger API<br/>fuze-backend-api]
-    CycleStore[(payout_cycles)]
-    FundingStore[(payout_cycle_funding_records)]
-    EligibilityStore[(payout_cycle_eligibility_references)]
-    ExecutionStore[(payout_cycle_execution_references)]
-    ClaimStore[(payout_cycle_claim_aggregates)]
-    VisibilityStore[(payout_cycle_visibility_states)]
-    InternalSvc[Internal FUZE Services]
-
-    PublicUser --> PLAPI
-    AuthUser --> WebApp
-    WebApp --> PLAPI
-    AdminUI --> PLAPI
-    InternalSvc --> PLAPI
-
-    PLAPI --> CycleStore
-    PLAPI --> FundingStore
-    PLAPI --> EligibilityStore
-    PLAPI --> ExecutionStore
-    PLAPI --> ClaimStore
-    PLAPI --> VisibilityStore
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    payout_cycles ||--o{ payout_cycle_versions : versions
-    payout_cycles ||--o{ payout_cycle_funding_records : funded_by
-    payout_cycles ||--o{ payout_cycle_eligibility_references : based_on
-    payout_cycles ||--o{ payout_cycle_execution_references : executes_via
-    payout_cycles ||--o{ payout_cycle_claim_aggregates : aggregates
-    payout_cycles ||--o{ payout_cycle_reporting_references : reports_to
-    payout_cycles ||--o{ payout_cycle_registry_references : references
-    payout_cycles ||--o{ payout_cycle_mutation_actions : tracks
-
-    payout_cycles {
-        uuid id PK
-        string payout_cycle_label
-        string period_reference
-        string cycle_status
-        string visibility_state
-        datetime created_at
-        datetime updated_at
-        datetime published_at
-        datetime closed_at
-    }
-
-    payout_cycle_versions {
-        uuid id PK
-        uuid payout_cycle_id FK
-        int cycle_version
-        string state
-        datetime created_at
-        datetime published_at
-        datetime superseded_at
-    }
-
-    payout_cycle_funding_records {
-        uuid id PK
-        uuid payout_cycle_id FK
-        decimal funded_amount
-        string payout_asset
-        string payout_chain
-        string funding_reference
-        datetime funded_at
-        datetime created_at
-    }
-
-    payout_cycle_eligibility_references {
-        uuid id PK
-        uuid payout_cycle_id FK
-        string snapshot_reference
-        string eligibility_basis_reference
-        string policy_version_reference
-        datetime created_at
-    }
-
-    payout_cycle_execution_references {
-        uuid id PK
-        uuid payout_cycle_id FK
-        string execution_reference_type
-        string execution_reference_id
-        datetime created_at
-    }
-
-    payout_cycle_claim_aggregates {
-        uuid id PK
-        uuid payout_cycle_id FK
-        string claim_state
-        decimal claimed_amount_total
-        decimal remaining_amount_total
-        datetime created_at
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path — initialize, fund, publish
-1. internal service creates draft payout-cycle ledger record
-2. funding record is attached after treasury-authorized funding occurs
-3. eligibility basis and execution references are attached
-4. claim-state aggregate is initialized or refreshed
-5. admin publishes the cycle to public-safe or first-party-safe visibility
-6. readers can inspect a structured cycle record rather than reconstructing meaning from raw contract activity
-
-### 24.2 Happy path — claim lifecycle updates
-1. cycle enters claims_open state
-2. claim executions occur on Base payout layer
-3. internal service refreshes aggregate claim-state summary
-4. payout ledger exposes cycle-level claim progress and closure posture
-5. cycle later transitions to claims_closed or closed
-
-### 24.3 Alternate path — corrected or superseded cycle
-1. visible cycle later requires correction or replacement
-2. corrected cycle version or replacement cycle is created
-3. admin supersedes the older cycle
-4. older record remains historically visible according to policy with supersession guidance
-5. new cycle becomes current trust surface
-
-### 24.4 Failure path — missing linkage or invalid publication
-1. publish or visibility change is attempted
-2. backend detects missing funding, eligibility, or required execution/reporting linkage according to policy
-3. request is rejected
-4. no public-visible mutation occurs
-
-### 24.5 Failure and remediation path — stale or inconsistent aggregate state
-1. cycle, funding, execution, or claim-state aggregate becomes stale or inconsistent
-2. admin opens discrepancy-resolution flow
-3. backend preserves existing lineage
-4. corrected aggregate or superseding cycle/version is created
-5. discrepancy closes with preserved history
-
-### 24.6 Close path
-1. claims period ends or cycle reaches closure condition
-2. admin or internal system records closed posture
-3. public-safe cycle view reflects closure
-4. historical lineage remains queryable for trust and reporting purposes
-
-### 24.7 Retry behavior
-- duplicate cycle creation returns same canonical cycle result
-- duplicate funding or eligibility link returns same lineage result where applicable
-- duplicate publish/correct/supersede/close/discrepancy actions return same terminal action result
-- duplicate claim-aggregate refresh returns same resulting aggregate state where applicable
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant S as Internal Service
-    participant API as Payout Ledger API
-    participant CYC as Cycle Store
-    participant FUN as Funding Store
-    participant ELI as Eligibility Store
-    participant EXE as Execution Store
-    participant CLA as Claim Aggregate Store
-
-    S->>API: POST /internal/v1/payout-ledger/cycles
-    API->>CYC: Create draft cycle
-    API-->>S: cycle summary
-
-    S->>API: POST /internal/v1/payout-ledger/cycles/{cycle_id}/funding-records
-    API->>FUN: Create funding record
-    API-->>S: funding summary
-
-    S->>API: POST /internal/v1/payout-ledger/cycles/{cycle_id}/eligibility-references
-    API->>ELI: Create eligibility linkage
-    API-->>S: eligibility summary
-
-    S->>API: POST /internal/v1/payout-ledger/cycles/{cycle_id}/execution-references
-    API->>EXE: Create execution linkage
-    API-->>S: execution summary
-
-    S->>API: POST /internal/v1/payout-ledger/cycles/{cycle_id}/claim-aggregates
-    API->>CLA: Create claim aggregate
-    API-->>S: claim-state summary
-```
-
----
-
-## 26. Security and Risk Controls
-
-1. **Payout-ledger truth is backend-owned**  
-   Frontends and informal channels may not authoritatively define payout-cycle truth.
-
-2. **Cycle-level trust record is distinct from contract execution**  
-   The API must keep the payout ledger separate from the Base payout contract while preserving explicit linkage.
-
-3. **Structured identity is mandatory**  
-   Every payout cycle must have stable identity, lifecycle state, and explicit funding and eligibility references.
-
-4. **Least privilege**  
-   Internal write and admin publish/correct/supersede routes must be limited to authorized services and operators.
-
-5. **Immutable lineage for trust-sensitive corrections**  
-   Corrections and supersession must preserve historical lineage rather than erase prior public meaning.
-
-6. **Public-private field separation**  
-   Public and first-party routes must not expose internal treasury notes, deep audit detail, or unsafe operational metadata.
-
-7. **Problem-details discipline**  
-   Error bodies must be structured and safe, without exposing hidden internal-only details.
-
-8. **Audit immutability**  
-   Sensitive payout-ledger actions require durable immutable audit lineage.
-
-9. **Replay resistance**  
-   Cycle creation, linkage, publication, correction, and discrepancy actions must be idempotent and replay-safe.
-
-10. **Claim-state integrity**  
-    Claim-state aggregates must remain bounded cycle-level truth and must not overstate or misrepresent execution settlement.
-
----
-
-## 27. Operational Considerations
-
-- public and first-party payout-cycle status routes should remain highly available
-- funding, execution, and claim-aggregate linkage is correctness-sensitive and must preserve cycle intelligibility
-- stale aggregate or broken-linkage anomalies should surface clearly to ops views
-- correction and supersession workflows should be observable and retryable
-- monitoring should alert on:
-  - missing funding references for visible cycles
-  - missing eligibility basis for visible cycles
-  - stale claim aggregate refreshes
-  - unusual correction or supersession volume
-  - public-status inconsistency versus canonical state
-  - broken reporting or registry references
-
----
-
-## 28. Acceptance Criteria
-
-1. The API preserves the distinction between payout-ledger cycle truth, Base payout contract execution truth, snapshot/eligibility truth, and transparency-report truth.
-2. Only `fuze-backend-api` owns canonical payout-ledger cycle truth.
-3. Cycles, versions, funding records, eligibility references, execution references, claim aggregates, and correction/discrepancy records are durable and backend-owned.
-4. Public and first-party routes expose only bounded safe cycle status views.
-5. Cycle identity, funding, claim state, and reporting linkage are explicit and durable.
-6. Corrections, supersession, and closure preserve immutable lineage.
-7. Publication, correction, claim-aggregate refresh, and discrepancy actions are idempotent and auditable.
-8. Internal and admin payout-ledger routes are least-privilege and backend-only.
-9. Admin routes require reason-coded privileged authorization.
-10. Event emissions exist for major payout-ledger mutations.
-11. Response and error semantics are stable and machine-readable.
-12. Database schema separates cycles, versions, funding, eligibility, execution, claims, visibility, and discrepancy layers.
-13. Public and first-party consumers can rely on structured cycle records without needing raw contract inspection alone.
-14. Discrepancy handling is supported and safely replayable.
-15. Mermaid diagrams remain consistent with prose and data model.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-1. Internal service creates draft payout-cycle record successfully.
-2. Internal service attaches funding record successfully.
-3. Internal service attaches eligibility reference successfully.
-4. Internal service attaches execution reference successfully.
-5. Internal service refreshes claim aggregate successfully.
-6. Admin publishes cycle successfully.
-7. Admin supersedes corrected cycle successfully.
-8. Public actor reads published cycle summary successfully.
-
-### 29.2 Negative cases
-9. Public user cannot access internal cycle truth or discrepancy detail.
-10. Internal service without write privilege cannot create cycle.
-11. Publication without required funding or eligibility linkage returns `PAYOUT_LEDGER_FUNDING_REFERENCE_REQUIRED` or `PAYOUT_LEDGER_ELIGIBILITY_REFERENCE_REQUIRED`.
-12. Attempt to publish private metadata returns `PAYOUT_LEDGER_PRIVATE_METADATA_FORBIDDEN`.
-13. Attempt to supersede with invalid replacement state returns state conflict.
-14. Authenticated actor without authorized visibility cannot read first-party-safe cycle detail.
-
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call admin publish/correct/supersede routes.
-16. Internal service without claim-aggregate privilege cannot update claim aggregate.
-17. Operator without publication privilege cannot publish cycle.
-18. Published payout-ledger cycle does not prove user-specific claim entitlement or completed settlement by itself.
-
-### 29.4 Idempotency and replay cases
-19. Repeating cycle creation with same idempotency key returns original draft cycle result.
-20. Repeating funding record creation with same idempotency key returns original linkage result.
-21. Repeating publish with same idempotency key returns original publish result.
-22. Repeating correction or discrepancy resolution with same idempotency key returns original terminal action result.
-
-### 29.5 Concurrency cases
-23. Concurrent claim-aggregate refresh attempts preserve one explicit current aggregate lineage and duplicate-safe outcomes where appropriate.
-24. Concurrent publish and correction actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent supersede and close actions preserve explicit visible lineage without ambiguity.
-
-### 29.6 Recovery / admin cases
-26. Stale claim-state aggregate can be corrected under controlled policy with explicit lineage.
-27. Corrected payout cycle remains historically linked to the original record.
-28. Discrepancy resolution closes cycle-linkage or visibility conflict with preserved audit history.
-
-### 29.7 Event and audit cases
-29. Successful cycle creation emits `payout_ledger.cycle_created`.
-30. Successful funding record creation emits `payout_ledger.funding_recorded`.
-31. Successful execution linkage emits `payout_ledger.execution_linked`.
-32. Successful publication emits `payout_ledger.cycle_published`.
-33. Successful discrepancy resolution emits `payout_ledger.discrepancy_resolved` with critical audit lineage.
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-1. Exact first-party-safe claim summary depth is deferred.
-2. Exact public aggregate claim-progress disclosure policy is deferred.
-3. Exact cycle reopening policy after closure is deferred.
-4. Exact version-numbering semantics for minor versus major corrections are deferred.
-5. Exact reporting-reference taxonomy is deferred.
-6. Exact discrepancy taxonomy for payout-ledger linkage conflicts is deferred.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-Recommended backend module layout:
-
-```text
-modules/platform/
-  payout-ledger/
-  payout-execution/
-  snapshot-eligibility/
-  profit-participation/
-  transparency-reporting/
-  audit-log/
-  control-plane/
-  integrations/
-```
-
-Implementation guidance:
-- keep cycle identity, funding linkage, eligibility linkage, execution linkage, claim-aggregate handling, and correction lineage in one canonical domain service
-- perform visibility and linkage-integrity checks inside the commit boundary
-- keep publication, correction, supersession, and closure actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public and first-party-safe cycle views from canonical truth; do not let derived views mutate payout-ledger state
-
----
-
-## 32. Frontend Consumption Notes
-
-### For `fuze-frontend-webapp`
-- may read public cycle/status views and bounded first-party-safe cycle views where approved
-- must not infer full cycle meaning from raw contract balances or isolated claim transactions alone
-- must treat backend payout-ledger responses as authoritative for structured cycle status
-- should clearly distinguish funded, claims_open, partially_claimed, claims_closed, corrected, and superseded states when visible
-
-### For `fuze-frontend-admin`
-- may trigger privileged publish, correct, supersede, close, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical payout-ledger truth client-side
-- should present immutable cycle history and correction lineage separately from current visible state
-
----
-
-## 33. Contract Derivation Notes
-
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public cycle-status and first-party-safe read operations
-- internal cycle creation, linkage, claim-aggregate, and canonical read operations
-- admin publish / correct / supersede / close / discrepancy operations
-- shared problem-details schema
-- payout-ledger lifecycle events in AsyncAPI
-
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public payout-cycle lookup helpers
-- first-party-safe cycle-status helpers for approved surfaces
-- typed payout-cycle, funding, and claim-status summary models
-- problem-error models for payout-ledger outcomes
-
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+- operator note where applicable
+- correlation id
+- idempotency key reference
+- operation id
+- policy version references where applicable
+- timestamp
+
+Observability MUST include metrics, structured logs, traces, and alerts for:
+
+- mutation success/failure
+- idempotency conflicts
+- publication operations
+- correction/supersession operations
+- unresolved discrepancies
+- projection lag
+- claim aggregate staleness
+- missing references
+- dependency failures
+- unsafe access attempts
+
+## Failure Handling / Edge Cases
+
+The API MUST explicitly handle:
+
+1. funding observed before treasury reference is attached
+2. treasury approval present but Base execution funding not yet observed
+3. eligibility basis missing after cycle creation
+4. execution-ready state attempted without approved entitlement input
+5. claim window opened while public ledger publication is delayed
+6. claim aggregate unavailable, delayed, partial, or inconsistent
+7. transparency report published with stale ledger link
+8. registry entry superseded after cycle publication
+9. chain reorg or provider/indexing anomaly affecting claim-state summary
+10. duplicate cycle creation request
+11. duplicate funding or execution reference submission
+12. idempotency replay with changed request hash
+13. post-publication correction needed
+14. supersession required after contained launch issue
+15. operator attempts to mutate finalized/superseded cycle
+16. public route requested for restricted or unpublished cycle
+17. internal dependency unavailable during publication
+18. projection update failure after canonical mutation succeeds
+19. audit write failure for critical mutation
+20. migration of legacy cycle records with incomplete lineage
+
+Failure handling MUST favor explicit uncertainty, restricted visibility, discrepancy posture, accepted-state status, or manual review over inferred success.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+- Route families are versioned under `/v1`, `/internal/v1`, and `/admin/v1` unless a later API-wide versioning standard supersedes this convention.
+- Additive response fields are preferred.
+- State meaning changes are breaking changes.
+- Public/first-party visibility semantics cannot be changed incompatibly without migration and deprecation plan.
+- Correction/supersession semantics cannot be weakened without higher-order approval.
+- Legacy v1 API routes and fields MAY be mapped to v2 resources, but missing lineage MUST be represented explicitly rather than fabricated.
+- Deprecated fields/routes MUST include deprecation metadata and compatibility windows.
+- Public clients MUST receive stable identifiers and correction/supersession relationships during migration.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI artifacts MUST preserve:
+
+- route family separation
+- required headers and idempotency requirements
+- stable resource identifiers
+- visibility field filtering
+- lifecycle state enums
+- correction/supersession lineage schemas
+- structured problem-details errors
+- accepted-state operation schemas
+- public vs internal vs admin response differences
+
+AsyncAPI artifacts MUST preserve:
+
+- event names
+- schema versions
+- stable cycle/reference identifiers
+- correlation/causation ids
+- replay-safe semantics
+- idempotent consumers
+- visibility classification
+
+SDKs MUST NOT provide convenience methods that blur public/internal/admin boundaries, hide idempotency requirements, or flatten state semantics into ambiguous labels.
+
+## Implementation-Contract Guardrails
+
+Implementation contracts MUST preserve:
+
+1. owner-domain mutation boundaries
+2. canonical vs derived truth separation
+3. explicit reference attachment commands
+4. lifecycle state transition checks
+5. visibility-state filtering
+6. idempotency and replay protection
+7. reason-coded admin actions
+8. audit emission before/with material commit where required
+9. event schema versioning
+10. async accepted-state distinction
+11. reconciliation and discrepancy handling
+12. correction/supersession lineage
+13. migration compatibility
+14. public-safe field constraints
+15. no broad-write internal shortcuts
+
+## Downstream Execution Staging
+
+1. Confirm refined semantic alignment and API governance approval.
+2. Define OpenAPI and AsyncAPI artifacts from this API spec.
+3. Define storage/implementation contracts and migration mapping for existing records.
+4. Implement internal service routes and idempotency records first.
+5. Implement admin/control-plane routes with audit and policy gates.
+6. Implement event emission and projection refresh.
+7. Implement public and first-party read routes from canonical records/projections.
+8. Implement reconciliation jobs and discrepancy workflows.
+9. Add contract, integration, security, migration, and regression test suites.
+10. Run production readiness review before public exposure.
+
+## Required Downstream Specs / Contract Layers
+
+- Machine-readable OpenAPI specification for public, first-party, internal, and admin route families
+- AsyncAPI event contract for payout-ledger events
+- Storage / logical schema contract
+- Idempotency-record implementation contract
+- Admin reason-code and policy mapping contract
+- Projection/export schema contract
+- Public-safe field classification matrix
+- Reconciliation job contract
+- QA test plan and regression suite
+- Migration plan for legacy payout-ledger API records
+- Runbook for discrepancy remediation and post-publication correction
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns include:
+
+1. `PATCH /payout-ledger/cycles/{id}` accepting arbitrary canonical state mutations
+2. public route exposing unpublished or restricted ledger records
+3. public route exposing private claimant details as cycle-level truth
+4. UI/admin console mutating ledger truth outside backend APIs
+5. report publication creating or altering payout-cycle ledger records
+6. registry entry creating payout-cycle existence
+7. Base contract event alone creating full payout-cycle history without approved references
+8. treasury book entry alone becoming public cycle ledger truth
+9. eligibility dataset alone opening a cycle for claims
+10. silently overwriting published funding, eligibility, execution, or reporting references
+11. generic `status` field hiding ledger/funding/claim/visibility distinction
+12. spreadsheet/export/cache/dashboard as mutation owner
+13. internal broad-write route bypassing owner-domain checks
+14. accepting async operation as final success
+15. using workspace scope as eligibility or cycle-publication authority
+
+Implementations SHOULD detect and alert on attempted boundary violations.
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example — Funding Reference Attachment
+
+A treasury-approved funding lineage exists and a Base execution funding reference is available. The internal service calls the explicit funding-record route with idempotency key and correlation ID. The API records the funding reference, emits `payout_ledger.funding_recorded`, and leaves claim state unchanged until execution truth provides claim-window facts.
+
+### Anti-Example — Contract Transaction as Full Cycle Truth
+
+A Base transaction is observed and a dashboard immediately displays a new public payout cycle without cycle identifier, eligibility basis, treasury reference, publication policy, or ledger record. This is forbidden.
+
+### Canonical Example — Post-Publication Correction
+
+A reporting reference is discovered to be stale after public publication. Admin submits a correction with reason code. API creates correction lineage, emits event, updates derived projections asynchronously, and public views show corrected/superseded posture where material.
+
+### Anti-Example — Silent Rewrite
+
+An operator directly edits the public view or database row to replace the old reporting reference without correction or audit lineage. This is forbidden.
+
+### Canonical Example — Delayed Claim Aggregate
+
+Execution facts show claims are open but aggregate claim progress is delayed. Public API returns claim posture as open and aggregate state as `aggregate_delayed`; it does not imply final totals.
+
+## Acceptance Criteria
+
+1. Public reads return only records with approved public visibility and never expose restricted fields.
+2. First-party reads require authentication and never compute or redefine entitlement truth.
+3. Every material mutation requires `Idempotency-Key` and `X-Correlation-ID`.
+4. Replaying the same idempotency key with the same semantic request returns the original result or operation status.
+5. Replaying the same key with a different payload fails with `PAYOUT_LEDGER_IDEMPOTENCY_CONFLICT`.
+6. Cycle creation requires stable unique cycle identity and creates initial version lineage.
+7. Funding registration cannot mark canonical funded state without approved funding lineage.
+8. Claim-ready/open publication cannot occur without approved eligibility basis and execution/claim-state reference strategy.
+9. Admin publication requires privileged authorization, reason code, audit record, and visibility-policy validation.
+10. Post-publication correction creates correction lineage and never silently overwrites visible history.
+11. Supersession creates old-to-new lineage visible to internal readers and public readers where omission would mislead.
+12. Claim aggregates distinguish final, delayed, partial, unavailable, and discrepancy states.
+13. Derived projections identify derivation/freshness where material and cannot mutate canonical ledger truth.
+14. Reconciliation mismatch creates or updates discrepancy posture rather than inferred success.
+15. Internal reads distinguish canonical ledger truth from execution, eligibility, reporting, registry, audit, and projection references.
+16. Error responses use structured problem-details shape and include correlation IDs.
+17. Events include stable identifiers, event version, correlation ID, source, and visibility classification.
+18. Public route rate limits prevent enumeration abuse and hidden-field inference.
+19. Migration preserves old identifiers, correction lineage, and public compatibility windows.
+20. OpenAPI, AsyncAPI, and SDK artifacts preserve route-family separation and state semantics.
+21. Audit logs are generated for cycle creation, reference attachment, publication, correction, supersession, closure, restriction, and discrepancy resolution.
+22. Projection failure after canonical mutation results in accepted/degraded projection status, not rollback of committed canonical truth unless transactionality requires it.
+23. Attempted generic broad-write update is rejected or impossible by contract.
+24. Boundary-violation attempts are observable and alertable.
+
+## Test Cases
+
+### Positive Path
+
+1. Create draft cycle with valid service identity, idempotency key, and correlation ID; expect `201`, stable cycle ID, initial version, audit event, and lifecycle event.
+2. Attach approved eligibility reference; expect reference record, event, audit, and no ownership change to eligibility truth.
+3. Attach approved funding record; expect funding record, state transition where allowed, and no treasury-truth reinterpretation.
+4. Attach execution reference and claim aggregate; expect execution linkage, aggregate state, and proper derived/final label.
+5. Publish public-safe cycle; expect visibility state, public projection refresh, audit, event, and public read availability.
+6. Retrieve public detail; expect public-safe fields and correction/supersession posture.
+7. Retrieve internal canonical detail; expect full authorized linkage and distinct truth-class fields.
+
+### Negative / Authorization
+
+8. Public caller requests unpublished cycle; expect not found or restricted response without hidden-state leakage.
+9. Unauthenticated caller requests first-party holder route; expect authentication-required error.
+10. Internal service without route scope attempts funding attachment; expect service-permission-denied.
+11. Admin without privileged role attempts correction; expect operator-permission-denied.
+12. Workspace-scoped user attempts to mutate cycle; expect permission-denied and no state change.
+
+### Idempotency / Replay / Conflict
+
+13. Replay identical cycle creation request; expect original result.
+14. Replay same key with different cycle payload; expect idempotency conflict.
+15. Retry funding attachment after transient failure before commit; expect safe single record.
+16. Retry claim aggregate refresh with changed semantics under same key; expect conflict.
+
+### State / Lifecycle
+
+17. Publish cycle without eligibility reference; expect eligibility-reference-required error.
+18. Publish cycle with missing funding reference where funding is required; expect funding-reference-required error.
+19. Mark claims final while aggregate is delayed; expect state conflict or aggregate-delayed response.
+20. Attempt to close cycle with unresolved critical discrepancy; expect close conflict.
+21. Attempt to mutate superseded cycle without approved correction path; expect version/state conflict.
+
+### Correction / Supersession
+
+22. Correct public-safe reporting reference; expect correction lineage and projection refresh.
+23. Supersede public cycle; expect old-to-new link and public-safe supersession visibility.
+24. Attempt silent overwrite of funding reference; expect forbidden pattern rejection.
+25. Attempt correction without reason code; expect reason-code-required error.
+
+### Reconciliation / Failure
+
+26. Execution truth and ledger claim aggregate disagree; expect discrepancy-under-review.
+27. Funding observed but treasury reference missing; expect discrepancy and no canonical funded finality.
+28. Reporting link stale after report supersession; expect discrepancy or correction workflow.
+29. Projection refresh fails after publication; expect canonical state committed and operation/projection delayed status.
+30. Audit write fails for critical mutation; expect mutation blocked or safely rolled back according to implementation transaction rules.
+
+### Public Safety / Privacy
+
+31. Public read attempts field expansion for audit/operator fields; expect forbidden or ignored fields.
+32. Public route attempts enumeration of restricted cycle IDs; expect rate limiting and no hidden-state leakage.
+33. Holder-safe view attempts to expose private claimant detail through cycle ledger endpoint; expect bounded response or separate governed API requirement.
+
+### Migration / Compatibility
+
+34. Legacy cycle without complete references is migrated; expect explicit unknown/incomplete lineage markers, not fabricated truth.
+35. Deprecated public field remains stable through compatibility window.
+36. SDK method for publish requires idempotency key, reason code, and admin auth context.
+
+### Boundary Violations
+
+37. Dashboard tries to write canonical cycle status; expect rejection.
+38. Transparency report tries to create payout cycle; expect rejection.
+39. Registry entry tries to imply cycle existence; expect no canonical ledger mutation.
+40. Contract event creates execution reference but not full cycle; expect reference/discrepancy posture until ledger prerequisites are met.
+
+## Dependencies / Cross-Spec Links
+
+- `PAYOUT_LEDGER_SPEC.md` — canonical payout-ledger semantics
+- `PROFIT_PARTICIPATION_SYSTEM_SPEC.md` — payout-cycle semantic meaning
+- `SNAPSHOT_AND_ELIGIBILITY_PIPELINE_SPEC.md` — eligibility and entitlement-input truth
+- `BASE_PAYOUT_EXECUTION_LAYER_SPEC.md` — Base execution and claim-state facts
+- `TREASURY_CONTROL_POLICY_SPEC.md` — funding authority and treasury controls
+- `VAULT_ACTION_POLICY_SPEC.md` — vault action constraints where funding movement is vault-linked
+- `MULTISIG_AND_TIMELOCK_SPEC.md` — shared authorization and delayed execution control truth where applicable
+- `TRANSPARENCY_MODEL_SPEC.md` and `TRANSPARENCY_REPORTING_SPEC.md` — public-trust explanation and reporting truth
+- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md` — registry truth for official contracts/wallets
+- `CHAIN_ARCHITECTURE_SPEC.md` and `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md` — chain role and boundary posture
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md` — audit truth
+- `SECURITY_AND_RISK_CONTROL_SPEC.md` — security controls and risk posture
+- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md` — operational monitoring and incident handling
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md` — idempotency and compatibility posture
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` — migration and deprecation posture
+- `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md` and related access/session foundation docs — authentication/session constraints
+- `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md` — workspace access-control constraints where admin/internal tools involve workspace-scoped users
+
+## Explicitly Deferred Items
+
+- final machine-readable OpenAPI files
+- final AsyncAPI event schemas
+- final SDK method names
+- final database physical schema and indexes
+- final public-safe field classification matrix
+- final admin reason-code taxonomy
+- final discrepancy severity taxonomy
+- final migration map for all legacy records
+- claimant-specific receipt/history API scope
+- external webhook contract, if ever approved
+
+## Final Normative Summary
+
+The Payout Ledger API MUST expose FUZE payout-cycle history as structured, durable, auditable, correction-safe ledger truth. It MUST preserve the refined semantic rule that payout-ledger truth links policy, eligibility, funding, execution, claim-state, reporting, registry, and audit references without absorbing those domains. Public and first-party surfaces MUST be bounded and safe. Internal and admin surfaces MUST be explicit, idempotent, audited, and policy-constrained. Derived projections, reports, exports, dashboards, caches, and public pages MUST remain subordinate to canonical ledger records. No API, service, UI, report, contract observation, spreadsheet, or operator shortcut may silently rewrite published trust-sensitive payout history or collapse ledger, execution, eligibility, treasury, reporting, registry, audit, projection, and presentation truth into one ambiguous object.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit.
+- [x] Accepted-state vs final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behaviors are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design diagram uses Mermaid syntax.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior where relevant.

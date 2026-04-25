@@ -1,302 +1,925 @@
-# MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md
-Canonical API Specification for Migration and Backward Compatibility in FUZE
+# FUZE Migration and Backward Compatibility API Specification
 
-## 1. Title
-**MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md**
+## Document Metadata
 
----
-
-## 2. Document Metadata
-- Document Name: `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- Document Type: Canonical API specification
-- Status: Draft for source-of-truth use
-- API Classification: cross-cutting | public | internal | admin | derived-public | event-driven | chain-adjacent
-- Owning Domain: Platform API Governance, Runtime Change Control, and Compatibility Architecture
-- Primary Implementing Repo: `fuze-backend-api`
-- Supporting Repos:
-  - `fuze-frontend-webapp`
-  - `fuze-frontend-admin`
-  - `fuze-contracts`
-  - `fuze-specs`
-  - `fuze-public-registry`
-  - future `fuze-sdk`
-- Primary Systems of Record:
-  - domain-owned canonical tables and service contracts in `fuze-backend-api`
-  - migration registry, compatibility policy, and lineage tables in `fuze-backend-api`
-  - contract and release metadata in `fuze-specs`
-  - published public compatibility artifacts and supersession references in `fuze-public-registry`
-  - explicit on-chain references in `fuze-contracts` and public registry artifacts where contract migration is involved
-- Governing Registries:
-  - `DOCS_SPEC.md`
+- **Document Name:** `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- **Document Type:** API SPEC v2 production-grade interface-contract specification
+- **Status:** Draft for source-of-truth review
+- **Version:** 2.0.0-api-v2
+- **Effective Date:** 2026-04-24
+- **Last Updated:** 2026-04-24
+- **Reviewed On:** 2026-04-24
+- **Document Owner:** FUZE Platform Migration and Compatibility Governance Domain; named individual owner is not explicitly specified in the retrieved governing materials
+- **Approval Authority:** Not explicitly specified in the retrieved governing materials; approval remains governed by the active FUZE approval workflow and higher-order constitutional specification process
+- **Review Cadence:** MUST be reviewed whenever API surface-family posture, contract-version policy, deprecation/sunset policy, migration registry schema, public-trust publication posture, chain-reference migration posture, rollback/forward-fix posture, or owner-domain migration authority materially changes; SHOULD be reviewed quarterly
+- **Governing Layer:** API SPEC v2 / shared platform change-governance and compatibility interface-contract layer
+- **Parent Registry:** `API_SPEC_INDEX.md` for historical API family registry; API SPEC v2 canonical registry order for new production API specs
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend engineering, API authors, implementation-contract authors, product engineering, event/webhook authors, public registry authors, transparency/reporting authors, security, audit, operations, support/control-plane operators, SDK/OpenAPI/AsyncAPI authors, and domain teams executing migrations
+- **Primary Purpose:** Define the production-grade FUZE API contract for migration, backward compatibility, deprecation, sunset, coexistence, supersession, lineage preservation, public notice, and migration-safe evolution across APIs, internal contracts, events, webhooks, identifiers, read models, public artifacts, chain references, and trust-sensitive platform surfaces
+- **Primary Upstream References:**
+  - `REFINED_SYSTEM_SPEC_INDEX.md`
+  - `DOCS_SPEC_INDEX.md`
   - `SYSTEM_SPEC_INDEX.md`
-- Intended Folder: `fuze.ac > docs > api-spec`
-- Machine-readable contract outputs derived later:
-  - OpenAPI deprecation and compatibility conventions
-  - shared migration and lineage schema components
-  - AsyncAPI event versioning conventions
-  - SDK migration guidance and client deprecation metadata
+  - `API_SPEC_INDEX.md`
+  - `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+  - `API_ARCHITECTURE_SPEC.md`
+  - `PUBLIC_API_SPEC.md`
+  - `INTERNAL_SERVICE_API_SPEC.md`
+  - `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+  - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+  - `FEATURE_FLAG_AND_ROLLOUT_CONTROL_SPEC.md`
+  - `WORKFLOW_AND_AUTOMATION_SPEC.md`
+  - `JOB_QUEUE_AND_WORKER_SPEC.md`
+  - `DEPLOYMENT_AND_RUNTIME_OPERATIONS_SPEC.md`
+  - `BUSINESS_CONTINUITY_AND_RECOVERY_SPEC.md`
+  - `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+  - `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md`
+  - `SECURITY_AND_RISK_CONTROL_SPEC.md`
+  - `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
+  - `TRANSPARENCY_MODEL_SPEC.md`
+  - `TRANSPARENCY_REPORTING_SPEC.md`
+  - `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+  - `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
+  - `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
+  - `FUZE_ACCOUNT_ACCESS_AND_SESSION_THESIS_FINAL_SPEC.md`
+  - `FUZE_ACCOUNT_ACCESS_AND_SESSION_CANONICAL_FINAL_SPEC.md`
+  - `FUZE_WORKSPACE_ACCESS_CONTROL_BASICS_THESIS_FINAL_SPEC.md`
+- **Primary Downstream Dependents:**
+  - domain API specifications that evolve contract-bearing resources
+  - OpenAPI deprecation, sunset, lineage, and compatibility components
+  - AsyncAPI migration and version-transition event catalogs
+  - SDK migration metadata, warnings, and generated client behavior
+  - public registry and transparency compatibility publication contracts
+  - release-control runbooks and cutover procedures
+  - migration implementation-contract specs
+  - data migration and backfill specs
+  - product migration plans and coexistence plans
+  - chain-reference replacement and supersession procedures
+- **API Surface Families Covered:** internal service API, admin/control-plane API, public compatibility read API, authenticated first-party compatibility read API, event/async API, webhook API, reporting/public-read API, chain-adjacent reference API
+- **API Surface Families Excluded:** ordinary domain business APIs except where they expose migration/compatibility metadata; raw database migration scripts; chain contract ABI definitions; product UI-only copy; CI/CD implementation internals; ledger/payout/treasury business semantics owned by their respective domains
+- **Canonical System Owner(s):** FUZE Platform Migration and Compatibility Governance Domain for migration and compatibility posture; owner domains retain canonical ownership of their business truth, identifiers, and domain-specific migration meaning
+- **Canonical API Owner:** FUZE Platform API Governance / Runtime Change Control interface-contract layer
+- **Supersedes:** Earlier API v1-style `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` interpretations that treated the API as route listing only or allowed migration mechanics to override refined system semantics
+- **Superseded By:** Not yet known
+- **Related Decision Records:** Not explicitly specified in the retrieved governing materials
+- **Canonical Status Note:** This API spec derives from the active refined migration and backward-compatibility semantics. It governs interface-contract expression only. It MUST NOT redefine migration truth, domain ownership, compatibility posture, or conflict-resolution semantics established by the refined system-spec library.
+- **Implementation Status:** Normative API-contract draft; downstream services, contract catalogs, migration registries, operator tooling, event/webhook catalogs, SDK derivation, and public compatibility surfaces MUST align after approval
+- **Approval Status:** Draft pending explicit FUZE approval workflow
+- **Change Summary:** Upgraded migration/backward-compatibility material into API SPEC v2 form with explicit API surface-family boundaries, resource families, request/response/error/status models, idempotency and replay rules, authorization and approval requirements, public/internal/admin/event separation, diagrams, flow view, data-flow sequence, acceptance criteria, tests, and implementation-contract guardrails.
 
----
+## Purpose
 
-## 3. Purpose
+This specification defines the FUZE API contract for migration and backward compatibility.
 
-This document defines the canonical API-level migration and backward compatibility model for the FUZE platform.
+The purpose of this API contract is to make migration, compatibility, deprecation, sunset, supersession, cutover, rollback, forward-fix, identifier mapping, contract-version lineage, and public compatibility notice behavior deterministic at the interface layer while preserving refined system semantics.
 
-Its purpose is to establish how FUZE evolves APIs, events, webhooks, published trust artifacts, identifiers, workflow contracts, product interfaces, and chain-adjacent references without breaking canonical ownership, creating ambiguous truth, or silently damaging user, partner, holder, and operator trust.
+This API specification exists because FUZE migration is not ordinary cleanup. Migration affects API contracts, internal service contracts, event schemas, webhook schemas, identifiers, projections, public trust artifacts, chain-adjacent references, product-visible behavior, and historical interpretability. A weak or implicit migration API would allow hidden dual ownership, silent breaking changes, reporting drift, public-trust damage, replay-unsafe cutovers, and operator shortcuts. This document prevents those failures by defining the allowed interface-contract model.
 
-FUZE is a platform-first ecosystem with shared identity, shared workspace and billing models, Platform Credits on Base, stablecoin payout execution on Base, Ethereum token participation, product-specific extension domains, public transparency surfaces, and governance-sensitive controls. In such a system, change management is not only an operational matter. It is an API and contract discipline. Interface migration, schema evolution, supersession, correction, deprecation, coexistence, and cutover all affect how consumers understand the platform and whether the platform remains trustworthy under change.
+## Scope
 
-This file turns the broader FUZE migration and backward compatibility architecture into an implementation-ready API source-of-truth document.
+This specification governs API-visible migration and backward-compatibility behavior for:
 
----
+1. migration registration and lifecycle-state APIs
+2. compatibility policy and contract-version registry APIs
+3. deprecation and sunset scheduling APIs
+4. supersession and identifier mapping APIs
+5. readiness, approval, cutover, rollback, and forward-fix APIs
+6. reconciliation and migration completion APIs
+7. public and authenticated compatibility read APIs
+8. migration/version/supersession event APIs
+9. public webhook notification posture for approved external compatibility changes
+10. reporting/projection/public-read rules for derived compatibility artifacts
+11. chain-adjacent reference replacement and public explanation posture
+12. OpenAPI, AsyncAPI, SDK, and implementation-contract derivation requirements
 
-## 4. Scope
+## Out of Scope
 
-This specification covers:
+This API specification does not define:
 
-- canonical migration and backward compatibility rules for API-visible surfaces
-- differentiation among migration, backward compatibility, correction, supersession, and deprecation
-- contract evolution across public APIs, internal service APIs, admin and control-plane actions, events, webhooks, reports, registries, and payout-facing artifacts
-- coexistence, dual-read, dual-write, shadow validation, and cutover patterns where API surfaces change over time
-- migration-safe identifier mapping, lineage, and historical interpretability requirements
-- compatibility commitments by surface sensitivity and stakeholder impact
-- version-transition behavior for public consumers, internal services, and derived public artifacts
-- audit, approval, reconciliation, rollback, and recovery requirements for material migrations
-- implementation expectations for `fuze-backend-api`
-- frontend consumption expectations for `fuze-frontend-webapp` and `fuze-frontend-admin`
-- future derivation implications for OpenAPI, AsyncAPI, and `fuze-sdk`
+- every table-level migration script or DDL statement
+- every product-specific migration plan or release calendar
+- domain-specific business approval rules outside compatibility/change-control behavior
+- exact CI/CD implementation details
+- every domain payload field for every version transition
+- exact product UX copy for deprecation banners or migration guidance
+- exact chain deployment transactions or smart-contract ABIs
+- legal/accounting interpretation of public notices
+- replacement of domain APIs that own business actions
+- replacement of `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, or `PUBLIC_API_SPEC.md`
 
-This specification does **not** replace domain-specific rules such as credits issuance policy, payout execution authority, governance approval logic, or product-specific business lifecycles. Those remain owned by their canonical domains. This document defines the migration and compatibility rules those domains must apply when evolving interface contracts and externally or cross-domain consumed structures.
+Those details belong in domain implementation contracts, migration runbooks, machine-readable OpenAPI/AsyncAPI artifacts, data migration plans, contract deployment procedures, and product-specific release artifacts, provided they preserve this API contract.
 
----
+## Design Goals
 
-## 5. Source-of-Truth Inputs
+1. Preserve canonical ownership during migration.
+2. Make compatibility obligations explicit, bounded, and observable.
+3. Distinguish migration, correction, supersession, deprecation, sunset, and replacement.
+4. Prevent hidden dual ownership during coexistence.
+5. Preserve lineage and historical interpretability across API, event, webhook, registry, reporting, and chain-adjacent transitions.
+6. Make public and partner-visible changes safe through notice, versioning, and narrow exposure.
+7. Make mutation APIs idempotent and replay-safe.
+8. Make operator/admin actions explicit, reason-coded, policy-constrained, and audited.
+9. Make long-running migrations expose accepted/in-progress/final outcomes correctly.
+10. Enable downstream OpenAPI, AsyncAPI, SDK, QA, and runtime implementation without contradictory reinterpretation.
 
-### Primary FUZE docs and registries used
-- `DOCS_SPEC.md`
-- `SYSTEM_SPEC_INDEX.md`
-- `FUZE_WHITEPAPER_v.2026.3.0.1.pdf`
-- `FUZE_CHAIN_ARCHITECTURE.md`
-- `FUZE_PLATFORM_CREDITS.md`
-- `STABLECOIN_PROFIT_PARTICIPATION.md`
-- `TOKEN_CONTRACT_ARCHITECTURE_.md`
-- `ALLOCATION_WALLET_MAP.md`
+## Non-Goals
 
-### Primary FUZE system specifications used
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+This specification does not aim to:
+
+- guarantee indefinite support for every legacy behavior
+- freeze FUZE API surfaces permanently
+- make public compatibility more important than platform correctness in emergency situations
+- allow migration APIs to bypass domain ownership or validation rules
+- allow rollout flags to substitute for migration truth
+- turn reporting/publication artifacts into canonical migration owners
+- treat chain observations as off-chain migration truth before owner-domain validation
+- expose internal readiness, approval, or risk details through public compatibility APIs
+- collapse implementation migration scripts into this interface-contract document
+
+## Core Principles
+
+### Canonical-Owner Preservation
+
+Every migration MUST preserve a clear canonical owner for each material truth family. Coexistence MAY expose multiple representations, but it MUST NOT create multiple write owners for the same truth.
+
+### Compatibility Is Bounded
+
+Backward compatibility is a governed promise. It MUST be explicit, scoped, policy-bound, and time-bounded where appropriate.
+
+### Historical Interpretability
+
+Historical artifacts, references, identifiers, public notices, reports, and chain-adjacent references MUST remain intelligible after migration.
+
+### Migration Is Not Rollout
+
+Rollout controls MAY gate exposure, traffic, or feature availability, but rollout state MUST NOT become canonical migration truth, compatibility truth, or lineage truth.
+
+### Correction Is Not Supersession
+
+Correction, supersession, deprecation, sunset, migration, and replacement MUST remain separate API states and reason classes.
+
+### Public-Trust Restraint
+
+Public APIs, public webhooks, public registry references, transparency artifacts, payout-facing references, and chain-adjacent references receive the strongest compatibility, notice, and lineage discipline.
+
+### Replay-and-Recovery Safety
+
+Migration operations, events, webhooks, notices, and version transitions MUST be safe under retry, replay, resumption, deduplication, and controlled recovery.
+
+### Operator Boundedness
+
+Admin/control-plane mutation APIs MUST be narrow, reason-coded, policy-constrained, approval-aware, and durably audited.
+
+## Canonical Definitions
+
+- **Migration:** A controlled change in representation, contract, storage, topology, reference, or operational posture that moves live FUZE behavior from one governed state to another.
+- **Backward Compatibility:** The bounded degree to which a new FUZE structure continues to support prior consumers, references, payload assumptions, or historical interpretation.
+- **Coexistence Window:** A governed period in which old and new representations or contracts may both exist while one remains explicitly canonical for writes or authoritative interpretation.
+- **Cutover:** The governed transition point at which primary write authority, canonical read authority, routing authority, or supported contract posture shifts from old to new.
+- **Supersession:** A controlled replacement of an artifact, reference, contract, or representation by a newer one with preserved lineage to the prior one.
+- **Correction:** A governed repair of incorrect historical or current data, publication, or interpretation that preserves explicit lineage to what was corrected.
+- **Deprecation:** A declared reduction in future support or preferred use of a contract or representation. Deprecation does not itself mean immediate removal.
+- **Sunset:** A declared end of supported use for a version, contract, or representation after required notice and compatibility obligations are satisfied or explicitly overridden under emergency policy.
+- **Migration Truth:** The durable platform-governed record of migration identity, status, strategy, readiness, approvals, reconciliation, and lineage.
+- **Compatibility Artifact:** A public or internal artifact that communicates version posture, deprecation status, replacement lineage, or migration guidance without owning underlying business meaning.
+- **Contract Version:** A versioned API, internal-service, event, webhook, reporting, registry, or public-read contract reference.
+- **Lineage Reference:** A durable relationship between old and new identifiers, contract versions, artifacts, registry entries, or chain-adjacent references.
+
+## Truth Class Taxonomy
+
+This API contract MUST preserve the following truth classes:
+
+1. **Semantic truth** — what changed, what remains equivalent, and which domain owns meaning.
+2. **API contract truth** — allowed route families, request and response envelopes, error classes, version fields, and surface-family exposure.
+3. **Policy truth** — compatibility windows, deprecation/sunset policy, public notice policy, approval policy, and override conditions.
+4. **Runtime truth** — staged state, active cutover state, validation progress, rollback state, forward-fix state, and execution progress.
+5. **Ledger / storage truth** — durable migration records, approval records, compatibility policy records, version lineage, identifier mapping, supersession records, and reconciliation outcomes.
+6. **Provider-input truth** — external, partner, or chain-originating observations before owner-domain validation.
+7. **Event / async execution truth** — migration events, version-transition events, webhook delivery records, retry outcomes, and replay lineage.
+8. **Projection / reporting truth** — dashboards, notices, registry views, transparency views, compatibility summaries, and public explanation artifacts derived from canonical sources.
+9. **Presentation truth** — banners, SDK warnings, console labels, user-facing explanatory text, and admin UI labels.
+
+These truth classes MUST NOT be collapsed. Migration governance does not become business-domain truth. Public notices do not become migration truth. Rollout flags do not become lineage truth. SDK hints do not become compatibility policy.
+
+## Architectural Position in the Spec Hierarchy
+
+This API spec derives from the active refined system specification for migration and backward compatibility and sits under the refined registry. It expresses system semantics as interface contracts.
+
+It is downstream of:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
 - `API_ARCHITECTURE_SPEC.md`
+- platform boundary and ownership specifications
+- identity/session and workspace access-control foundation documents
+
+It is adjacent to:
+
 - `PUBLIC_API_SPEC.md`
 - `INTERNAL_SERVICE_API_SPEC.md`
-- `EVENT_MODEL_AND_WEBHOOK_SPEC_refreshed.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
 - `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `ROLLOUT_STRATEGY_SPEC.md`
-- `PRODUCT_ROLLOUT_DEPENDENCY_SPEC.md`
-- `DEPLOYMENT_AND_RUNTIME_OPERATIONS_SPEC.md`
-- `BUSINESS_CONTINUITY_AND_RECOVERY_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `CREDIT_LEDGER_AND_SETTLEMENT_SPEC.md`
-- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
-- `REFUND_REVERSAL_AND_ADJUSTMENT_SPEC.md`
-- `PAYOUT_LEDGER_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `TRANSPARENCY_REPORTING_SPEC.md`
-- upstream conceptual source: `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `INTEGRATION_CONNECTOR_FRAMEWORK_API_SPEC.md`
+- `DATA_CLASSIFICATION_AND_HANDLING_API_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_API_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_API_SPEC.md`
 
-### Highest-priority governing interpretation used here
-1. system boundaries and ownership documents
-2. platform architecture and domain ownership documents
-3. on-chain/off-chain separation and core financial/platform-rail documents
-4. shared API, event, idempotency, audit, runtime, and security documents
-5. migration and compatibility documents
-6. rollout and recovery documents
+It is upstream to:
 
-### Supporting standards and external references used only as guidance
-- HTTP semantics for interface behavior
-- HTTP Problem Details for structured error responses
-- the `Deprecation` HTTP response header field
-- the `Sunset` HTTP response header field
-- general OpenAPI-oriented compatibility and deprecation discipline
+- domain migration implementation contracts
+- data migration plans
+- contract-version registries
+- migration event catalogs
+- public compatibility endpoints
+- SDK migration warnings
+- release-control runbooks
+- OpenAPI and AsyncAPI contract components
 
-Where a FUZE rule and an external standard differ, FUZE source-of-truth interpretation controls.
+## Upstream Semantic Owners
 
-### Format guide status
-- `The_API_Specification_guide.md` was named as a governing format guide in the generation prompt, but direct contents were not retrievable in the resolved source set for this run.
-- `Database_Schemas_Guide.md` was named as a governing format guide in the generation prompt, but direct contents were not retrievable in the resolved source set for this run.
+The upstream refined system specs own semantics as follows:
 
-This file therefore applies the production-grade structure and schema discipline already established by approved FUZE API specifications and the resolved FUZE architecture sources.
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md` owns migration, compatibility, coexistence, cutover, rollback, forward-fix, supersession, deprecation, sunset, lineage, and historical interpretability semantics.
+- `API_ARCHITECTURE_SPEC.md` owns shared API surface-family, accepted-state, request/response/error, chain-adjacent interface, and API-governance posture.
+- `PUBLIC_API_SPEC.md` owns external/public exposure posture.
+- `INTERNAL_SERVICE_API_SPEC.md` owns internal service-to-service contract posture.
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md` owns event and webhook semantics.
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md` owns replay/idempotency and contract-version classification semantics.
+- `FEATURE_FLAG_AND_ROLLOUT_CONTROL_SPEC.md` owns rollout gating semantics and does not own migration truth.
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md` and `AUDIT_AND_ACCESS_TRACEABILITY_SPEC.md` own immutable audit and traceability semantics.
+- `SECURITY_AND_RISK_CONTROL_SPEC.md` owns sensitive-path risk controls and emergency withdrawal posture.
+- `DEPLOYMENT_AND_RUNTIME_OPERATIONS_SPEC.md` owns release mechanics and runtime activation discipline.
+- `BUSINESS_CONTINUITY_AND_RECOVERY_SPEC.md` owns resilience, containment, recovery, restoration, and degraded-mode posture.
+- Domain refined specs own the meaning of their own resources, identifiers, and business outcomes.
 
----
+## API Surface Families
 
-## 6. Governing Architecture and Ownership Interpretation
+### Public Compatibility Read API
 
-### 6.1 Why this specification belongs to a cross-cutting platform domain
+Public, unauthenticated or public-safe API surfaces MAY expose published compatibility notices, deprecation status, sunset status, public supersession lineage, public registry migration references, and approved public contract metadata. These APIs MUST be read-only and MUST NOT expose internal readiness, approval, risk, unreleased migration state, or private domain data.
 
-Migration and backward compatibility are not owned by a single product, single API family, or single runtime surface. They govern how all contract-bearing FUZE surfaces evolve. That includes public HTTP APIs, internal service APIs, events, webhooks, registry artifacts, transparency artifacts, payout-facing publications, and chain reference transitions.
+### Authenticated First-Party Compatibility Read API
 
-The owning architectural center is therefore the platform API governance and change-control layer implemented in `fuze-backend-api`, with domain-specific application by each owning domain.
+First-party application APIs MAY expose caller-scoped migration metadata that directly affects the caller's own account, workspace, resources, entitlements, operations, or public artifacts. These APIs remain public/external authenticated APIs, not internal APIs.
 
-### 6.2 Why frontends do not own this behavior
+### Internal Service Migration API
 
-`fuze-frontend-webapp` may display compatibility notices, migration banners, or resource-version metadata, but it does not define authoritative deprecation timing, cutover semantics, or migration lineage.
+Internal service APIs MAY register migrations, read compatibility state, resolve identifier mappings, attach readiness data, record execution progress, and submit reconciliation results within authorized owner scope. Internal services MUST NOT mutate foreign-domain migration truth or business truth through convenience routes.
 
-`fuze-frontend-admin` may allow operators to initiate approved migration workflows, approve cutovers, or inspect compatibility status, but it does not become the source of truth for migration state, compatibility policy, or supersession lineage.
+### Admin / Control-Plane Migration API
 
-All authoritative outcomes remain backend-owned.
+Admin/control APIs MAY approve, stage, activate, roll back, forward-fix, quarantine, or publish compatibility posture under explicit scopes, approval rules, policy gates, reason codes, and audit requirements.
 
-### 6.3 Why contracts do not fully own this behavior
+### Event / Async API
 
-`fuze-contracts` may embody immutable contract semantics, superseding addresses, or chain-level migration constraints, but FUZE migration and backward compatibility are broader than smart-contract execution. They also cover off-chain business entities, cross-service interfaces, public reporting artifacts, event schemas, webhook payloads, and operational cutover controls.
+Event APIs communicate migration lifecycle changes, version lifecycle changes, supersession records, public-notice publication, reconciliation outcomes, rollback, forward-fix, and sunset transitions. Event delivery is at-least-once unless otherwise specified and MUST be replay-safe.
 
-### 6.4 Governing interpretation applied
+### Webhook API
 
-This document applies the following architectural interpretation:
+External webhooks MAY notify approved partner/public consumers of public compatibility changes, public contract version transitions, public registry supersessions, or upcoming sunset events. Webhooks MUST be narrower than internal events.
 
-- one domain remains canonical for a given truth during migration
-- coexistence is temporary and must not create hidden dual ownership
-- migration is explicit, auditable, version-aware, and explainable
-- compatibility obligations are strongest where external dependency and trust sensitivity are highest
-- lineage must remain visible across migration, correction, and supersession
-- public trust artifacts must preserve historical intelligibility even when live structures change
+### Reporting / Public-Read API
 
----
+Reporting and public-read APIs MAY expose derived compatibility summaries, dashboards, transparency references, and registry views. They MUST NOT become canonical migration owners.
 
-## 7. Domain Responsibilities
+### Chain-Adjacent API
 
-### 7.1 Platform API governance and runtime change control
-Owns:
-- cross-cutting migration policy for contract-bearing surfaces
-- compatibility policy classification by surface type
-- migration registry and cutover control framework
-- deprecation and sunset metadata conventions
-- migration approval gate orchestration
-- compatibility observability and audit conventions
+Chain-adjacent APIs MAY expose or consume supersession references, contract-address lineage, wallet-registry migration references, and public explanation links. They MUST distinguish chain-native facts from off-chain migration policy and publication truth.
 
-### 7.2 Domain owners
-Each owning domain remains responsible for:
-- migrating its own canonical entities and contracts
-- defining migration semantics for its owned resources
-- publishing lineage and mapping information
-- executing correction or compensation where migration errors affect its truth
-- maintaining compatibility documentation for its consumers
+## System / API Boundaries
 
-### 7.3 Reporting and public-registry domains
-May:
-- publish derived compatibility notices
-- publish supersession relationships and public lineage
-- expose historical publication references
-Must not:
-- become the owner of the migrated truth itself
+1. Application plane owner domains retain canonical business mutation authority.
+2. Execution plane systems may coordinate backfills, validation jobs, and cutover workflows but do not own domain meaning.
+3. Integration plane systems may normalize partner/provider inputs but raw external inputs do not become canonical migration truth.
+4. Reporting plane systems may publish notices or compatibility summaries but remain derived.
+5. Control plane systems may approve, restrict, stage, activate, roll back, or forward-fix migrations under policy but do not own business meaning.
+6. Chain-adjacent systems may reference chain-native facts but MUST NOT represent off-chain migration state as chain-native fact.
+7. API gateways may enforce route access, versioning, headers, and rate limits but do not own migration policy.
 
-### 7.4 Frontend surfaces
-May:
-- display migration status
-- present deprecation warnings
-- guide users through transition UX
-Must not:
-- redefine canonical migration state
-- mutate compatibility policy directly
-- infer migration completion from local heuristics
+## Adjacent API Boundaries
 
-### 7.5 Contracts and chain-adjacent services
-Own:
-- contract deployment lineage
-- canonical chain-side references
-- chain-specific cutover metadata where needed
-Must coordinate with:
-- public registry
-- payout and transparency domains
-- governance and treasury control domains
-when the migration affects public trust interpretation
+- `API_ARCHITECTURE_SPEC.md` governs surface-family structure; this spec governs migration and compatibility API contracts.
+- `PUBLIC_API_SPEC.md` governs external exposure; this spec governs compatibility reads and public-safe migration notices.
+- `INTERNAL_SERVICE_API_SPEC.md` governs internal service posture; this spec governs internal migration and compatibility contract families.
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md` governs event/webhook semantics; this spec governs migration-specific events and webhooks.
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md` governs replay and version classification; this spec applies those rules to migration lifecycle and compatibility actions.
+- `INTEGRATION_CONNECTOR_FRAMEWORK_API_SPEC.md` will govern connector interfaces; this spec constrains connector migrations, provider replacement, callback version transitions, and external lineage requirements.
+- `AUDIT_LOG_AND_ACTIVITY_API_SPEC.md` will govern audit APIs; this spec defines required audit evidence for migration actions.
+- `SECURITY_AND_RISK_CONTROL_API_SPEC.md` will govern sensitive control posture; this spec defines when migration APIs require security/risk control enforcement.
+- Domain API specs govern their own resource APIs; this spec governs how those APIs migrate and preserve compatibility.
 
----
+## Conflict Resolution Rules
 
-## 8. Out of Scope
+1. `REFINED_SYSTEM_SPEC_INDEX.md` wins on active refined source-of-truth routing and refined-over-legacy precedence.
+2. The active refined migration specification wins on migration, compatibility, coexistence, cutover, rollback, forward-fix, deprecation, sunset, supersession, and lineage semantics.
+3. Domain refined specs win on business meaning, domain-specific entity lifecycle, validation, correction, compensation, and owner-domain mutation authority.
+4. `API_ARCHITECTURE_SPEC.md` wins on API surface-family interpretation unless contradicted by stronger refined migration semantics for migration-specific state.
+5. `IDEMPOTENCY_AND_VERSIONING_SPEC.md` wins on idempotency, replay, and contract-version classification inside its scope.
+6. `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, and `EVENT_MODEL_AND_WEBHOOK_SPEC.md` win on their respective surface-family meanings.
+7. Public notices, reports, dashboards, caches, SDK warnings, and frontend banners never win over canonical migration truth or owner-domain truth.
+8. Rollout flags never win over migration state, compatibility windows, or lineage records.
+9. If ambiguity remains, the API MUST choose the more conservative architecture-consistent interpretation and require explicit recorded decision work before production activation.
 
-The following are out of scope for this document:
+## Default Decision Rules
 
-- exact table-by-table SQL migration scripts
-- exact contract deployment transactions and network scripts
-- exact product-specific UX copy for migration banners or notices
-- exact SLA or retention period for every legacy version
-- exact release calendar or date commitments for every migration
-- domain-specific business approval rules outside the compatibility/change-control context
-- low-level CI/CD pipeline implementation details beyond migration control implications
+1. One domain remains canonical for each truth family throughout migration.
+2. One representation remains canonical for writes at any given time, even if multiple representations coexist for reads.
+3. Additive evolution and adapter-based transition are preferred over silent semantic breakage.
+4. Public and trust-sensitive surfaces receive strongest compatibility and historical interpretability.
+5. Internal service surfaces default to coordinated coexistence and explicit cutover, not silent breaking change.
+6. Derived/public/reporting surfaces default to derived status, not canonical migration ownership.
+7. Rollback is allowed only when semantically safe; otherwise forward-fix with lineage is required.
+8. Public sunset is forbidden without required prior notice unless emergency security/correctness policy explicitly overrides the window.
+9. If a migration cannot name owner domain, affected truth classes, surface family, coexistence strategy, cutover authority, reconciliation method, recovery choice, and lineage strategy, it MUST NOT proceed to production activation.
+10. If a caller attempts to use migration APIs to alter foreign-domain business truth, the API MUST reject the request.
 
----
+## Roles / Actors / API Consumers
 
-## 9. Canonical Entities and Data Ownership
+### Human Actors
 
-### 9.1 Core durable entities
+- end users affected by product-visible migration
+- partner integrators and external developers
+- support operators
+- product operators
+- release managers
+- security reviewers
+- finance/control-plane operators
+- governance or approval actors
+- public/community readers of trust-sensitive compatibility notices
 
-#### `migration_registry`
-Authoritative backend record of material migrations.
-Owned by: Platform API governance / runtime change control.
-Durability: durable source-of-truth for migration coordination.
-Key fields:
-- `migration_id`
-- `migration_type`
+### System Actors
+
+- public clients
+- authenticated first-party applications
+- API gateway
+- owner-domain services
+- migration registry service
+- compatibility policy service
+- contract version registry service
+- release-control service
+- workflow engines and workers
+- validation and reconciliation jobs
+- reporting/publication services
+- public registry and transparency publication systems
+- event bus
+- webhook delivery service
+- admin/control-plane backend
+- chain-adjacent coordination services
+- SDK and machine-readable contract generation pipelines
+
+## Resource / Entity Families
+
+### Canonical API Resources
+
+- `migration`
+- `compatibility_policy`
+- `contract_version`
+- `supersession`
+- `identifier_mapping`
+- `migration_approval`
+- `migration_readiness`
+- `migration_reconciliation_result`
+- `public_compatibility_notice`
+- `migration_event_reference`
+- `migration_operation`
+- `idempotency_record`
+- `audit_reference`
+
+### Derived API Resources
+
+- `compatibility_summary`
+- `public_contract_version_view`
+- `public_supersession_view`
+- `migration_dashboard_view`
+- `sdk_migration_hint`
+- `deprecation_warning_view`
+- `historical_readability_view`
+
+### Provider / External Input Resources
+
+- `provider_contract_observation`
+- `partner_callback_version_observation`
+- `chain_reference_observation`
+- `external_schema_observation`
+
+Provider/external input resources are normalized inputs only until accepted by the owner domain or migration governance domain.
+
+## Ownership Model
+
+### Migration Governance Domain Owns
+
+- migration lifecycle state semantics
+- compatibility policy structure
+- surface-family compatibility classification
+- migration status transitions
+- deprecation/sunset state posture
+- cutover and recovery state posture
+- shared lineage requirements
+- migration approval and readiness contract structure
+- migration registry schema-level API contract
+- public notice eligibility rules
+
+### Owner Domains Own
+
+- business meaning of migrated resources
+- domain validation and correction rules
+- domain identifier families
+- semantic equivalence or non-equivalence of old/new representations
+- domain-specific compensation, repair, or forward-fix requirements
+- domain-specific migration completion criteria
+
+### Publication Domains Own
+
+- published notices
+- public registry views
+- transparency views
+- public explanation artifacts
+
+They do not own migration truth or domain truth.
+
+### Runtime / Release Domains Own
+
+- release mechanics
+- deployment activation
+- runtime routing
+- traffic exposure
+- backfill execution environment
+
+They do not own migration truth or business semantics.
+
+## Authority / Decision Model
+
+1. Platform migration governance authority controls shared lifecycle, compatibility, deprecation, sunset, and lineage posture.
+2. Domain authority controls business meaning and validates that migration preserves or intentionally changes domain semantics.
+3. Control-plane authority may approve, activate, roll back, or forward-fix only under bounded policy.
+4. Security/risk authority may block, quarantine, or emergency-withdraw unsafe migrations.
+5. Public registry/transparency authority may publish derived compatibility artifacts after canonical migration and owner-domain state supports publication.
+6. Chain-native systems remain authoritative only for chain-native facts. Off-chain policy and explanation remain off-chain truths.
+7. No actor may infer migration completion from UI behavior, cache state, rollout percentage, or deployment state alone.
+
+## Authentication Model
+
+### Public Reads
+
+Public compatibility reads MAY be unauthenticated only where the resource is intentionally public. They MUST be rate-limited and MUST expose only published data.
+
+### Authenticated End-User Reads
+
+Authenticated first-party reads MUST use canonical account/session authentication. Session authentication confirms actor identity; it does not grant migration mutation authority.
+
+### Workspace-Scoped Reads
+
+Workspace-related migration metadata MUST require workspace scope and access evaluation. Workspace membership, workspace scope, permission, and entitlement MUST remain distinct.
+
+### Internal Service Calls
+
+Internal service migration APIs MUST authenticate service identity using approved internal service identity mechanisms. Service identity MUST be bound to an allowed owner domain and route family.
+
+### Admin / Control Calls
+
+Admin/control-plane mutation APIs MUST require privileged operator authentication, policy-bound scope, reason code, approval context, and traceable session or service identity.
+
+### Webhook Delivery
+
+Outbound webhooks MUST use signing, timestamp, delivery ID, and replay-window controls. Webhook consumers MUST NOT be trusted to acknowledge migration truth beyond delivery confirmation.
+
+## Authorization / Scope / Permission Model
+
+### Required Scope Families
+
+- `migration:read`
+- `migration:register`
+- `migration:plan`
+- `migration:approve`
+- `migration:stage`
+- `migration:activate`
+- `migration:rollback`
+- `migration:forward_fix`
+- `migration:reconcile`
+- `compatibility_policy:read`
+- `compatibility_policy:write`
+- `contract_version:read`
+- `contract_version:write`
+- `contract_version:deprecate`
+- `contract_version:sunset`
+- `supersession:write`
+- `identifier_mapping:write`
+- `public_notice:publish`
+- `admin:migration_control`
+- `security:migration_override`
+
+### Authorization Rules
+
+1. Read access MUST be scoped by actor type, visibility class, and affected resource.
+2. Mutation access MUST require owner-domain authority or explicit platform migration governance authority.
+3. Admin/control routes MUST require narrower privileges than internal read routes.
+4. Public callers MUST NOT access internal migration registry details, approval records, readiness risks, unreleased migration plans, or validation failures unless explicitly published.
+5. Workspace-scoped migration reads MUST enforce workspace access evaluation and must not rely solely on resource IDs.
+6. Entitlement checks MAY constrain product migration visibility or transition access but MUST NOT replace authorization.
+7. Governance-sensitive or chain-reference migrations MAY require dual-control or approval layers before activation.
+
+## Entitlement / Capability-Gating Model
+
+1. Migration APIs MUST NOT silently reinterpret plan, entitlement, or capability meaning.
+2. If entitlement semantics or plan mappings change, the owner domain MUST publish explicit compatibility lineage and affected-resource handling.
+3. Rollout gating MAY narrow exposure during migration but MUST NOT replace entitlement truth or migration truth.
+4. Legacy entitlement interpretation MAY be temporarily supported only under explicit compatibility policy.
+5. Public compatibility reads do not confer entitlement to use deprecated or sunset contracts.
+6. SDK warnings or UI banners MUST NOT be treated as entitlement decisions.
+
+## API State Model
+
+### Migration Lifecycle
+
+`draft -> planned -> approved -> staged -> active -> validating -> completed`
+
+Exceptional or terminal states:
+
+- `cancelled`
+- `rolled_back`
+- `failed_requires_forward_fix`
+- `superseded`
+
+### Version Lifecycle
+
+`proposed -> current -> deprecated -> sunset_scheduled -> sunset_complete`
+
+Additional state:
+
+- `historical_readable_only`
+
+### Supersession Lifecycle
+
+`declared -> published -> effective -> historical_lineage_only`
+
+### Public Notice Lifecycle
+
+`draft -> approved_for_publication -> published -> corrected -> superseded -> archived`
+
+### Operation Lifecycle
+
+`accepted -> in_progress -> succeeded -> failed_retryable -> failed_terminal -> blocked_requires_operator -> rolled_back -> forward_fix_required`
+
+### State Transition Rules
+
+1. `active` requires owner attribution, readiness record, approval linkage, and idempotency protection.
+2. `deprecated` requires replacement reference or explicit deprecation rationale.
+3. `sunset_complete` requires satisfied notice window or explicit emergency override.
+4. `completed` requires reconciliation success or governed override with residual risk acceptance.
+5. `rolled_back` is allowed only when semantically safe for the owner domain.
+6. `failed_requires_forward_fix` is required when rollback would corrupt truth or public trust.
+7. `historical_readable_only` means no live supported behavior remains, but historical artifacts remain interpretable.
+
+## Lifecycle / Workflow Model
+
+1. Register migration candidate with owner domain, affected surface families, change class, migration class, and intended strategy.
+2. Attach migration plan, readiness evidence, impact classification, compatibility policy reference, validation method, and recovery posture.
+3. Collect approvals based on sensitivity tier, public exposure, chain-adjacent effect, financial/governance impact, and domain owner requirements.
+4. Stage adapters, dual-read/dual-write plans, shadow validation, read-model rebuild plans, public notice drafts, event/webhook transition catalogs, and SDK metadata.
+5. Activate cutover under explicit authority and idempotency guard.
+6. Emit lifecycle events and produce operation reference.
+7. Execute validation/reconciliation jobs and publish results.
+8. Publish compatibility notices, deprecation metadata, supersession records, and public explanations where required.
+9. Complete, roll back, or declare forward-fix with explicit lineage and audit references.
+10. Preserve historical readability and compatibility artifacts for the required duration.
+
+## Architecture Diagram — Mermaid flowchart
+
+```mermaid
+flowchart LR
+  PublicClient["Public Client / Partner"] --> PublicAPI["Public Compatibility Read API"]
+  FirstParty["First-Party App"] --> FirstPartyAPI["Authenticated Compatibility API"]
+  InternalSvc["Owner-Domain Service"] --> InternalAPI["Internal Migration API"]
+  Admin["Admin / Control Plane"] --> AdminAPI["Admin Migration Control API"]
+  Release["Release Control"] --> InternalAPI
+  Gateway["API Gateway / Version Router"] --> PublicAPI
+  Gateway --> FirstPartyAPI
+  Gateway --> InternalAPI
+  Gateway --> AdminAPI
+
+  PublicAPI --> PublicViews["Published Compatibility Views"]
+  FirstPartyAPI --> MigrationRegistry["Migration Registry"]
+  InternalAPI --> MigrationRegistry
+  InternalAPI --> ContractRegistry["Contract Version Registry"]
+  InternalAPI --> MappingRegistry["Identifier Mapping Registry"]
+  InternalAPI --> SupersessionRegistry["Supersession Registry"]
+  AdminAPI --> ApprovalStore["Migration Approval Store"]
+  AdminAPI --> MigrationRegistry
+  AdminAPI --> PolicyStore["Compatibility Policy Store"]
+
+  MigrationRegistry --> EventBus["Event Bus"]
+  ContractRegistry --> EventBus
+  SupersessionRegistry --> EventBus
+  EventBus --> Worker["Migration / Validation Workers"]
+  EventBus --> WebhookSvc["Webhook Delivery Service"]
+  Worker --> Reconciliation["Reconciliation Results"]
+  Reconciliation --> MigrationRegistry
+
+  MigrationRegistry --> Publication["Registry / Transparency Publication"]
+  ContractRegistry --> Publication
+  SupersessionRegistry --> Publication
+  Publication --> PublicViews
+  Publication --> ChainRefs["Chain-Adjacent Reference Views"]
+
+  InternalAPI --> Audit["Audit / Traceability"]
+  AdminAPI --> Audit
+  Worker --> Audit
+  WebhookSvc --> Audit
+
+  PolicyStore --> Security["Security / Risk Controls"]
+  AdminAPI --> Security
+  Security --> AdminAPI
+
+  classDef canonical fill:#eef,stroke:#333,stroke-width:1px;
+  classDef derived fill:#efe,stroke:#333,stroke-width:1px;
+  classDef control fill:#fee,stroke:#333,stroke-width:1px;
+  class MigrationRegistry,ContractRegistry,MappingRegistry,SupersessionRegistry,PolicyStore,ApprovalStore,Reconciliation canonical;
+  class PublicViews,Publication,ChainRefs derived;
+  class AdminAPI,Security,Audit control;
+```
+
+## Data Design — Mermaid Diagram
+
+```mermaid
+erDiagram
+  MIGRATION {
+    string migration_id PK
+    string owning_domain
+    string migration_class
+    string surface_family
+    string status
+    string cutover_strategy
+    datetime initiated_at
+    datetime approved_at
+    datetime activated_at
+    datetime completed_at
+    string compatibility_policy_id FK
+    string audit_reference_id
+  }
+
+  COMPATIBILITY_POLICY {
+    string compatibility_policy_id PK
+    string surface_family
+    string consumer_class
+    string breaking_change_policy
+    string deprecation_policy
+    string sunset_policy
+    string historical_interpretability_requirement
+    boolean active
+  }
+
+  CONTRACT_VERSION {
+    string version_reference_id PK
+    string contract_family
+    string resource_family
+    string surface_family
+    string version_label
+    string version_status
+    datetime introduced_at
+    datetime deprecated_at
+    datetime sunset_at
+    string replacement_version_reference_id FK
+    string migration_id FK
+  }
+
+  SUPERSESSION {
+    string supersession_id PK
+    string superseded_type
+    string superseded_reference
+    string replacement_type
+    string replacement_reference
+    string reason_code
+    datetime effective_at
+    string migration_id FK
+    string public_explanation_reference
+  }
+
+  IDENTIFIER_MAPPING {
+    string mapping_id PK
+    string entity_type
+    string old_identifier
+    string new_identifier
+    string mapping_kind
+    string mapping_status
+    datetime effective_at
+    string migration_id FK
+  }
+
+  MIGRATION_APPROVAL {
+    string approval_id PK
+    string migration_id FK
+    string approval_scope
+    string approval_status
+    string approved_by_actor_id
+    datetime approved_at
+    string policy_version
+  }
+
+  RECONCILIATION_RESULT {
+    string reconciliation_id PK
+    string migration_id FK
+    string validation_scope
+    string reconciliation_status
+    string summary_hash
+    int error_count
+    int warning_count
+    datetime completed_at
+  }
+
+  PUBLIC_NOTICE {
+    string notice_id PK
+    string migration_id FK
+    string notice_type
+    string publication_status
+    string public_reference
+    datetime published_at
+    string supersedes_notice_id FK
+  }
+
+  IDEMPOTENCY_RECORD {
+    string idempotency_key PK
+    string action_fingerprint
+    string operation_reference
+    string response_fingerprint
+    datetime expires_at
+  }
+
+  AUDIT_RECORD {
+    string audit_reference_id PK
+    string actor_id
+    string actor_type
+    string action
+    string reason_code
+    string correlation_id
+    datetime recorded_at
+  }
+
+  MIGRATION ||--o{ CONTRACT_VERSION : governs
+  MIGRATION ||--o{ SUPERSESSION : records
+  MIGRATION ||--o{ IDENTIFIER_MAPPING : maps
+  MIGRATION ||--o{ MIGRATION_APPROVAL : requires
+  MIGRATION ||--o{ RECONCILIATION_RESULT : validates
+  MIGRATION ||--o{ PUBLIC_NOTICE : publishes
+  COMPATIBILITY_POLICY ||--o{ MIGRATION : constrains
+  CONTRACT_VERSION ||--o{ CONTRACT_VERSION : replaces
+  MIGRATION ||--o{ AUDIT_RECORD : audits
+  MIGRATION ||--o{ IDEMPOTENCY_RECORD : protects
+```
+
+## Flow View
+
+### Standard Migration Registration and Cutover
+
+1. Caller submits `POST /internal/migrations` with owner domain, surface family, migration class, change scope, and cutover strategy.
+2. API authenticates service/admin identity.
+3. API authorizes owner-domain scope and route permission.
+4. API validates that owner domain, affected truth classes, surface family, and recovery posture are explicit.
+5. API records idempotency identity and rejects conflicting duplicate action fingerprints.
+6. Migration registry records `draft` or `planned`.
+7. Audit record captures actor, reason, correlation ID, request source, policy version, and idempotency key.
+8. Event bus receives `platform.migration.created`.
+9. Readiness APIs collect validation plan, dependency state, public notice need, rollback/forward-fix classification, and approval requirements.
+10. Admin/control-plane approval records required approvals.
+11. Stage API records staging state after adapters, compatibility policy, public notice draft, and reconciliation plan are ready.
+12. Activate API performs cutover or records external cutover confirmation under explicit authority.
+13. API returns `202 Accepted` with operation reference where activation is asynchronous or `200 OK` only when already durably applied.
+14. Reconciliation jobs validate semantic, lineage, public notice, event/webhook, and projection correctness.
+15. Completion API marks migration complete only after reconciliation success or governed override.
+16. Public notices and compatibility views are published where required.
+17. Historical readability remains available for deprecated or sunset references.
+
+### Failure, Retry, and Recovery
+
+1. Duplicate retries with same idempotency key and same action fingerprint return the original response or current stable operation status.
+2. Duplicate retries with materially different fingerprints return `409 idempotency_conflict`.
+3. Activation failure moves operation to `failed_retryable`, `blocked_requires_operator`, or `failed_terminal`.
+4. If rollback is semantically safe, admin/control route may initiate rollback with reason code and risk acknowledgement.
+5. If rollback is unsafe, migration transitions to `failed_requires_forward_fix`.
+6. Forward-fix requires preserved lineage, approval reference, and public explanation where trust-sensitive.
+7. All recovery actions emit events and audit records.
+8. Public surfaces expose only approved/published status, not internal failure detail.
+
+### Public Compatibility Read
+
+1. Public client requests current compatibility notice or contract version metadata.
+2. API gateway applies public rate limit and abuse controls.
+3. API reads published compatibility views only.
+4. API returns current status, replacement references, deprecation/sunset dates where published, and historical lineage references.
+5. API omits internal readiness, approval, risk, and unreleased migration details.
+
+## Data Flows — Mermaid sequenceDiagram
+
+```mermaid
+sequenceDiagram
+  participant Caller as Internal Service or Admin
+  participant Gateway as API Gateway
+  participant Auth as AuthN/AuthZ
+  participant Idem as Idempotency Store
+  participant API as Migration API
+  participant Reg as Migration Registry
+  participant Policy as Compatibility Policy
+  participant Audit as Audit Log
+  participant Bus as Event Bus
+  participant Worker as Validation Worker
+  participant Pub as Publication Service
+  participant Public as Public Compatibility API
+
+  Caller->>Gateway: POST /internal/migrations/{id}/activate
+  Gateway->>Auth: Authenticate actor and evaluate scope
+  Auth-->>Gateway: Authorized with policy version
+  Gateway->>Idem: Check idempotency key and action fingerprint
+  Idem-->>Gateway: No conflict or stable replay
+  Gateway->>API: Forward validated request
+  API->>Policy: Load compatibility and notice requirements
+  Policy-->>API: Policy constraints
+  API->>Reg: Validate state, owner, approvals, readiness
+  Reg-->>API: Staged and activatable
+  API->>Reg: Transition to active or create operation
+  API->>Audit: Record activation attempt, reason, actor, correlation
+  API->>Bus: Emit platform.migration.activated
+  API-->>Caller: 202 Accepted with operation_reference
+
+  Bus->>Worker: Start validation/reconciliation
+  Worker->>Reg: Submit reconciliation result
+  Worker->>Audit: Record validation outcome
+  Worker->>Bus: Emit reconciliation event
+  Reg->>Pub: Publish notices if approved and required
+  Pub->>Public: Update published compatibility view
+
+  Caller->>Gateway: Retry same activation
+  Gateway->>Idem: Check same key/fingerprint
+  Idem-->>Gateway: Return stable operation reference
+  Gateway-->>Caller: 202 Accepted or current operation status
+```
+
+## Request Model
+
+### Required Envelope Fields for Mutations
+
+Mutation requests MUST include or derive:
+
+- `request_id`
+- `idempotency_key`
+- `correlation_id`
+- `actor_reference`
+- `actor_type`
+- `owning_domain`
+- `surface_family`
+- `reason_code`
+- `policy_version`
+- `requested_at`
+- `operation_mode`
+- `client_contract_version` where applicable
+
+### Migration Registration Request
+
+Required fields:
+
 - `migration_class`
 - `owning_domain`
-- `surface_type`
-- `migration_status`
+- `affected_surface_families[]`
+- `affected_resource_families[]`
+- `affected_truth_classes[]`
 - `change_scope`
 - `cutover_strategy`
-- `initiated_at`
-- `approved_at`
-- `activated_at`
-- `completed_at`
-- `rolled_back_at`
-- `created_by_actor_id`
-- `approved_by_actor_id`
-- `notes`
-
-#### `compatibility_policy`
-Defines surface-specific compatibility commitments.
-Owned by: Platform API governance.
-Durability: durable policy truth.
-Key fields:
 - `compatibility_policy_id`
-- `surface_type`
-- `consumer_class`
-- `breaking_change_policy`
-- `deprecation_policy`
-- `sunset_policy`
-- `legacy_support_expectation`
-- `historical_interpretability_requirement`
-- `version_transition_policy`
-- `is_active`
+- `rollback_classification`
+- `forward_fix_plan_required`
+- `public_notice_required`
+- `chain_reference_impact`
+- `reconciliation_strategy`
 
-#### `contract_version_registry`
-Tracks API, event, webhook, report, and registry versions.
-Owned by: owning domain with platform-governed structure.
-Durability: durable truth for version lineage.
-Key fields:
+### Activation Request
+
+Required fields:
+
+- `activation_mode`
+- `effective_at`
+- `cutover_reference`
+- `approval_references[]`
+- `operator_confirmation`
+- `risk_acknowledgement` when required
+- `expected_migration_status`
+- `expected_contract_versions[]`
+
+### Deprecation / Sunset Request
+
+Required fields:
+
 - `version_reference_id`
-- `contract_surface_type`
-- `contract_family`
-- `resource_family`
-- `version_label`
-- `version_status`
-- `introduced_at`
-- `deprecated_at`
-- `sunset_at`
-- `replacement_version_reference_id`
-- `migration_id`
+- `deprecation_reason_code`
+- `replacement_version_reference_id` or explicit no-replacement rationale
+- `public_notice_reference` when public
+- `sunset_at` when scheduling sunset
+- `compatibility_window`
+- `consumer_impact_class`
 
-#### `supersession_registry`
-Tracks explicit replacement relationships.
-Owned by: owning domain, with platform-governed schema.
-Durability: durable lineage truth.
-Key fields:
-- `supersession_id`
+### Supersession Request
+
+Required fields:
+
 - `superseded_type`
 - `superseded_reference`
 - `replacement_type`
@@ -304,473 +927,86 @@ Key fields:
 - `reason_code`
 - `effective_at`
 - `migration_id`
-- `public_explanation_reference`
+- `public_explanation_reference` when public/trust-sensitive
 
-#### `identifier_mapping_registry`
-Maps old identifiers to new identifiers where continuity is required.
-Owned by: owning domain.
-Durability: durable mapping truth.
-Key fields:
-- `mapping_id`
+### Identifier Mapping Request
+
+Required fields:
+
 - `entity_type`
 - `old_identifier`
 - `new_identifier`
-- `mapping_status`
 - `mapping_kind`
 - `migration_id`
 - `effective_at`
+- `owner_domain_confirmation`
 
-#### `migration_approval`
-Tracks operator and governance approvals required for material changes.
-Owned by: runtime change control with references to governance-sensitive systems where applicable.
-Durability: durable approval linkage.
-Key fields:
-- `migration_approval_id`
-- `migration_id`
-- `approval_scope`
-- `required_role`
-- `approval_status`
-- `approved_by_actor_id`
-- `approved_at`
+## Response Model
 
-#### `migration_reconciliation_result`
-Tracks validation and semantic reconciliation after change.
-Owned by: owning domain with platform visibility.
-Durability: durable verification truth.
-Key fields:
-- `reconciliation_id`
-- `migration_id`
-- `validation_scope`
-- `reconciliation_status`
-- `summary_hash`
-- `error_count`
-- `warning_count`
-- `completed_at`
+### Mutation Response Classes
 
-#### `public_compatibility_notice`
-Derived publication records for public-facing compatibility messaging.
-Owned by: public registry / transparency publication services.
-Durability: published artifact metadata, derived from canonical sources.
-Key fields:
-- `notice_id`
-- `migration_id`
-- `surface_type`
-- `notice_type`
-- `published_at`
-- `public_reference`
+- `created` — durable record created.
+- `accepted` — action accepted for async processing; final business outcome pending.
+- `applied` — state transition durably applied.
+- `in_progress` — operation executing or validating.
+- `completed` — migration or operation completed.
+- `rolled_back` — rollback completed.
+- `forward_fix_required` — rollback unsafe; forward-fix required.
+- `conflict` — state, owner, idempotency, or policy conflict.
+- `rejected` — authorization, scope, readiness, policy, or validation failure.
+
+### Required Mutation Response Fields
+
 - `status`
+- `migration_id` where applicable
+- `version_reference_id` where applicable
+- `operation_reference`
+- `result_class`
+- `current_lifecycle_state`
+- `accepted_at` or `applied_at`
+- `correlation_id`
+- `audit_reference_id`
+- `idempotency_replay` boolean
+- `lineage_references[]`
+- `next_required_action` where applicable
+- `retryability`
+
+### Public Read Response Fields
+
+Public reads MUST classify records as published derived compatibility data and include:
+
+- `contract_family` or `reference`
+- `current_version`
+- `deprecated_versions[]`
+- `sunset_status`
+- `replacement_reference`
+- `supersession_lineage[]`
+- `public_explanation_reference`
+- `published_at`
+- `last_public_update_at`
+- `historical_readability_status`
+
+Public reads MUST NOT include:
+
+- internal approval records
+- unreleased migration plans
+- internal risk flags
+- operator identities
+- validation failure details
+- non-public resource IDs
+- private domain data
+
+## Error / Result / Status Model
+
+### Canonical Error Families
 
-### 9.2 Ownership interpretation
-
-- migration policy and status are platform-owned
-- resource-specific lineage is owned by the resource-owning domain
-- public notices are derived artifacts, not canonical migration truth
-- contract-version records are authoritative for interface lineage
-- identifier mappings are authoritative only when published by the owning domain
-
-### 9.3 Derived versus durable fields
-
-Durable:
-- migration identifiers
-- status transitions
-- compatibility policy references
-- version references
-- supersession references
-- approval linkage
-- reconciliation outcomes
-
-Derived or denormalized:
-- public summary labels
-- dashboard rollups
-- deprecated-surface counts
-- migration health summaries
-- client-facing explanatory text caches
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 Migration lifecycle states
-
-`draft -> planned -> approved -> staged -> active -> validating -> completed`
-
-Additional terminal or exceptional states:
-- `cancelled`
-- `rolled_back`
-- `failed_requires_forward_fix`
-- `superseded`
-
-### 10.2 Version lifecycle states
-
-`proposed -> current -> deprecated -> sunset_scheduled -> sunset_complete`
-
-Additional state:
-- `historical_readable_only`
-
-### 10.3 Supersession lifecycle states
-
-`declared -> published -> effective -> historical_lineage_only`
-
-### 10.4 State transition rules
-
-- no migration may move to `active` without explicit owner and approval linkage
-- no version may move to `deprecated` without replacement or deprecation rationale
-- no `sunset_complete` state should occur without published prior notice for public surfaces unless emergency risk controls require immediate withdrawal
-- no migration should move to `completed` until reconciliation succeeds or risk is explicitly accepted through governed override
-- a failed migration may move to `rolled_back` only if rollback is semantically safe for the owning domain
-- otherwise it moves to `failed_requires_forward_fix` with preserved lineage
-
----
-
-## 11. API Surface Overview
-
-FUZE migration and backward compatibility expose several interface families.
-
-### 11.1 Internal migration governance APIs
-Used by domain services, release controls, and runtime operators to:
-- register migrations
-- stage cutovers
-- publish compatibility metadata
-- record approval and reconciliation outcomes
-
-### 11.2 Admin migration control APIs
-Restricted control-plane interfaces used by privileged operators to:
-- review migration readiness
-- trigger staged activation
-- publish or confirm deprecation windows
-- initiate rollback or forward-fix workflows where allowed
-
-### 11.3 Public compatibility and deprecation reads
-Externally readable surfaces for:
-- deprecation notices
-- version transition guidance
-- public registry supersession lineage
-- transparency artifact correction or supersession notices
-- public product contract version metadata where intentionally exposed
-
-### 11.4 Event-driven migration interfaces
-Events emitted when:
-- migration is approved
-- cutover occurs
-- version becomes deprecated
-- sunset is scheduled
-- reconciliation fails
-- public notice is published
-
-### 11.5 Chain-adjacent compatibility surfaces
-Used for:
-- contract supersession lineage
-- old-to-new address traceability
-- public registry reference migration
-- payout and treasury reference transitions
-
----
-
-## 12. Authentication and Authorization Model
-
-### 12.1 Public reads
-Allowed only for explicitly published compatibility surfaces such as:
-- public registry supersession lineage
-- public deprecation notices
-- public artifact correction references
-- public payout/report format supersession notices
-
-No public write access exists for migration control.
-
-### 12.2 Authenticated application reads
-Authenticated end users may read migration-related metadata for surfaces that affect:
-- their own account
-- their workspaces
-- their product resources
-- their entitlement interpretation
-- their asynchronous operations
-- their published user-visible artifacts
-
-### 12.3 Internal service access
-Internal services authenticate through platform service identity and may:
-- read compatibility state
-- read version registries
-- resolve identifier mappings
-- record migration execution status for owned domains
-They may not mutate foreign-domain truth through migration convenience routes.
-
-### 12.4 Admin control-plane access
-Only privileged operators with explicit scopes may:
-- create material migration records
-- approve or reject cutover readiness
-- schedule deprecation and sunset metadata
-- trigger cutover transitions
-- invoke rollback or forward-fix workflows where permitted
-
-### 12.5 Governance-sensitive access
-Where migration touches:
-- treasury controls
-- payout publication
-- governance structures
-- contract registry meaning
-- foundation or vault references
-
-additional approval or dual-control expectations apply before activation.
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-### 13.1 Internal migration registration
-
-#### `POST /internal/migrations`
-- Purpose: create a migration record for a material change
-- Caller type: internal service or controlled admin backend
-- Auth expectation: internal service identity or admin service token
-- Request body summary:
-  - `migration_type`
-  - `migration_class`
-  - `owning_domain`
-  - `surface_type`
-  - `change_scope`
-  - `cutover_strategy`
-  - `target_contract_families[]`
-  - `target_entity_families[]`
-- Response summary:
-  - created `migration_id`
-  - initial status `draft` or `planned`
-- Side effects:
-  - creates durable migration record
-- Idempotency behavior:
-  - required for create requests via business action key
-- Audit requirements:
-  - create actor, request source, correlation ID
-- Emitted events:
-  - `platform.migration.created`
-
-#### `POST /internal/migrations/{migration_id}/plan`
-- Purpose: attach detailed migration plan and readiness metadata
-- Caller type: owning domain service or admin backend
-- Side effects:
-  - updates migration planning data
-- Emitted events:
-  - `platform.migration.planned`
-
-### 13.2 Approval and readiness
-
-#### `POST /internal/migrations/{migration_id}/approve`
-- Purpose: record approval for a migration that passed readiness gates
-- Caller type: admin backend or governed workflow
-- Auth expectation: privileged internal scope
-- Response summary:
-  - approval status and required remaining approvals
-- Side effects:
-  - creates migration approval record
-- Emitted events:
-  - `platform.migration.approval_recorded`
-
-#### `GET /internal/migrations/{migration_id}/readiness`
-- Purpose: return readiness status including unmet gates
-- Caller type: internal service, admin backend
-- Response summary:
-  - readiness result
-  - unmet gates
-  - risk flags
-  - dependency references
-
-### 13.3 Cutover and activation
-
-#### `POST /internal/migrations/{migration_id}/stage`
-- Purpose: mark migration as staged and ready for activation
-- Caller type: admin backend or release control workflow
-- Side effects:
-  - state transition to `staged`
-- Emitted events:
-  - `platform.migration.staged`
-
-#### `POST /internal/migrations/{migration_id}/activate`
-- Purpose: execute or confirm cutover activation
-- Caller type: admin backend or release control service
-- Auth expectation: privileged internal scope with approval linkage
-- Request body summary:
-  - `activation_mode`
-  - `cutover_reference`
-  - `effective_at`
-  - `operator_confirmation`
-- Response summary:
-  - migration status
-  - activated contract version references
-- Side effects:
-  - state transition to `active`
-  - may publish deprecation/sunset metadata to registries
-- Idempotency behavior:
-  - mandatory, because activation is correctness-sensitive
-- Audit requirements:
-  - full actor and approval correlation
-- Emitted events:
-  - `platform.migration.activated`
-
-### 13.4 Reconciliation and completion
-
-#### `POST /internal/migrations/{migration_id}/reconcile`
-- Purpose: submit reconciliation results for the migration
-- Caller type: owning domain service or validation job
-- Response summary:
-  - reconciliation status
-  - error and warning counts
-- Side effects:
-  - creates reconciliation record
-- Emitted events:
-  - `platform.migration.reconciliation_recorded`
-
-#### `POST /internal/migrations/{migration_id}/complete`
-- Purpose: mark migration complete after validation
-- Caller type: admin backend or owning domain service under policy
-- Preconditions:
-  - approved
-  - active
-  - reconciliation passed or governed override present
-- Emitted events:
-  - `platform.migration.completed`
-
-### 13.5 Rollback and forward-fix
-
-#### `POST /internal/migrations/{migration_id}/rollback`
-- Purpose: initiate or record rollback where semantically safe
-- Caller type: restricted admin backend
-- Auth expectation: emergency-capable privileged role
-- Request body summary:
-  - `reason_code`
-  - `rollback_reference`
-  - `risk_acknowledgement`
-- Response summary:
-  - new migration status
-- Side effects:
-  - status transition to `rolled_back`
-  - compatibility notices may be republished
-- Emitted events:
-  - `platform.migration.rolled_back`
-
-#### `POST /internal/migrations/{migration_id}/forward-fix`
-- Purpose: declare or execute controlled forward-fix pathway when rollback is unsafe
-- Caller type: restricted admin backend or governed workflow
-- Emitted events:
-  - `platform.migration.forward_fix_declared`
-
-### 13.6 Versioning and compatibility metadata
-
-#### `POST /internal/contract-versions`
-- Purpose: create a version registry entry for a contract family
-- Caller type: internal service or controlled spec/release pipeline
-- Side effects:
-  - creates version reference record
-
-#### `POST /internal/contract-versions/{version_reference_id}/deprecate`
-- Purpose: mark a contract version deprecated
-- Request body summary:
-  - `deprecated_at`
-  - `replacement_version_reference_id`
-  - `deprecation_notice_reference`
-  - `sunset_at` where applicable
-- Emitted events:
-  - `platform.contract_version.deprecated`
-
-#### `POST /internal/contract-versions/{version_reference_id}/sunset`
-- Purpose: mark a contract version sunset complete
-- Preconditions:
-  - prior deprecation exists
-  - required notice window satisfied unless emergency override exists
-- Emitted events:
-  - `platform.contract_version.sunset_complete`
-
-### 13.7 Identifier mapping and supersession
-
-#### `POST /internal/identifier-mappings`
-- Purpose: register mapping between legacy and current identifiers
-- Caller type: owning domain service
-- Side effects:
-  - creates durable mapping record
-
-#### `POST /internal/supersessions`
-- Purpose: record controlled supersession for resource, artifact, contract, or registry entry
-- Caller type: owning domain service or admin backend
-- Emitted events:
-  - `platform.supersession.recorded`
-
-### 13.8 Public compatibility reads
-
-#### `GET /public/compatibility/notices`
-- Purpose: list published compatibility and deprecation notices intentionally visible to external consumers
-- Caller type: public client
-- Response summary:
-  - published notices only
-  - no internal approval or risk data
-
-#### `GET /public/compatibility/contracts/{contract_family}`
-- Purpose: read current public version metadata and deprecation lineage for an exposed contract family
-- Caller type: public client or partner integrator
-- Response summary:
-  - current version
-  - deprecated versions
-  - replacement references
-  - sunset dates where published
-
-#### `GET /public/registry/supersessions/{reference}`
-- Purpose: expose public supersession lineage for contract or wallet registry entries
-- Caller type: public client
-- Response summary:
-  - previous reference
-  - current reference
-  - effective date
-  - public explanation link
-
-### 13.9 Admin control-plane reads
-
-#### `GET /admin/migrations`
-- Purpose: list migration records with filterable state and risk metadata
-- Caller type: admin dashboard
-- Auth expectation: privileged operator session
-
-#### `GET /admin/migrations/{migration_id}`
-- Purpose: inspect complete migration state including readiness, approvals, and reconciliation
-- Caller type: admin dashboard
-
----
-
-## 14. Request Rules
-
-- mutation requests affecting migration status, deprecation, sunset, or cutover must use explicit idempotency semantics
-- request bodies must identify owning domain and affected surface type
-- migration activation and rollback requests must include operator or workflow confirmation context
-- public-read endpoints must expose only published compatibility artifacts
-- identifier mappings must be submitted only by the domain that owns the identifier family
-- contract-version mutation requests must include replacement references when deprecation is material
-- emergency overrides must include explicit risk acknowledgement and operator identity
-- hidden direct write requests to foreign-domain migration state are forbidden
-
----
-
-## 15. Response Rules
-
-- responses must clearly classify returned records as:
-  - canonical migration truth
-  - canonical version truth
-  - identifier lineage
-  - derived public notice
-- public compatibility responses must remain historically interpretable and must not silently omit relevant supersession when a public reference has changed
-- mutation responses must include:
-  - `migration_id` or `version_reference_id`
-  - resulting status
-  - relevant timestamps
-  - replacement or lineage references where applicable
-- status responses for long-running migration steps should return accepted or in-progress metadata rather than pretending immediate completion
-- admin and internal responses may include readiness and risk detail not visible on public surfaces
-
----
-
-## 16. Error Model
-
-FUZE migration and compatibility interfaces should use a structured error model consistent with broader API architecture.
-
-Canonical error families include:
 - `migration_not_found`
 - `migration_state_conflict`
 - `migration_not_ready`
+- `migration_owner_missing`
+- `migration_owner_mismatch`
+- `affected_truth_class_missing`
+- `compatibility_policy_missing`
 - `approval_missing`
 - `approval_scope_insufficient`
 - `rollback_not_semantically_safe`
@@ -778,59 +1014,167 @@ Canonical error families include:
 - `version_reference_not_found`
 - `replacement_reference_missing`
 - `legacy_mapping_conflict`
+- `supersession_conflict`
+- `public_notice_required`
 - `public_notice_not_published`
+- `sunset_window_not_satisfied`
 - `surface_not_public`
+- `idempotency_key_missing`
 - `idempotency_conflict`
 - `authorization_denied`
+- `workspace_scope_denied`
+- `entitlement_transition_denied`
 - `governance_approval_required`
+- `security_override_required`
 - `reconciliation_failed`
-- `sunset_window_not_satisfied`
+- `chain_reference_lineage_missing`
+- `derived_surface_not_canonical`
+- `foreign_domain_write_forbidden`
+- `rate_limited`
+- `abuse_control_blocked`
 
-Error responses must preserve:
-- stable machine-readable code
-- human-readable message
-- correlation ID
-- lineage reference where relevant
-- retryability classification where relevant
+### Error Envelope
 
----
+Errors MUST include:
 
-## 17. Idempotency and Mutation Safety
+- stable machine-readable `code`
+- human-readable `message`
+- `correlation_id`
+- `request_id`
+- `retryability`
+- `status`
+- `policy_reference` where applicable
+- `lineage_reference` where relevant
+- `operation_reference` where an accepted operation exists
+- `audit_reference_id` for control-plane and internal mutation failures where safe to expose
 
-- create, approve, stage, activate, rollback, and forward-fix endpoints are mutation-sensitive and require idempotent business semantics
-- replay of the same activation request must not trigger double cutover
-- replay of the same deprecation scheduling request must return stable version state
-- conflicting reuse of a migration idempotency identity for materially different inputs must return conflict rather than applying an ambiguous action
-- identifier mapping creation must be unique for a given `entity_type + old_identifier + migration_id`
-- public read surfaces do not require idempotency but must remain version-aware
-- rollback attempts after a forward-fix-only classification must be rejected unless override policy explicitly allows them
+### Status Semantics
 
----
+- `200 OK` MAY be used for completed reads or stable idempotent replay of completed actions.
+- `201 Created` MAY be used for synchronous creation of migration, contract-version, mapping, or supersession records.
+- `202 Accepted` MUST be used where final business outcome is asynchronous.
+- `204 No Content` SHOULD NOT be used for migration mutations because response lineage is required.
+- `400 Bad Request` is used for malformed requests.
+- `401 Unauthorized` is used for missing/invalid authentication.
+- `403 Forbidden` is used for valid authentication but denied scope/policy.
+- `404 Not Found` MUST NOT leak private IDs across visibility boundaries.
+- `409 Conflict` is used for state, idempotency, owner, mapping, or supersession conflicts.
+- `422 Unprocessable Entity` is used for semantically invalid migration content.
+- `423 Locked` MAY be used for migration hold/quarantine states.
+- `429 Too Many Requests` is used for rate-limit or abuse controls.
+- `500/503` are used for server/dependency failures and MUST include retry classification.
 
-## 18. Versioning and Compatibility Rules
+## Idempotency / Retry / Replay Model
 
-- public APIs and public webhooks receive the strongest compatibility commitment
-- internal service APIs receive coordinated compatibility commitment, not silent breaking change
-- reports, ledgers, and public registries require historical readability even when formats evolve
-- a deprecation announcement does not by itself change resource behavior
-- a sunset announcement indicates an intended future unresponsive or unsupported state for a resource or version
-- compatibility policy must distinguish:
-  - deprecation
-  - sunset
-  - correction
-  - supersession
-  - replacement
-- additive change is preferred where feasible
-- breaking changes require explicit version transition and migration guidance
-- historical artifacts must preserve lineage instead of disappearing silently
-- old and new representations may coexist temporarily, but only one may remain canonical for writes
+1. Every mutation that creates, approves, stages, activates, rolls back, forward-fixes, deprecates, sunsets, supersedes, maps identifiers, publishes notices, or completes a migration MUST require idempotency.
+2. The idempotency key MUST be scoped to actor, owner domain, operation family, target resource, and action fingerprint.
+3. Replaying the same key and same fingerprint MUST return the stable prior response or current operation state.
+4. Replaying the same key with a different fingerprint MUST return `idempotency_conflict`.
+5. Activation replay MUST NOT trigger double cutover.
+6. Deprecation replay MUST NOT create duplicate notices or multiple version transitions.
+7. Identifier mapping replay MUST preserve uniqueness for `entity_type + old_identifier + migration_id`.
+8. Event replay MUST NOT duplicate migration meaning.
+9. Webhook redelivery MUST preserve delivery IDs and event IDs.
+10. Retryable failures MUST distinguish transport retry from semantic retry.
+11. Public reads do not require idempotency but MUST remain version-aware and cache-safe.
+12. Idempotency records MUST be auditable for material migration actions.
 
----
+## Rate Limit / Abuse-Control Model
 
-## 19. Event Emission and Webhook Behavior
+1. Public compatibility reads MUST be rate-limited by IP, public token where applicable, contract family, and request class.
+2. Authenticated first-party reads MUST be rate-limited by account, workspace, session, and resource family.
+3. Internal service mutations MUST be rate-limited by service identity, owner domain, and operation class.
+4. Admin/control mutations MUST be rate-limited more strictly and MAY require step-up confirmation.
+5. Repeated failed activation, rollback, forward-fix, deprecation, sunset, or public notice publication attempts MUST trigger risk controls.
+6. Public enumeration of unpublished or private migration resources MUST be blocked.
+7. Webhook delivery retries MUST use bounded retry policies and dead-letter posture.
+8. Abuse controls MUST NOT silently alter compatibility state; they may block access or require review.
 
-### 19.1 Internal events
-The following internal events should exist where relevant:
+## Endpoint / Route Family Model
+
+This section defines route families, not exhaustive OpenAPI paths. Downstream OpenAPI MUST preserve these route-family boundaries.
+
+### Internal Migration Registration
+
+- `POST /internal/migrations`
+- `GET /internal/migrations/{migration_id}`
+- `PATCH /internal/migrations/{migration_id}/plan`
+- `GET /internal/migrations/{migration_id}/readiness`
+
+Allowed callers: owner-domain service, release-control service, admin backend.
+
+### Approval and Control
+
+- `POST /admin/migrations/{migration_id}/approve`
+- `POST /admin/migrations/{migration_id}/reject`
+- `POST /admin/migrations/{migration_id}/hold`
+- `POST /admin/migrations/{migration_id}/release-hold`
+- `GET /admin/migrations`
+- `GET /admin/migrations/{migration_id}`
+
+Allowed callers: privileged admin/control-plane actors only.
+
+### Staging, Activation, Recovery
+
+- `POST /internal/migrations/{migration_id}/stage`
+- `POST /admin/migrations/{migration_id}/activate`
+- `POST /admin/migrations/{migration_id}/rollback`
+- `POST /admin/migrations/{migration_id}/forward-fix`
+- `POST /internal/migrations/{migration_id}/reconcile`
+- `POST /internal/migrations/{migration_id}/complete`
+
+Activation, rollback, and forward-fix SHOULD be admin/control routes even when invoked by release-control workflows.
+
+### Compatibility Policy
+
+- `GET /internal/compatibility-policies`
+- `GET /internal/compatibility-policies/{policy_id}`
+- `POST /admin/compatibility-policies`
+- `PATCH /admin/compatibility-policies/{policy_id}`
+
+Policy writes are admin/control-plane only.
+
+### Contract Versions
+
+- `POST /internal/contract-versions`
+- `GET /internal/contract-versions/{version_reference_id}`
+- `POST /internal/contract-versions/{version_reference_id}/deprecate`
+- `POST /internal/contract-versions/{version_reference_id}/schedule-sunset`
+- `POST /admin/contract-versions/{version_reference_id}/sunset-complete`
+
+Public equivalents MUST be read-only and published-only.
+
+### Supersession and Identifier Mapping
+
+- `POST /internal/supersessions`
+- `GET /internal/supersessions/{supersession_id}`
+- `POST /internal/identifier-mappings`
+- `GET /internal/identifier-mappings:resolve`
+
+Writes require owner-domain authority.
+
+### Public Compatibility Reads
+
+- `GET /public/compatibility/notices`
+- `GET /public/compatibility/contracts/{contract_family}`
+- `GET /public/compatibility/contracts/{contract_family}/versions/{version}`
+- `GET /public/registry/supersessions/{reference}`
+- `GET /public/compatibility/chain-references/{reference}`
+
+These endpoints MUST return only published compatibility artifacts.
+
+### Authenticated First-Party Reads
+
+- `GET /v1/me/migration-notices`
+- `GET /v1/workspaces/{workspace_id}/migration-notices`
+- `GET /v1/resources/{resource_family}/{resource_id}/compatibility-status`
+
+These endpoints MUST enforce account, session, workspace, permission, and visibility rules.
+
+### Event and Webhook APIs
+
+Events include:
+
 - `platform.migration.created`
 - `platform.migration.planned`
 - `platform.migration.approval_recorded`
@@ -841,713 +1185,559 @@ The following internal events should exist where relevant:
 - `platform.migration.rolled_back`
 - `platform.migration.forward_fix_declared`
 - `platform.contract_version.deprecated`
+- `platform.contract_version.sunset_scheduled`
 - `platform.contract_version.sunset_complete`
 - `platform.supersession.recorded`
+- `platform.public_compatibility_notice.published`
 
-### 19.2 Webhook behavior
-Public webhooks for compatibility changes should exist only where FUZE intentionally supports partner notification of:
-- deprecation of public contract families
-- upcoming sunset of public resources or versions
-- public registry supersession for known references
+Public webhook families MAY include:
 
-Webhook payloads must:
-- carry explicit version metadata
-- carry lineage references
-- not require consumers to infer replacement relationships
-- avoid silent schema breakage during migration
+- `compatibility.contract.deprecated`
+- `compatibility.contract.sunset_scheduled`
+- `compatibility.contract.sunset_complete`
+- `compatibility.registry.superseded`
+- `compatibility.public_notice.published`
 
-### 19.3 Replay and recovery
-Repeated event delivery must be safe under the broader idempotency model.
-Compatibility events and webhooks must be replayable without duplicating migration meaning.
+## Public API Considerations
 
----
+1. Public APIs MUST expose only approved/published compatibility records.
+2. Public APIs MUST remain narrow and stable.
+3. Public reads MUST preserve historical interpretability and replacement lineage.
+4. Public APIs MUST NOT expose draft, planned, staged, readiness, approval, internal risk, or operator details.
+5. Public contract version metadata MUST distinguish `current`, `deprecated`, `sunset_scheduled`, `sunset_complete`, and `historical_readable_only`.
+6. Public deprecation metadata MUST include replacement reference or explicit no-replacement rationale where published.
+7. Public chain-reference supersession MUST include old/new reference, effective date, and public explanation reference.
+8. Public surfaces MUST not imply a deprecated contract is already unusable unless sunset has occurred or an emergency withdrawal notice is published.
 
-## 20. Audit and Activity Requirements
+## First-Party Application API Considerations
 
-Every material migration action must preserve:
-- actor reference
-- service or operator source
-- owning domain
-- affected surface type
-- migration ID
-- previous status
-- resulting status
-- approval linkage
+1. First-party applications MAY show caller-relevant migration notices.
+2. First-party APIs MUST enforce account/session/workspace visibility.
+3. First-party APIs MUST distinguish user-facing migration warnings from canonical migration state.
+4. First-party APIs MUST NOT mutate migration or compatibility policy.
+5. User-facing notices MUST not expose unreleased risk or internal readiness details.
+6. First-party migration status may be personalized only as a derived presentation view.
+
+## Internal Service API Considerations
+
+1. Internal APIs MUST authenticate service identity.
+2. Internal APIs MUST enforce owner-domain scope for writes.
+3. Internal APIs MAY read compatibility state required to coordinate safe coexistence.
+4. Internal APIs MUST NOT become broad hidden write shortcuts.
+5. Internal APIs MUST emit audit and event references for material state changes.
+6. Internal route families MUST preserve accepted-state semantics for long-running migration work.
+7. Internal APIs MUST reject foreign-domain migration writes unless explicit delegated authority exists and is audited.
+
+## Admin / Control-Plane API Considerations
+
+1. Admin/control mutations MUST be narrower than internal mutations.
+2. Admin/control mutations MUST require reason codes, approval references, policy versions, actor identity, and audit references.
+3. Activation, rollback, forward-fix, sunset-complete, hold, release-hold, and emergency override MUST be admin/control-plane actions.
+4. Admin reads MAY expose risk, readiness, approval, validation, and failure detail but only to authorized operators.
+5. Admin routes MUST NOT bypass owner-domain validation.
+6. Emergency paths MUST be explicit and must preserve public explanation requirements when public trust is affected.
+7. Operator confirmation MUST be captured for irreversible or trust-sensitive actions.
+
+## Event / Webhook / Async API Considerations
+
+1. Internal events represent migration lifecycle facts or accepted intents.
+2. Public webhooks are derived external notifications and MUST be narrower than internal events.
+3. Event envelopes MUST include `event_id`, `event_type`, `event_version`, `occurred_at`, `migration_id`, `operation_reference`, `correlation_id`, and lineage references where applicable.
+4. Webhook envelopes MUST include delivery ID, signature, timestamp, event ID, event type, event version, public-safe payload, and replacement references where applicable.
+5. Event and webhook version transitions MUST follow compatibility and lineage rules.
+6. Replayed events MUST not duplicate migration meaning.
+7. Webhook consumers MUST not be forced into silent schema breakage; replacement paths and deprecation windows MUST be explicit.
+8. Async migration operations MUST distinguish accepted intent from final business outcome.
+
+## Chain-Adjacent API Considerations
+
+1. Chain-native facts and off-chain migration truth MUST remain distinct.
+2. Contract address replacement or wallet registry supersession MUST preserve old-to-new lineage.
+3. Public explanation references MUST exist for trust-sensitive chain-reference changes.
+4. Off-chain compatibility policy MUST NOT be represented as chain-native fact.
+5. Chain observations MUST remain provider/input truth until owner-domain validation succeeds.
+6. Chain-adjacent public reads MUST preserve historical interpretability even when old references are no longer current.
+7. Treasury, vault, payout, or governance-sensitive chain-reference migrations MAY require additional approval and dual-control gates.
+
+## Data Model / Storage Support Implications
+
+Downstream storage contracts SHOULD preserve durable records for:
+
+- migration registry
+- compatibility policy
+- contract version registry
+- supersession registry
+- identifier mapping registry
+- migration approval
+- migration readiness
+- migration reconciliation result
+- public compatibility notice
+- operation record
+- idempotency record
+- audit record
+- event publication record
+- webhook delivery record
+
+Storage MUST distinguish canonical migration records from derived views and public notices. Derived caches may be rebuilt from canonical migration records, contract-version records, supersession records, and public notice records.
+
+## Read Model / Projection / Reporting Rules
+
+1. Derived read models MUST NOT be canonical migration owners.
+2. Public compatibility views MUST derive from approved canonical records and publication records.
+3. Dashboards may aggregate migration health but MUST link to canonical migration records.
+4. Caches may lag only within documented freshness bounds and must indicate stale status where material.
+5. Reporting exports MUST preserve lineage references and avoid hiding superseded records.
+6. Public trust surfaces MUST not silently drop deprecated, sunset, superseded, or corrected references when historical readability is required.
+7. Read models MUST not allow mutation of canonical migration state through projection APIs.
+
+## Security / Risk / Privacy Controls
+
+1. Migration APIs affecting public trust, finance, governance, treasury, payout, chain references, identity, access control, billing, credits, or audit systems are sensitive-path APIs.
+2. Sensitive-path mutations MUST require elevated authorization and may require dual approval.
+3. Migration plans may contain non-public risk details and must not be exposed through public APIs.
+4. Public compatibility APIs MUST avoid leaking private resource IDs or unreleased contract plans.
+5. Identifier mapping APIs MUST protect against enumeration.
+6. Emergency override APIs MUST require explicit risk acknowledgement and post-action review.
+7. Security may block or quarantine migrations that create unsafe exposure or compatibility ambiguity.
+8. Audit evidence MUST not be redacted below the level needed for traceability, except where privacy policy requires protected views.
+9. Webhook signing keys and endpoint secrets belong to secrets/config governance and MUST not be exposed through compatibility APIs.
+
+## Audit / Traceability / Observability Requirements
+
+Every material mutation MUST produce durable audit evidence including:
+
+- actor identity
+- actor type
+- service identity where applicable
+- owner domain
+- route family
+- action
+- reason code
+- policy version
+- approval references
+- idempotency key reference
+- request fingerprint
 - correlation ID
-- idempotency key where applicable
-- replacement or supersession reference where applicable
+- trace ID
+- operation reference
+- before/after lifecycle state
+- affected contract versions
+- affected identifiers or supersession references
 - public notice reference where applicable
+- timestamp
+- result class
 
-Audit records are mandatory for:
-- migration creation
-- approval recording
-- cutover activation
-- deprecation publishing
-- sunset scheduling
-- rollback
-- forward-fix declaration
-- public registry supersession
-- compatibility override
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 Core tables
-
-#### `migration_registry`
-Primary key:
-- `migration_id` UUID
-
-Indexes:
-- `(owning_domain, migration_status)`
-- `(surface_type, migration_status)`
-- `(activated_at)`
-- `(migration_class, initiated_at)`
-
-Important columns:
-- `migration_id`
-- `migration_type`
-- `migration_class`
-- `owning_domain`
-- `surface_type`
-- `change_scope_json`
-- `migration_status`
-- `cutover_strategy`
-- `risk_level`
-- `created_by_actor_id`
-- `approved_by_actor_id`
-- `initiated_at`
-- `approved_at`
-- `activated_at`
-- `completed_at`
-- `rolled_back_at`
-- `superseded_by_migration_id`
-- `notes`
-
-Audit columns:
-- `created_at`
-- `updated_at`
-- `created_by`
-- `updated_by`
-
-#### `compatibility_policy`
-Primary key:
-- `compatibility_policy_id` UUID
-
-Unique constraints:
-- `(surface_type, consumer_class, is_active=true)` logical uniqueness
-
-Important columns:
-- `compatibility_policy_id`
-- `surface_type`
-- `consumer_class`
-- `breaking_change_policy`
-- `deprecation_policy`
-- `sunset_policy`
-- `historical_interpretability_requirement`
-- `legacy_support_expectation`
-- `version_transition_policy`
-- `is_active`
-
-#### `contract_version_registry`
-Primary key:
-- `version_reference_id` UUID
-
-Unique constraints:
-- `(contract_surface_type, contract_family, version_label)`
-
-Foreign keys:
-- `migration_id -> migration_registry.migration_id`
-- `replacement_version_reference_id -> contract_version_registry.version_reference_id`
-
-Important columns:
-- `version_reference_id`
-- `contract_surface_type`
-- `contract_family`
-- `resource_family`
-- `version_label`
-- `version_status`
-- `introduced_at`
-- `deprecated_at`
-- `sunset_at`
-- `replacement_version_reference_id`
-- `migration_id`
-
-#### `supersession_registry`
-Primary key:
-- `supersession_id` UUID
-
-Foreign keys:
-- `migration_id -> migration_registry.migration_id`
-
-Indexes:
-- `(superseded_type, superseded_reference)`
-- `(replacement_type, replacement_reference)`
-
-Important columns:
-- `supersession_id`
-- `superseded_type`
-- `superseded_reference`
-- `replacement_type`
-- `replacement_reference`
-- `reason_code`
-- `effective_at`
-- `public_explanation_reference`
-- `migration_id`
-
-#### `identifier_mapping_registry`
-Primary key:
-- `mapping_id` UUID
-
-Unique constraints:
-- `(entity_type, old_identifier, migration_id)`
-- optionally `(entity_type, new_identifier, migration_id)` where one-to-one migration is expected
-
-Important columns:
-- `mapping_id`
-- `entity_type`
-- `old_identifier`
-- `new_identifier`
-- `mapping_kind`
-- `mapping_status`
-- `effective_at`
-- `migration_id`
-
-#### `migration_approval`
-Primary key:
-- `migration_approval_id` UUID
-
-Foreign keys:
-- `migration_id -> migration_registry.migration_id`
-
-Important columns:
-- `migration_approval_id`
-- `migration_id`
-- `approval_scope`
-- `required_role`
-- `approval_status`
-- `approved_by_actor_id`
-- `approved_at`
-- `approval_reference`
-
-#### `migration_reconciliation_result`
-Primary key:
-- `reconciliation_id` UUID
-
-Foreign keys:
-- `migration_id -> migration_registry.migration_id`
-
-Important columns:
-- `reconciliation_id`
-- `migration_id`
-- `validation_scope`
-- `reconciliation_status`
-- `summary_hash`
-- `error_count`
-- `warning_count`
-- `completed_at`
-- `details_reference`
-
-#### `public_compatibility_notice`
-Primary key:
-- `notice_id` UUID
-
-Foreign keys:
-- `migration_id -> migration_registry.migration_id`
-
-Important columns:
-- `notice_id`
-- `migration_id`
-- `surface_type`
-- `notice_type`
-- `published_at`
-- `public_reference`
-- `status`
-
-### 21.2 Normalization and derived data
-
-- migration status is canonical in `migration_registry`
-- public notices are derived from canonical migration and version state
-- read models used by dashboards must not become migration truth
-- report or registry supersession artifacts may be rebuilt from canonical lineage tables where practical
-
-### 21.3 Reconciliation and audit columns
-Every core table should include:
-- `created_at`
-- `updated_at`
-- `created_by`
-- `updated_by`
-- `correlation_id` where mutation trace is needed
-- `audit_lineage_reference` where cross-domain traceability is needed
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
-
-```mermaid
-flowchart LR
-    subgraph PublicSurface["Public and Partner Surface"]
-        PUB1["Public Compatibility Reads"]
-        PUB2["Public Registry Supersession Reads"]
-    end
-
-    subgraph AppSurface["Application Surfaces"]
-        WEB["fuze-frontend-webapp"]
-        ADMIN["fuze-frontend-admin"]
-    end
-
-    subgraph Backend["fuze-backend-api"]
-        EDGE["API Edge"]
-        MIG["Migration Governance Service"]
-        VER["Contract Version Registry Service"]
-        MAP["Identifier Mapping Service"]
-        REC["Reconciliation Service"]
-        AUD["Audit and Activity Service"]
-        EVT["Event Publisher"]
-    end
-
-    subgraph DomainOwners["Owning Domain Services"]
-        D1["Platform Domains"]
-        D2["Product Domains"]
-        D3["Transparency and Registry Domains"]
-        D4["Governance and Payout Domains"]
-    end
-
-    subgraph Chain["Chain and Registry"]
-        CON["fuze-contracts"]
-        REG["fuze-public-registry"]
-    end
-
-    WEB --> EDGE
-    ADMIN --> EDGE
-    PUB1 --> EDGE
-    PUB2 --> EDGE
-
-    EDGE --> MIG
-    EDGE --> VER
-    EDGE --> MAP
-
-    MIG --> D1
-    MIG --> D2
-    MIG --> D3
-    MIG --> D4
-
-    MIG --> REC
-    MIG --> AUD
-    MIG --> EVT
-    VER --> AUD
-    MAP --> AUD
-
-    D4 --> CON
-    D3 --> REG
-    MIG --> REG
-    VER --> REG
-
-    EVT --> D1
-    EVT --> D2
-    EVT --> D3
-    EVT --> D4
-```
-
----
-
-## 23. Data Design — Mermaid Diagram
-
-```mermaid
-erDiagram
-    MIGRATION_REGISTRY ||--o{ MIGRATION_APPROVAL : has
-    MIGRATION_REGISTRY ||--o{ MIGRATION_RECONCILIATION_RESULT : validates
-    MIGRATION_REGISTRY ||--o{ CONTRACT_VERSION_REGISTRY : affects
-    MIGRATION_REGISTRY ||--o{ IDENTIFIER_MAPPING_REGISTRY : maps
-    MIGRATION_REGISTRY ||--o{ SUPERSESSION_REGISTRY : records
-    MIGRATION_REGISTRY ||--o{ PUBLIC_COMPATIBILITY_NOTICE : publishes
-
-    MIGRATION_REGISTRY {
-        uuid migration_id PK
-        string migration_type
-        string migration_class
-        string owning_domain
-        string surface_type
-        string migration_status
-        string cutover_strategy
-        datetime initiated_at
-        datetime approved_at
-        datetime activated_at
-        datetime completed_at
-        datetime rolled_back_at
-    }
-
-    COMPATIBILITY_POLICY {
-        uuid compatibility_policy_id PK
-        string surface_type
-        string consumer_class
-        string breaking_change_policy
-        string deprecation_policy
-        string sunset_policy
-        string version_transition_policy
-        boolean is_active
-    }
-
-    CONTRACT_VERSION_REGISTRY {
-        uuid version_reference_id PK
-        string contract_surface_type
-        string contract_family
-        string version_label
-        string version_status
-        datetime introduced_at
-        datetime deprecated_at
-        datetime sunset_at
-        uuid replacement_version_reference_id FK
-        uuid migration_id FK
-    }
-
-    IDENTIFIER_MAPPING_REGISTRY {
-        uuid mapping_id PK
-        string entity_type
-        string old_identifier
-        string new_identifier
-        string mapping_kind
-        string mapping_status
-        datetime effective_at
-        uuid migration_id FK
-    }
-
-    SUPERSESSION_REGISTRY {
-        uuid supersession_id PK
-        string superseded_type
-        string superseded_reference
-        string replacement_type
-        string replacement_reference
-        string reason_code
-        datetime effective_at
-        uuid migration_id FK
-    }
-
-    MIGRATION_APPROVAL {
-        uuid migration_approval_id PK
-        uuid migration_id FK
-        string approval_scope
-        string required_role
-        string approval_status
-        string approved_by_actor_id
-        datetime approved_at
-    }
-
-    MIGRATION_RECONCILIATION_RESULT {
-        uuid reconciliation_id PK
-        uuid migration_id FK
-        string validation_scope
-        string reconciliation_status
-        int error_count
-        int warning_count
-        datetime completed_at
-    }
-
-    PUBLIC_COMPATIBILITY_NOTICE {
-        uuid notice_id PK
-        uuid migration_id FK
-        string surface_type
-        string notice_type
-        datetime published_at
-        string public_reference
-        string status
-    }
-```
-
----
-
-## 24. Flow View
-
-### 24.1 Happy path
-1. Owning domain or release control registers a migration.
-2. Migration plan is attached with affected surfaces, versions, mappings, and cutover strategy.
-3. Required approvals are recorded.
-4. Migration moves to staged state.
-5. Activation occurs through idempotent cutover request.
-6. Owning domains execute controlled transition.
-7. Reconciliation validates semantic integrity.
-8. Public notices and supersession references are published where relevant.
-9. Migration is marked completed.
-
-### 24.2 Alternate path
-1. Migration requires temporary coexistence.
-2. Platform enters dual-read or shadow-validation phase.
-3. New version is registered as current while old version remains deprecated but active.
-4. Public or internal consumers receive explicit compatibility metadata.
-5. Final cutover occurs once dependent consumers are ready.
-
-### 24.3 Failure and recovery flow
-1. Activation begins.
-2. Reconciliation detects mismatch, ambiguity, or unacceptable divergence.
-3. If rollback is semantically safe, rollback is triggered and recorded.
-4. If rollback is unsafe, migration moves to `failed_requires_forward_fix`.
-5. Forward-fix workflow is declared and executed with preserved lineage.
-6. Public trust artifacts are not republished until correctness is revalidated.
-
-### 24.4 Retry behavior
-- migration create, approve, stage, activate, rollback, and complete operations are idempotent at business meaning level
-- duplicate activation requests return stable existing state
-- duplicate deprecation scheduling returns stable version metadata
-- duplicate public notice publication should not produce ambiguous duplicate notices for the same notice type and migration
-
-### 24.5 Admin override flow
-- only privileged operators may apply emergency overrides
-- override requires explicit risk acknowledgement
-- override is always audited
-- override does not erase lineage, approval gaps, or failed validation evidence
-
----
-
-## 25. Data Flows — Mermaid sequenceDiagram
-
-```mermaid
-sequenceDiagram
-    participant OD as Owning Domain Service
-    participant API as API Edge
-    participant MIG as Migration Governance
-    participant APR as Approval Control
-    participant VER as Version Registry
-    participant REC as Reconciliation Service
-    participant REG as Public Registry
-    participant AUD as Audit Service
-
-    OD->>API: POST /internal/migrations
-    API->>MIG: create migration
-    MIG->>AUD: audit creation
-    MIG-->>API: migration_id + planned state
-    API-->>OD: created response
-
-    OD->>API: POST /internal/migrations/{id}/plan
-    API->>MIG: attach plan
-    MIG->>AUD: audit planning
-    MIG-->>API: staged planning state
-    API-->>OD: planning accepted
-
-    participant ADMIN as Admin Control Plane
-    ADMIN->>API: POST /internal/migrations/{id}/approve
-    API->>APR: record approval
-    APR->>AUD: audit approval
-    APR-->>API: approval recorded
-
-    ADMIN->>API: POST /internal/migrations/{id}/activate
-    API->>MIG: activate migration
-    MIG->>VER: update contract/version state
-    MIG->>AUD: audit activation
-    MIG-->>API: active status
-
-    OD->>API: POST /internal/migrations/{id}/reconcile
-    API->>REC: submit reconciliation results
-    REC->>AUD: audit reconciliation
-    REC-->>API: reconciliation passed
-
-    API->>REG: publish public notice and supersession lineage
-    REG-->>API: publication recorded
-
-    ADMIN->>API: POST /internal/migrations/{id}/complete
-    API->>MIG: mark completed
-    MIG->>AUD: audit completion
-    MIG-->>API: completed status
-```
-
----
-
-## 26. Security and Risk Controls
-
-- migration and compatibility mutation routes are privileged and must not be exposed publicly
-- deprecation and sunset metadata for public surfaces must be published intentionally and consistently
-- internal migration routes must require service or operator identity with explicit scopes
-- emergency override and rollback routes require tighter controls than routine planning routes
-- contract and registry supersession affecting trust-sensitive meaning require dual-control or governed approval posture where relevant
-- public compatibility notices must never expose internal-only risk analysis, secret operational context, or restricted approval detail
-- migration APIs must preserve separation among FUZE token, Platform Credits, stablecoin payout execution, treasury policy, and governance records
-- direct raw table mutation outside owning domains is forbidden even during migration urgency
-- reconciliation failures in economic or payout-sensitive domains must trigger containment rather than silent continuation
-
----
-
-## 27. Operational Considerations
-
-- migration readiness should be observable through dashboards and structured status APIs
-- cutover operations should support staged rollout and accepted-state patterns where work is long-running
-- migration lineage should remain queryable for support and audit teams
-- temporary coexistence must have explicit end conditions
-- public compatibility messaging should remain synchronized with actual runtime and contract state
-- reporting and registry publication pipelines must consume canonical supersession records rather than inferring change
-- deployment sequencing should align with rollout dependencies and recovery posture
-- failed migrations should preserve actionable reconciliation outputs and not leave operator teams guessing which representation is current
-
----
-
-## 28. Acceptance Criteria
-
-1. The specification defines migration and backward compatibility as a cross-cutting platform concern owned in `fuze-backend-api`.
-2. The specification preserves canonical domain ownership during migration and explicitly forbids migration convenience writes into foreign truth.
-3. The specification differentiates migration, compatibility, correction, supersession, deprecation, and sunset.
-4. The specification defines concrete canonical entities for migration tracking, version lineage, identifier mapping, approvals, reconciliation, and public notices.
-5. The specification defines state transitions for migration and version lifecycles.
-6. The specification includes internal, admin, and public-read migration-related API families with clear boundary rules.
-7. The specification defines idempotent activation, rollback, and completion semantics.
-8. The specification preserves stronger compatibility commitments for public APIs, public webhooks, public registries, and trust-sensitive public artifacts.
-9. The specification preserves historical interpretability of public artifacts and superseded references.
-10. The specification includes a database-oriented schema view with keys, foreign keys, indexes, and audit columns.
-11. The specification includes render-safe Mermaid architecture, data, and flow diagrams aligned with the prose design.
-12. The specification aligns with `API_ARCHITECTURE_SPEC.md`, `PUBLIC_API_SPEC.md`, `INTERNAL_SERVICE_API_SPEC.md`, and `IDEMPOTENCY_AND_VERSIONING_SPEC.md`.
-13. The specification is usable as a governing source-of-truth file for downstream migration-aware OpenAPI, AsyncAPI, and SDK derivation work.
-
----
-
-## 29. Test Cases
-
-### 29.1 Positive cases
-
-1. **Migration registration succeeds**
-   - Given a domain owner submits a valid migration registration request
-   - When the request includes owning domain, surface type, and cutover strategy
-   - Then a `migration_id` is created
-   - And the migration enters `draft` or `planned` state
-
-2. **Public contract deprecation is recorded with replacement**
-   - Given a public API family has a replacement version
-   - When the owning domain deprecates the older version
-   - Then the version registry records deprecation, replacement, and optional sunset metadata
-   - And public compatibility reads expose that lineage
-
-3. **Controlled cutover completes with reconciliation**
-   - Given approvals and readiness gates are satisfied
-   - When the migration is activated and reconciliation passes
-   - Then the migration can move to `completed`
-   - And public notices may be published where relevant
-
-### 29.2 Negative cases
-
-4. **Foreign domain attempts migration write**
-   - Given a non-owning domain attempts to mutate another domain’s migration-sensitive truth through convenience route
-   - Then the request is rejected
-   - And the design is considered non-compliant
-
-5. **Deprecated public surface disappears without lineage**
-   - Given a public contract family is removed without deprecation or supersession metadata
-   - Then the design fails compatibility review
-
-6. **Dual-write becomes indefinite ambiguous ownership**
-   - Given a migration uses temporary dual-write
-   - When no canonical write owner remains explicit
-   - Then the migration fails review because it creates hidden multi-owner truth
-
-### 29.3 Authorization cases
-
-7. **Admin approval required for activation**
-   - Given a migration is planned but not approved
-   - When activation is requested
-   - Then the API returns `approval_missing` or equivalent
-   - And activation does not proceed
-
-8. **Public client denied internal migration route**
-   - Given an unauthenticated or partner client calls `/internal/migrations`
-   - Then the request is denied or route is unreachable by design
-
-### 29.4 Idempotency cases
-
-9. **Duplicate activation returns stable state**
-   - Given the same activation request is retried with the same idempotency identity
-   - Then the API returns the same migration result without duplicate cutover
-
-10. **Conflicting activation retry is rejected**
-   - Given the same idempotency identity is reused for materially different activation payload
-   - Then the API returns conflict and does not apply ambiguous activation
-
-### 29.5 Reconciliation and lineage cases
-
-11. **Failed reconciliation blocks completion**
-   - Given reconciliation detects semantic mismatch
-   - When completion is requested
-   - Then the request is rejected unless governed override exists
-
-12. **Superseded public registry reference remains traceable**
-   - Given a contract or wallet reference is superseded
-   - When a public client queries the older reference lineage
-   - Then the API returns replacement mapping and effective date
-
-### 29.6 Event and webhook cases
-
-13. **Deprecation event emitted once**
-   - Given a contract version is deprecated
-   - When the mutation succeeds
-   - Then `platform.contract_version.deprecated` is emitted once in business meaning
-
-14. **Public compatibility webhook payload preserves version metadata**
-   - Given a partner-compatible deprecation webhook exists
-   - When it is delivered
-   - Then the payload includes contract family, version, replacement, and timing metadata
-
----
-
-## 30. Open Questions or Explicit Deferred Decisions
-
-- exact public notice window duration by public API family
-- exact retention policy for legacy version metadata
-- exact dual-control thresholds for governance-, treasury-, and payout-sensitive migrations
-- exact identifier mapping retention rules by entity family
-- exact structure of public compatibility notice documents
-- exact SDK-level deprecation annotation format derived from approved contracts
-- exact compatibility policy matrix by product API family
-
-These items do not weaken the canonical migration and backward compatibility architecture defined here.
-
----
-
-## 31. Implementation Notes for `fuze-backend-api`
-
-- implement migration governance as a dedicated internal service or strongly bounded module, not as scattered ad hoc logic
-- keep migration registry, version registry, mapping registry, and reconciliation records in durable backend storage
-- use asynchronous execution for long-running cutovers, validation, and publication workflows
-- never let dashboard-only read models become authoritative for migration state
-- expose public compatibility reads only from published artifacts or canonical registries intentionally marked for public use
-- centralize audit, correlation, and idempotency support across migration-sensitive mutation routes
-- integrate approval gates with existing role, governance, and control-plane policies
-- preserve explicit contract family names and version references so downstream OpenAPI and AsyncAPI derivation remains stable
-
----
-
-## 32. Frontend Consumption Notes
-
-### `fuze-frontend-webapp`
-- consumes only published migration- or compatibility-relevant metadata intended for end users
-- may display warnings for deprecated resources, changed entitlements, or superseded public references
-- must not infer migration completion from UI state alone
-- must not expose internal-only migration risk, approval, or rollback controls
-
-### `fuze-frontend-admin`
-- may inspect migration details, readiness status, approvals, reconciliation, and public notice state
-- may initiate privileged actions only through explicit backend APIs
-- must present migration status, lineage, and risk clearly to operators
-- must not become a side channel for undocumented direct database mutation or contract replacement
-
----
-
-## 33. Contract Derivation Notes for OpenAPI / AsyncAPI / future `fuze-sdk`
-
-### OpenAPI derivation
-Derived machine-readable contracts should include:
-- migration route families
-- deprecation and sunset metadata conventions
-- structured error families for migration states
-- shared schema components for migration records, version records, supersession, and reconciliation results
-
-### AsyncAPI derivation
-Derived event contracts should include:
-- migration lifecycle events
-- contract version deprecation events
-- supersession publication events
-- replay-safe event identity and lineage metadata
-
-### Future `fuze-sdk`
-A future SDK should derive migration-related compatibility helpers from approved contracts only.
-The SDK may surface:
-- deprecation metadata
-- replacement-version hints
-- compatibility notice reads
-- retry guidance for idempotent migration-aware calls
-
-The SDK must not become the source of truth for migration policy, compatibility commitment, or lineage semantics.
+Observability MUST include metrics for:
+
+- migration registrations
+- approval latency
+- readiness gate failures
+- activation failures
+- rollback and forward-fix rates
+- reconciliation failures
+- public notice publication lag
+- deprecated/sunset contract usage
+- idempotency conflicts
+- webhook delivery failures
+- unauthorized mutation attempts
+- stale projection incidents
+
+## Failure Handling / Edge Cases
+
+### Migration Not Ready
+
+Activation MUST fail with `migration_not_ready` and return unmet gates.
+
+### Missing Owner Domain
+
+Migration registration MUST fail if owner domain is missing or ambiguous.
+
+### Foreign-Domain Write Attempt
+
+The API MUST reject writes where caller does not own the target domain or lacks delegated authority.
+
+### Rollback Unsafe
+
+Rollback MUST fail with `rollback_not_semantically_safe` and require forward-fix posture.
+
+### Reconciliation Failed
+
+Migration MUST remain `validating` or move to controlled failure state. Completion is forbidden unless governed override accepts residual risk.
+
+### Public Notice Missing
+
+Public or partner-visible deprecation/sunset MUST fail or remain blocked if required notice is missing, except emergency policy.
+
+### Legacy Identifier Conflict
+
+Identifier mapping conflicts MUST return `legacy_mapping_conflict` and MUST NOT silently choose a target.
+
+### Sunset Window Not Satisfied
+
+Sunset completion MUST fail unless required notice window is satisfied or emergency override is authorized.
+
+### Chain Reference Ambiguity
+
+Chain-reference migrations MUST remain blocked until old/new lineage and public explanation are explicit.
+
+### Projection Lag
+
+Derived views MAY indicate stale state but MUST NOT present stale compatibility data as current if material.
+
+### Provider Callback Version Drift
+
+Provider/partner callbacks using older payloads MUST be normalized and validated before influencing owner-domain migration state.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+1. All route families MUST include contract version posture in machine-readable specifications.
+2. Breaking changes require explicit version transition, migration guidance, and compatibility window unless emergency withdrawal applies.
+3. Deprecation does not change behavior by itself.
+4. Sunset changes support posture after compatibility obligations are satisfied or emergency override applies.
+5. Public APIs and public webhooks receive the strongest compatibility commitments.
+6. Internal APIs receive coordinated compatibility commitments and MUST NOT silently break.
+7. Event and webhook transitions MUST preserve replay safety.
+8. Reports, ledgers, registries, and transparency artifacts require historical readability even when formats evolve.
+9. Correction, migration, supersession, replacement, deprecation, and sunset MUST remain distinct metadata and event classes.
+10. Compatibility windows MUST be visible to authorized consumers and public consumers where applicable.
+11. Old and new representations may coexist temporarily, but only one may remain canonical for writes.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+### OpenAPI
+
+OpenAPI artifacts MUST preserve:
+
+- route-family boundaries
+- public/internal/admin separation
+- required idempotency headers for mutations
+- correlation/request IDs
+- version status fields
+- deprecation/sunset metadata
+- replacement references
+- public/internal visibility separation
+- error code taxonomy
+- operation-reference schemas for accepted async work
+- audit-reference fields where safe
+- response classes distinguishing accepted, applied, completed, failed, and conflict states
+
+### AsyncAPI
+
+AsyncAPI artifacts MUST preserve:
+
+- migration event families
+- event IDs and versions
+- lineage fields
+- replay-safety requirements
+- public webhook narrowing relative to internal events
+- deprecation and sunset event semantics
+- webhook delivery IDs, signatures, timestamps, and retry behavior
+- accepted-state vs final-outcome semantics
+
+### SDKs
+
+SDKs MUST:
+
+- expose deprecation and sunset warnings without redefining compatibility truth
+- surface replacement references and public explanation links
+- preserve operation references for async migration-related actions
+- avoid hiding error codes behind generic exceptions
+- handle idempotent replay responses
+- respect public compatibility visibility
+- avoid treating SDK hints as canonical policy
+
+## Implementation-Contract Guardrails
+
+1. Implementations MUST NOT treat migration APIs as generic data admin APIs.
+2. Implementations MUST NOT allow direct database edits to replace migration API actions for production state transitions.
+3. Implementations MUST NOT use rollout flags as migration status.
+4. Implementations MUST NOT infer completion from deployment success alone.
+5. Implementations MUST NOT expose internal readiness, approval, or risk data publicly.
+6. Implementations MUST NOT create hidden dual-write owners.
+7. Implementations MUST NOT make derived projections mutable.
+8. Implementations MUST NOT skip idempotency for activation, rollback, forward-fix, deprecation, sunset, supersession, or mapping.
+9. Implementations MUST NOT collapse correction and supersession.
+10. Implementations MUST NOT delete historical lineage required for public trust or audit.
+11. Implementations MUST NOT allow webhooks to expose unpublished migration state.
+12. Implementations MUST NOT allow provider or chain inputs to become canonical without owner-domain validation.
+
+## Downstream Execution Staging
+
+Downstream teams SHOULD implement in this order:
+
+1. canonical resource schemas for migration, compatibility policy, contract version, supersession, identifier mapping, approval, reconciliation, public notice, idempotency, and audit
+2. internal read/registration APIs
+3. admin approval and readiness APIs
+4. idempotent stage/activate/rollback/forward-fix APIs
+5. reconciliation jobs and operation status APIs
+6. event publication for lifecycle transitions
+7. public compatibility read models
+8. public notice publication workflow
+9. webhook delivery for approved external compatibility events
+10. OpenAPI/AsyncAPI/SDK derivation
+11. dashboard/reporting views
+12. production-readiness regression suite
+
+## Required Downstream Specs / Contract Layers
+
+- migration registry storage contract
+- compatibility policy storage contract
+- contract version registry storage contract
+- identifier mapping and supersession storage contracts
+- migration approval and audit contract
+- migration event catalog
+- public compatibility OpenAPI contract
+- internal/admin migration OpenAPI contract
+- webhook AsyncAPI contract
+- SDK migration-warning contract
+- migration runbook and cutover procedure templates
+- recovery/rollback/forward-fix runbook
+- public notice publication contract
+- chain-reference supersession contract where applicable
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+The following patterns are forbidden unless explicitly approved and bounded:
+
+1. public mutation of migration state
+2. admin mutation without reason code and audit reference
+3. activation without owner domain and readiness gates
+4. deprecation without replacement reference or explicit rationale
+5. sunset without notice window or emergency override
+6. hidden dual-write during coexistence
+7. migration completion without reconciliation or governed override
+8. rollback where rollback is semantically unsafe
+9. public notice published from draft/unapproved migration state
+10. reporting view used as migration source of truth
+11. SDK warning used as compatibility policy
+12. frontend banner used as migration state
+13. rollout percentage used as migration truth
+14. chain observation treated as off-chain canonical migration state
+15. internal service mutating foreign-domain identifiers
+16. duplicate activation caused by retry
+17. event replay creating duplicate migration meaning
+18. webhook schema break without explicit version transition
+19. deletion of historical lineage after supersession
+20. direct database edits bypassing migration API state transitions
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example: Public API Deprecation
+
+A public route family moves from `v1` to `v2`. The owner domain registers a migration, creates a contract-version record, marks `v1` deprecated with replacement `v2`, publishes a public notice, emits `platform.contract_version.deprecated`, keeps `v1` readable during the compatibility window, and later schedules sunset after notice obligations are met.
+
+### Anti-Example: Silent Payload Drift
+
+A team adds required response semantics to a public endpoint without version metadata, deprecation notice, or replacement reference. This is forbidden because consumers cannot distinguish additive change from semantic breakage.
+
+### Canonical Example: Identifier Mapping
+
+A domain replaces legacy identifiers with stable global IDs. The owner domain writes `identifier_mapping` records, exposes public mapping only where approved, preserves old-to-new lineage, validates projections, and keeps old references historically readable.
+
+### Anti-Example: Reporting-Owned Migration
+
+A dashboard remaps old IDs to new IDs and teams treat the dashboard mapping as canonical. This is forbidden because reporting is derived and cannot own migration truth.
+
+### Canonical Example: Chain Reference Supersession
+
+A contract address is superseded. The chain-native fact remains the old and new deployed addresses. FUZE off-chain systems record supersession lineage, publish a public registry explanation, preserve old references, and distinguish off-chain interpretation from chain-native state.
+
+### Anti-Example: Rollout-as-Migration
+
+A feature flag routes 90% of traffic to a new implementation and the team declares migration complete. This is forbidden unless migration state, reconciliation, lineage, and compatibility obligations are explicitly satisfied.
+
+## Acceptance Criteria
+
+1. Migration registration rejects requests without owner domain, surface family, affected truth classes, migration class, and recovery posture.
+2. Internal migration writes require service identity or admin identity and owner-domain authorization.
+3. Admin activation requires approval references, reason code, policy version, idempotency key, and audit reference.
+4. Activation replay with same idempotency key and same fingerprint returns stable operation state without duplicate cutover.
+5. Activation replay with same idempotency key and different fingerprint returns `409 idempotency_conflict`.
+6. Migration cannot enter `active` without readiness gates and approval linkage.
+7. Migration cannot enter `completed` without reconciliation success or governed override.
+8. Rollback is rejected when rollback is semantically unsafe and forward-fix is required.
+9. Public reads expose only published compatibility notices and public lineage.
+10. Public reads do not expose internal readiness, approval, risk, or draft migration data.
+11. Deprecation requires replacement reference or explicit rationale.
+12. Public sunset completion requires satisfied notice window or explicit emergency override.
+13. Supersession records preserve old/new reference, reason, effective date, and migration ID.
+14. Identifier mapping is unique for `entity_type + old_identifier + migration_id`.
+15. Event emission occurs for material lifecycle transitions.
+16. Webhook payloads include version and lineage references and are narrower than internal events.
+17. Public chain-reference supersession distinguishes chain-native facts from off-chain migration interpretation.
+18. Reporting/projection APIs cannot mutate canonical migration state.
+19. Audit records exist for every material mutation.
+20. OpenAPI/AsyncAPI artifacts preserve public/internal/admin/event surface separation.
+21. SDK derivation exposes deprecation/sunset warnings without redefining compatibility truth.
+22. Boundary-violation attempts are rejected and audited.
+23. Rate-limit and abuse controls apply to public enumeration and admin mutation attempts.
+24. Degraded-mode responses distinguish stale projections from current canonical state.
+25. Migration status cannot be inferred from rollout flags or deployment success alone.
+
+## Test Cases
+
+### Positive Tests
+
+1. **Register migration:** Valid owner-domain service submits complete migration registration and receives `201 Created` with `migration_id`.
+2. **Plan migration:** Owner-domain service attaches readiness plan and receives `200 OK` with updated state `planned`.
+3. **Approve migration:** Authorized admin submits approval and receives approval record plus audit reference.
+4. **Activate migration async:** Admin activates staged migration and receives `202 Accepted` with operation reference.
+5. **Complete migration:** Reconciliation succeeds and completion request transitions migration to `completed`.
+6. **Public notice read:** Public client retrieves published deprecation notice and sees replacement reference and sunset date.
+7. **Identifier mapping resolve:** Authorized internal service resolves old ID to new ID with lineage reference.
+8. **Supersession publish:** Public registry publishes supersession after canonical migration and receives public view update.
+9. **Webhook delivery:** Partner receives signed deprecation webhook with event ID, version, lineage, and replacement reference.
+10. **SDK deprecation warning:** SDK generated from OpenAPI surfaces deprecation metadata and replacement reference.
+
+### Negative Tests
+
+11. **Missing owner:** Registration without owner domain returns `422 migration_owner_missing`.
+12. **Foreign write:** Internal service attempts to mutate another domain's identifier mapping and receives `403 foreign_domain_write_forbidden`.
+13. **Public draft access:** Public client requests draft migration and receives `404` or visibility-safe denial.
+14. **Activation without approval:** Activation fails with `approval_missing`.
+15. **Activation not ready:** Activation fails with `migration_not_ready` and unmet gates for authorized callers.
+16. **Deprecation without replacement/rationale:** Deprecation request returns `422 replacement_reference_missing`.
+17. **Sunset too early:** Sunset completion before notice window returns `409 sunset_window_not_satisfied`.
+18. **Unsafe rollback:** Rollback classified unsafe returns `409 rollback_not_semantically_safe`.
+19. **Mapping conflict:** Duplicate old identifier with different new identifier returns `409 legacy_mapping_conflict`.
+20. **Reporting mutation:** Attempt to mutate migration through dashboard/projection API returns `403 derived_surface_not_canonical`.
+
+### Authorization / Entitlement / Scope Tests
+
+21. Authenticated user can read migration notice only for own account/workspace/resource.
+22. Workspace member without required permission receives `403 workspace_scope_denied`.
+23. Entitlement transition notice is visible, but entitlement truth is not altered by compatibility read.
+24. Admin without `migration:activate` cannot activate staged migration.
+25. Security override requires elevated scope and policy version.
+
+### Idempotency / Retry / Replay Tests
+
+26. Same activation request replay returns same operation reference.
+27. Same idempotency key with changed activation payload returns `409 idempotency_conflict`.
+28. Event replay does not duplicate migration state.
+29. Webhook redelivery preserves delivery ID and does not create duplicate notice.
+30. Retry after transient worker failure resumes operation without duplicating reconciliation.
+
+### Conflict / Concurrency Tests
+
+31. Two activation attempts race; one succeeds, the other receives stable state or conflict.
+32. Contract version cannot be both `current` and `sunset_complete`.
+33. Supersession conflict with different replacement is rejected.
+34. Completion during active reconciliation is rejected.
+35. Hold/quarantine blocks activation.
+
+### Rate Limit / Abuse Tests
+
+36. Public enumeration across unknown references is rate-limited.
+37. Repeated failed admin activations trigger risk controls.
+38. Webhook delivery retries stop after bounded policy and enter dead-letter state.
+39. Identifier mapping resolution protects against enumeration.
+40. Public compatibility API returns cache-safe responses without exposing private IDs.
+
+### Degraded Mode / Recovery Tests
+
+41. Projection stale state is labeled stale and does not claim current compatibility.
+42. Migration registry unavailable causes mutation fail-closed.
+43. Public compatibility view can continue serving last published notice with freshness metadata.
+44. Failed reconciliation prevents completion.
+45. Forward-fix path preserves lineage and emits event.
+
+### Audit / Observability Tests
+
+46. Every material mutation has audit record with actor, reason, policy version, correlation ID, and before/after state.
+47. Unauthorized mutation attempt is audited.
+48. Metrics emit for activation failure, idempotency conflict, public notice lag, and webhook failure.
+49. Trace ID links activation request, event, worker reconciliation, publication, and public view.
+50. Audit view redacts only privacy-sensitive fields while preserving traceability.
+
+### Migration / Compatibility Tests
+
+51. Public API breaking change cannot be released without contract-version transition metadata.
+52. Internal API breaking change requires coordinated compatibility window.
+53. Deprecated version remains historically readable.
+54. Sunset version blocks unsupported behavior after effective sunset.
+55. Public registry supersession preserves old reference lookup.
+
+### Boundary-Violation Tests
+
+56. Rollout flag change alone does not move migration status.
+57. Deployment success alone does not complete migration.
+58. Frontend banner cannot publish public notice.
+59. SDK warning cannot alter compatibility policy.
+60. Chain observation cannot create off-chain migration truth without owner-domain validation.
+
+## Dependencies / Cross-Spec Links
+
+This API spec depends on:
+
+- refined system registry for source-of-truth routing and precedence
+- migration/backward-compatibility refined spec for semantics
+- API architecture refined spec for surface-family posture
+- idempotency/versioning refined spec for replay safety and version classification
+- public/internal/event API specs for surface-family rules
+- security/risk specs for sensitive-path controls
+- audit specs for traceability
+- deployment/runtime specs for release activation
+- business continuity/recovery specs for rollback, containment, forward-fix, and degraded-mode behavior
+- public registry/transparency specs for public compatibility publication
+- domain refined specs for owner-domain business semantics
+
+## Explicitly Deferred Items
+
+1. exact OpenAPI schema files
+2. exact AsyncAPI schema files
+3. exact SDK method names
+4. exact database DDL
+5. exact public notice copy
+6. exact compatibility window durations by each future contract family
+7. exact release calendar and rollout schedule
+8. exact CI/CD implementation
+9. exact chain transaction scripts and ABIs
+10. exact dashboard layout
+11. exact product-specific migration plans
+12. exact named human approval authority where not yet specified
+
+Deferred items MUST preserve this API contract.
+
+## Final Normative Summary
+
+The FUZE migration and backward compatibility API contract exists to make platform evolution explicit, auditable, replay-safe, lineage-preserving, and compatible with refined system semantics.
+
+The API layer MUST express migration truth without becoming domain business truth. It MUST preserve owner-domain mutation boundaries. It MUST distinguish public, first-party, internal, admin/control, event, webhook, reporting, and chain-adjacent surfaces. It MUST distinguish migration, correction, supersession, deprecation, sunset, replacement, rollout, publication, and presentation. It MUST require idempotency, auditability, authorization, approval, observability, compatibility windows, public notice posture, and recovery discipline wherever material. It MUST prevent hidden dual ownership, silent breaking changes, reporting-owned semantics, public exposure drift, operator shortcut drift, event replay drift, and chain-reference ambiguity.
+
+Downstream implementation contracts, OpenAPI/AsyncAPI artifacts, SDKs, migration runbooks, public registry views, reporting surfaces, and release-control tools MUST preserve this specification and MUST NOT reinterpret it for convenience.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, policy-constrained, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are explicit.
+- [x] Accepted-state vs final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behaviors are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart`.
+- [x] Architecture Diagram clarifies consumers, surface families, owner domains, services, stores, events, async workers, publication, and chain-adjacent boundaries.
+- [x] Data Design diagram uses Mermaid `erDiagram`.
+- [x] Data Design distinguishes canonical records from derived/public records.
+- [x] Flow View includes synchronous, asynchronous, failure, retry, audit, admin/operator, and finalization paths.
+- [x] Data Flows use Mermaid `sequenceDiagram`.
+- [x] Sequence diagram distinguishes accepted async intent from final outcomes.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.

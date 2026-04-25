@@ -1,1404 +1,1474 @@
-# PUBLIC_PRODUCT_CATALOG_API_SPEC
+# PUBLIC_PRODUCT_CATALOG_API_SPEC.md
+
+## Document Metadata
+
+- **Document Name:** `PUBLIC_PRODUCT_CATALOG_API_SPEC.md`
+- **Document Type:** FUZE API SPEC v2 / production-grade public-read companion API specification
+- **Status:** Draft refined canonical API specification
+- **Version:** 2.0.0
+- **Effective Date:** 2026-04-25
+- **Last Updated:** 2026-04-25
+- **Reviewed On:** 2026-04-25
+- **Document Owner:** FUZE Public Product Catalog API Domain; named individual owner is not yet specified
+- **Approval Authority:** FUZE API Governance / Platform Architecture approval workflow; named approval body is not yet specified
+- **Review Cadence:** Quarterly and whenever product admission, product visibility, public API posture, pricing presentment, entitlement, rollout, public metadata, trust artifacts, or publication lifecycle materially changes
+- **Governing Layer:** Public-read / public-trust companion API layer
+- **Parent Registry:** API SPEC v2 Canonical File Registry
+- **Upstream Semantic Registry:** `REFINED_SYSTEM_SPEC_INDEX.md`
+- **Upstream API Registry:** `API_SPEC_INDEX.md`
+- **Primary Audience:** Platform architecture, backend/API engineering, public API governance, product engineering, frontend, growth, public trust, SDK/OpenAPI authors, security, audit, operations, and implementation-contract authors
+- **Primary Purpose:** Define the canonical API contract for FUZE public product catalog discovery, publication, lookup, product/plan presentment references, bounded actor-aware catalog enrichments, correction lineage, withdrawal, supersession, public-safe read models, events, auditability, and downstream implementation guardrails
+- **Primary Upstream References:** `PUBLIC_PRODUCT_CATALOG_API_SPEC.md` v1, `PUBLIC_API_SPEC.md`, `API_ARCHITECTURE_SPEC.md`, `PRODUCT_BOUNDARY_AND_DOMAIN_OWNERSHIP_SPEC.md`, `PRODUCT_ADMISSION_AND_EXPANSION_GATE_SPEC.md`, `PRICING_AND_MONETIZATION_MODEL_SPEC.md`, `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`, `ENTITLEMENT_AND_CAPABILITY_GATING_SPEC.md`, `FEATURE_FLAG_AND_ROLLOUT_CONTROL_SPEC.md`, `PUBLIC_METADATA_API_SPEC.md`, `PUBLIC_TRANSPARENCY_API_SPEC.md`, `FILE_OBJECT_AND_ARTIFACT_STORAGE_SPEC.md`, `EVENT_MODEL_AND_WEBHOOK_SPEC.md`, `IDEMPOTENCY_AND_VERSIONING_SPEC.md`, `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`, `AUDIT_LOG_AND_ACTIVITY_SPEC.md`, `SECURITY_AND_RISK_CONTROL_SPEC.md`, `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+- **Primary Downstream Dependents:** Public OpenAPI contract, public catalog SDK surfaces, first-party web catalog UI, public product pages, partner-safe catalog lookup, public metadata linking, product integration contracts, pricing-presentment contracts, admin publication tooling, read-model/projection jobs, event catalog, audit catalog, implementation-contract specs
+- **API Surface Families Covered:** public-read, authenticated public-read, first-party application read, internal service, admin/control-plane, event/async, reporting/export, public metadata linking
+- **API Surface Families Excluded:** arbitrary public writes, checkout/payment mutations, subscription lifecycle mutations, entitlement computation APIs, feature-flag/rollout-control APIs, product-internal configuration APIs, governance/treasury/payout APIs, raw storage APIs, raw analytics APIs
+- **Canonical System Owner(s):** Public Product Catalog publication domain; upstream product, pricing, billing, entitlement, rollout, metadata, transparency, audit, and file/artifact domains retain their own semantic ownership
+- **Canonical API Owner:** Public Product Catalog API Domain
+- **Supersedes:** v1 `PUBLIC_PRODUCT_CATALOG_API_SPEC.md` as an API SPEC v2 production-grade contract; earlier weaker interpretations that treat catalog as website content, frontend-owned data, pricing truth, entitlement truth, or a raw export of product internals
+- **Superseded By:** Not yet specified
+- **Related Decision Records:** Not yet specified
+- **Canonical Status Note:** This API specification is canonical for the public product catalog API contract. It does not own underlying product, pricing, billing, entitlement, rollout, or public metadata truth.
+- **Implementation Status:** Ready for downstream implementation planning and machine-readable contract derivation; final route inventory and payload schemas remain downstream implementation-contract work
+- **Approval Status:** Pending approval
+- **Change Summary:** Upgrades the v1 public product catalog API into API SPEC v2 format; strengthens truth-class separation, public/internal/admin boundaries, catalog lineage, visibility states, request/response/error/idempotency/audit rules, read-model controls, diagrams, flow views, acceptance criteria, and tests.
 
-## 1. Title
+## Title
 
-**PUBLIC_PRODUCT_CATALOG_API_SPEC.md**
+FUZE Public Product Catalog API Specification
 
----
+## Purpose
 
-## 2. Document Metadata
-
-- **Document Name:** PUBLIC_PRODUCT_CATALOG_API_SPEC.md
-- **API Classification:** public-read, authenticated-read, internal, event-driven
-- **Owning Domain:** Public Product Catalog Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** public product catalog records, catalog family profiles, publication states, product artifact links, product visibility rules, correction-safe catalog lineage, and bounded actor-aware catalog enrichments in `fuze-backend-api`
-- **Status:** Draft for canonical source-of-truth approval
-- **Purpose:** Define the production-grade API contract architecture for the FUZE public product catalog, including public product discovery, public SKU/service-plan visibility, catalog-family publication, artifact linkage, correction-safe catalog lineage, and stable public-read product surfaces across the platform
-- **Canonical Folder:** `fuze.ac > docs > api-spec`
+This document defines the production-grade API contract for FUZE public product catalog surfaces.
 
----
+The Public Product Catalog API provides a stable, governed public-read and bounded authenticated-read surface for discovering FUZE products, product families, product modules, public plan/package labels, public capability summaries, activation posture, availability posture, and product-linked public artifacts. It exists so product discovery can be published through one durable API layer rather than ad hoc landing-page data, frontend-only constants, raw product configuration, or unsafe exports of internal business systems.
 
-## 2.1 API Classification Header
-
-- **API Classification:** public-read | authenticated-read | internal | event-driven
-- **Owning Domain:** Public Product Catalog Domain
-- **Primary Implementing Repo:** `fuze-backend-api`
-- **Primary System of Record:** public product catalog publication and discovery domain
+The API MUST preserve the distinction between:
 
----
-
-## 3. Purpose
+- canonical product/domain truth;
+- public product catalog publication truth;
+- public pricing and plan-presentment references;
+- entitlement and capability eligibility truth;
+- rollout/control truth;
+- public metadata and transparency artifacts;
+- derived catalog search/list views; and
+- presentation rendering.
 
-This document defines the canonical API specification for FUZE public product catalog operations. It translates the governing FUZE platform architecture, public API rules, platform/product integration rules, pricing and monetization rules, subscriptions and billing constraints, public metadata expectations, and API architecture rules into an implementation-ready API contract.
+## Scope
 
-This API exists because FUZE requires a stable public discovery surface for platform products, modules, service plans, activation surfaces, pricing-presentment metadata, product-family visibility, and public go-to-market references that is narrower than internal product truth and more structured than ad hoc landing-page content. Public product catalog must therefore remain a deliberate public-read layer that supports discovery, evaluation, partner/reference integration, and transparency-first positioning without leaking unsafe internal product configuration or silently redefining canonical owned domain truth.
+This specification governs:
 
-Public product catalog must preserve explicit distinction between:
-- canonical product-owned truth,
-- public product catalog publication,
-- public pricing/presentment references,
-- and bounded actor-aware catalog enrichments.
+1. public-read catalog list, detail, family, lookup, and search route families;
+2. authenticated public-read catalog enrichments that are safe for the caller scope;
+3. first-party application consumption of the same public or authenticated-public contract posture;
+4. internal service APIs for catalog record creation, artifact linkage, product/plan reference validation, draft lifecycle, and projection refresh;
+5. admin/control-plane APIs for publication, withdrawal, restriction, correction, supersession, and discrepancy resolution;
+6. event and async behavior for catalog publication lifecycle changes;
+7. request, response, error, result, status, idempotency, audit, observability, migration, OpenAPI, AsyncAPI, and SDK derivation rules;
+8. public catalog read-model, search-index, reporting, export, cache, and public metadata linking boundaries.
 
-Accordingly, this specification defines how public product catalog records, catalog families, publication states, product references, plan references, artifact links, and correction lineage are represented, and how public catalog behavior remains auditable, idempotent, and architecture-consistent across FUZE.
+## Out of Scope
 
----
+This specification does not govern:
 
-## 4. Scope
+- product business behavior, product runtime workflows, or product-owned capability semantics;
+- canonical pricing policy, billing truth, payment truth, subscription truth, invoice truth, or Platform Credits truth;
+- entitlement computation or effective permission calculation;
+- rollout flag ownership, kill-switch ownership, admission approval workflow ownership, or release-control policy truth;
+- checkout, subscription purchase, payment, refund, or usage billing APIs;
+- private internal product configuration schemas;
+- arbitrary public write APIs;
+- website page rendering, CMS implementation, visual design, analytics instrumentation, or SEO content management;
+- raw file storage, object-store delivery, or secret/config management;
+- governance, treasury, payout, wallet registry, or chain execution mutations.
 
-This specification covers:
+## Design Goals
 
-- public-read APIs for public product discovery, product family browsing, product detail retrieval, public plan/package visibility, public capability summaries, and product-linked trust-surface discovery
-- authenticated read APIs for bounded actor-aware catalog enrichments where policy allows
-- internal APIs for public catalog record creation, artifact linkage, publication, correction, supersession, and withdrawal
-- publication-state handling for product records, plan-presentment records, derived public catalog summaries, and bounded rollout visibility
-- event emission requirements for public catalog lifecycle changes
-- request, response, error, idempotency, versioning, audit, and database-shape rules for this domain
+1. Provide stable public discovery of FUZE products and product families.
+2. Keep catalog publication narrower than internal product truth.
+3. Prevent public catalog records from becoming shadow pricing, billing, entitlement, or rollout owners.
+4. Preserve durable publication, withdrawal, correction, and supersession lineage.
+5. Support public, authenticated-public, internal, admin/control, event, and reporting surfaces without collapsing them.
+6. Support OpenAPI/SDK derivation without allowing SDK ergonomics to redefine product/catalog semantics.
+7. Preserve auditability, idempotency, abuse resistance, observability, migration safety, and public trust.
 
-This specification does **not** redefine:
+## Non-Goals
 
-- canonical internal product configuration in full detail
-- subscriptions and billing ownership in full detail
-- platform credits ownership in full detail
-- pricing-engine ownership in full detail
-- feature-flag or rollout-control ownership in full detail
-- internal entitlement computation in full detail
-- low-level website rendering implementation
-- SDK generation strategy in full detail
+This API is not intended to:
 
-Those remain governed by their own source-of-truth specifications.
+- expose all product configuration publicly;
+- define commercial pricing policy or billing behavior;
+- prove that a user is entitled to use a product;
+- act as a rollout-control system;
+- turn landing-page copy into source-of-truth product data;
+- expose support/admin publication powers through public routes;
+- create a broad partner catalog-write interface;
+- replace product-specific API specs where products require richer contracts.
 
----
+## Core Principles
 
-## 5. Source-of-Truth Inputs
+### 1. Catalog-Is-Publication Principle
 
-### Primary FUZE docs and specs used
+Public catalog records are governed publication records. They MAY reference product, pricing-presentment, plan, artifact, metadata, and trust surfaces, but they MUST NOT become the canonical owner of those underlying domains.
 
-#### Highest-priority platform and ownership sources
-- `SYSTEM_SPEC_INDEX.md`
-- `DOCS_SPEC.md`
-- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`
-- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`
-- `PLATFORM_ARCHITECTURE_SPEC.md`
-- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`
-- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`
-- `PRODUCT_INTEGRATION_ARCHITECTURE_SPEC.md`
-- `PRODUCT_ROLLOUT_DEPENDENCY_SPEC.md`
-- `ONCHAIN_OFFCHAIN_RESPONSIBILITY_SPEC.md`
+### 2. Narrower-Than-Product Principle
 
-#### Primary product / catalog / public-read sources
-- `PUBLIC_API_SPEC.md`
-- `PRICING_AND_MONETIZATION_MODEL_SPEC.md`
-- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
-- `PLATFORM_CREDITS_SPEC.md`
-- `TRANSPARENCY_MODEL_SPEC.md`
-- `PUBLIC_CONTRACT_AND_WALLET_REGISTRY_SPEC.md`
-- `API_ARCHITECTURE_SPEC.md`
-- product integration specs where relevant:
-  - `QTB_PRODUCT_INTEGRATION_SPEC.md`
-  - `AIMM_PRODUCT_INTEGRATION_SPEC.md`
-  - `ZAGA_PRODUCT_INTEGRATION_SPEC.md`
-  - `AIE_PRODUCT_INTEGRATION_SPEC.md`
-  - `HERHELP_PRODUCT_INTEGRATION_SPEC.md`
-  - `BOTMAD_PRODUCT_INTEGRATION_SPEC.md`
+The public product catalog MUST expose a public-safe subset of product meaning. Internal roadmap, orchestration, feature-flag, entitlement, billing, provider, security, or operations details MUST remain non-public unless a narrower approved spec explicitly permits publication.
 
-#### Supporting runtime and control sources
-- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
-- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
-- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
-- `SECURITY_AND_RISK_CONTROL_SPEC.md`
-- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
-- `SECRETS_CONFIG_AND_ENVIRONMENT_SPEC.md`
-- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+### 3. Product-Truth Separation Principle
 
-### Highest-priority interpretation applied
+Product domains own product semantics. Catalog owns public discovery and publication lifecycle. Public catalog consumers MUST NOT infer that catalog visibility alone grants entitlement, workspace access, commercial activation, or product runtime availability.
 
-For this file, the most important governing interpretation is:
+### 4. Pricing-Presentment Separation Principle
 
-1. public product catalog is a deliberate public discovery surface and not a convenience export of internal product configuration
-2. backend owns canonical public catalog publication truth
-3. public product catalog must remain explicitly separate from product domain business truth, billing truth, entitlement truth, and rollout-control truth
-4. product family, public plan/package labels, pricing-presentment metadata, availability posture, and product capability summaries are suitable public surfaces when intentionally designed
-5. unsafe internal pricing rules, entitlement internals, product orchestration detail, and control-plane mutation capabilities must remain non-public
-6. catalog publication corrections and supersession must preserve historical intelligibility rather than silently rewriting public meaning
+The catalog MAY display approved plan/package labels, public price-presentment references, and pricing artifact links. It MUST NOT calculate, override, or reinterpret canonical pricing policy, billing state, invoices, discounts, taxes, credits, or payment outcomes.
 
-### Supporting external standards used only as guidance
+### 5. Explicit Visibility Principle
 
-- HTTP semantics for public-read and bounded authenticated-read APIs
-- structured problem-details error design
-- general public-catalog, search/filter, and public product discovery patterns as supporting guidance
+Every catalog record MUST carry explicit visibility classification: public, authenticated-public, limited-public, partner-safe, internal-only draft, restricted, withdrawn, or superseded. Ambiguous visibility is forbidden.
 
-External guidance does not override FUZE source-of-truth documents.
+### 6. Correction-Lineage Principle
 
----
+Corrections, withdrawal, and supersession MUST preserve lineage. Public catalog history MUST NOT be silently rewritten when historical intelligibility, public trust, or consumer compatibility could be affected.
 
-## 6. Governing Architecture and Ownership Interpretation
+### 7. Admin-Separation Principle
 
-This API belongs to the **Public Product Catalog Domain** because it owns the canonical lifecycle of:
-
-- public product catalog records,
-- catalog family classification,
-- public product and plan references,
-- public availability posture,
-- public artifact linkage,
-- bounded catalog enrichments,
-- and correction-safe public catalog history.
-
-This API is implemented primarily in `fuze-backend-api` because:
-
-- backend owns durable public catalog publication truth
-- catalog publication must be built from canonical product-owned domains without becoming a shadow owner
-- multiple public discovery surfaces require one stable public catalog layer
-- public trust requires structured, versionable product outputs beyond ad hoc website content
-- audit generation and correction lineage must be centralized
-
-This API is **not** owned by:
-
-- `fuze-frontend-webapp`, because frontend may render product catalog content but must not own canonical catalog publication truth
-- `fuze-frontend-admin`, because admin may publish or supersede catalog artifacts but must not own catalog truth
-- product domains, because product domains own canonical product behavior while this domain owns a bounded public discovery projection
-- subscriptions/billing domain, because plan charging truth is linked but not owned here
-- pricing domain, because public price-presentment references may be published here without making catalog the pricing authority
-- public metadata domain, because metadata is a broader publication/discovery layer while catalog owns product-specific public discovery semantics
-
-### Architectural implications
-
-- every public catalog record must declare what product surface it is
-- every public catalog record must preserve whether it is a primary product record, public plan/package record, supporting artifact, or derived public summary
-- public catalog may link to pricing references, docs, transparency artifacts, registry entries, or public product pages without owning their deeper truth
-- catalog corrections, supersession, and withdrawal must preserve historical lineage rather than silently rewriting public meaning
-- authenticated enrichments must remain bounded and must not turn catalog surfaces into hidden control or entitlement interfaces
-
----
-
-## 7. Domain Responsibilities
-
-The Public Product Catalog API domain is responsible for:
-
-1. maintaining canonical public product catalog records and catalog-family profiles
-2. classifying catalog records as primary product records, plan/package records, supporting artifacts, or derived public summaries
-3. publishing stable public-read product discovery, family browsing, and product detail surfaces
-4. preserving explicit publication, withdrawal, and supersession state
-5. linking catalog records to public docs, pricing-presentment artifacts, transparency artifacts, registry entries, and other public trust artifacts
-6. exposing bounded authenticated-read catalog enrichments where actor context is relevant
-7. emitting public catalog lifecycle events
-8. generating audit lineage for sensitive publication and correction actions
-9. preserving separation between public catalog artifacts and private canonical product truth
-10. supporting public-safe degraded modes and trust-preserving catalog behavior
-
-The domain is not responsible for:
-
-- owning product business truth
-- owning pricing calculation truth
-- owning subscription charging truth
-- exposing arbitrary internal roadmap, feature-flag, or orchestration state publicly
-- replacing domain-specific product APIs where richer contracts are needed
-- performing canonical entitlement computation as its source-of-truth function
-
----
-
-## 8. Out of Scope
-
-The following are out of scope for this API specification:
-
-- arbitrary public write APIs
-- checkout, purchase, or subscription mutation APIs
-- private entitlement APIs
-- rollout-control APIs
-- governance-, treasury-, or payout mutation flows
-- end-user onboarding UX
-- low-level static site generation
-- internal audit investigation workflows
-
----
-
-## 9. Canonical Entities and Data Ownership
+Publication and correction authority belongs on bounded admin/control-plane surfaces, with reason codes, policy checks, and audit lineage. Public routes MUST NOT hide admin mutation capabilities.
 
-### Durable entities
-
-#### 9.1 public_product_catalog_records
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** canonical public product catalog records
-- **Nature:** source-of-truth durable entity
+### 8. Derived-Read Discipline Principle
 
-#### 9.2 product_catalog_family_profiles
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** profiles for catalog families such as products, product lines, plans, packages, modules, and supporting artifacts
-- **Nature:** source-of-truth durable entity
+Catalog indexes, search views, recommendation views, exports, and UI caches are derived. They MUST NOT become canonical catalog mutation owners.
 
-#### 9.3 product_catalog_classifications
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** classification of catalog records as primary product record, plan/package record, supporting artifact, or derived summary
-- **Nature:** source-of-truth durable entity
+### 9. Compatibility and Public Promise Principle
 
-#### 9.4 product_catalog_publication_states
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** publication, visibility, withdrawal, and lifecycle state of catalog records
-- **Nature:** source-of-truth durable entity
+Published public catalog contracts and stable record identifiers are public promises. Breaking changes require migration, deprecation, and supersession discipline.
 
-#### 9.5 product_catalog_product_references
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** explicit linkage from public catalog records to product identities and product-family lineage
-- **Nature:** source-of-truth durable lineage entity
+### 10. Auditability Principle
 
-#### 9.6 product_catalog_plan_references
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** explicit linkage from public catalog records to public plan/package references and presentment labels
-- **Nature:** source-of-truth durable lineage entity
-
-#### 9.7 product_catalog_artifact_links
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** links to public docs, pricing-presentment artifacts, transparency artifacts, registry entries, and supporting public artifacts
-- **Nature:** source-of-truth durable lineage entity
+Meaningful publication, correction, withdrawal, and discrepancy actions MUST be reconstructible through request lineage, actor identity, reason codes, before/after summaries, correlation IDs, and audit records.
 
-#### 9.8 product_catalog_scope_enrichments
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** bounded authenticated-read enrichment rules by actor or scope
-- **Nature:** durable lineage entity
+## Canonical Definitions
 
-#### 9.9 product_catalog_supersession_links
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** supersession and correction lineage between catalog records
-- **Nature:** durable lineage entity
-
-#### 9.10 product_catalog_discrepancy_cases
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** review and remediation records for stale, incorrect, incomplete, or inconsistent public catalog data
-- **Nature:** durable review/remediation entity
-
-#### 9.11 product_catalog_mutation_actions
-- **Owner:** Public Product Catalog Domain
-- **Purpose:** high-level action records for create, publish, withdraw, correct, supersede, and resolve discrepancy
-- **Nature:** durable action records with audit linkage
-
-#### 9.12 product_catalog_audit_events
-- **Owner:** Audit / Activity domain, sourced by Public Product Catalog Domain
-- **Purpose:** immutable trail for sensitive catalog actions
-- **Nature:** durable audit records
-
-### Derived or cached entities
-
-#### 9.13 product_catalog_index_views
-- **Owner:** derived read-model layer
-- **Purpose:** list/index projections for product discovery surfaces
-- **Nature:** derived
+### Public Product Catalog Record
 
-#### 9.14 product_catalog_status_views
-- **Owner:** derived read-model layer
-- **Purpose:** public-safe catalog summaries and bounded authenticated enrichments
-- **Nature:** derived
-
-#### 9.15 product_catalog_discrepancy_views
-- **Owner:** derived ops read-model layer
-- **Purpose:** visibility into stale or inconsistent catalog conditions
-- **Nature:** derived
-
----
-
-## 10. State Model and Lifecycle
-
-### 10.1 catalog record lifecycle
-
-Possible states:
-
-- `draft`
-- `published`
-- `restricted`
-- `deprecated`
-- `superseded`
-- `archived`
-
-### 10.2 publication-state lifecycle
-
-Possible states:
-
-- `unpublished`
-- `published_public`
-- `published_authenticated`
-- `restricted`
-- `withdrawn`
-
-### 10.3 public-availability lifecycle
-
-Possible states:
-
-- `announced`
-- `discoverable`
-- `active`
-- `limited`
-- `paused`
-- `retired`
-- `superseded`
-
-### 10.4 discrepancy lifecycle
-
-Possible states:
-
-- `opened`
-- `under_review`
-- `resolved`
-- `failed`
-- `closed`
-
-Lifecycle notes:
-- published does not imply ownership of linked pricing, billing, or entitlement domains
-- public-safe and authenticated-only visibility must remain explicit
-- public availability is a bounded publication object and not the same thing as internal rollout-control truth
-- supersession must preserve historical public intelligibility
-- withdrawn or restricted states must not silently erase audit lineage
-
----
-
-## 11. API Surface Overview
-
-The API surface is divided into three families:
-
-### 11.1 Public-read APIs
-Used by public users, prospects, partners, community observers, and integrators for:
-- catalog index retrieval
-- product detail retrieval
-- family browsing
-- plan/package presentment discovery
-- product-linked trust-surface discovery
-
-### 11.2 Authenticated read APIs
-Used by authenticated users and approved clients for:
-- bounded catalog enrichment
-- actor- or scope-sensitive catalog visibility where policy allows
-- authenticated access to catalog references not broadly public but safe within actor scope
-
-### 11.3 Internal service and admin APIs
-Used by trusted internal services and privileged operators for:
-- creating and updating catalog records
-- publishing, correcting, superseding, restricting, or withdrawing records
-- linking artifacts and maintaining correction lineage
-- resolving catalog discrepancies
-
----
-
-## 12. Authentication and Authorization Model
-
-### 12.1 Authentication posture by route family
-
-#### Public-read routes
-No authentication required:
-- list catalog records
-- retrieve catalog detail
-- read public product/plan/family discovery where published
-
-#### Authenticated read routes
-Require valid authenticated session:
-- read bounded authenticated-only catalog
-- read actor- or workspace-scoped catalog enrichments where allowed
-
-#### Internal service routes
-Require internal service identity with explicit least privilege:
-- create and update catalog records
-- attach artifact links
-- refresh publication states
-- read canonical truth
-
-#### Admin routes
-Require privileged operator identity plus reason-coded actions:
-- publish, withdraw, restrict, supersede, and resolve discrepancy cases
-
-### 12.2 Authorization checkpoints
-
-Authorization must evaluate:
-- caller identity and route family
-- whether catalog record is public, authenticated-only, or internal-only
-- whether actor has scope visibility for authenticated enrichments
-- whether service has create/publish/link/read privilege
-- whether operator role is present for publication or correction actions
-- whether current catalog state allows requested mutation
-
-### 12.3 Sensitive action rules
-
-The following require heightened checks:
-- publication of new public catalog records
-- publication of products or plans tied to trust-sensitive pricing-presentment or public capability claims
-- withdrawal or restriction of already public catalog artifacts
-- supersession of trust-sensitive published catalog records
-- discrepancy-resolution actions
-
----
-
-## 13. API Endpoints / Interface Contracts
-
-## 13.1 Public-Read APIs
-
-### 13.1.1 `GET /v1/public-product-catalog`
-**Purpose:** list published public catalog records  
-**Caller Type:** public  
-**Auth Expectation:** none  
-**Query Parameters Summary:**
-- optional `catalog_family`
-- optional `classification`
-- optional `availability_state`
-- optional `product_family`
-- pagination
-**Response Summary:**
-- catalog record summaries
-- family and classification labels
-- publication state
-- product summary
-- plan/package summary where relevant
-- timestamps
-**Side Effects:** none
-**Audit Requirements:** access logging optional
-**Emitted Events:** none required
-
-### 13.1.2 `GET /v1/public-product-catalog/{public_catalog_id}`
-**Purpose:** retrieve one public catalog record  
-**Caller Type:** public  
-**Response Summary:**
-- catalog detail
-- classification and visibility information
-- product reference
-- public availability summary
-- plan/package presentment summary where relevant
-- artifact links
-- supersession guidance where relevant
-- public-safe status references
-**Side Effects:** none
-
-### 13.1.3 `GET /v1/public-product-catalog/families/{catalog_family}`
-**Purpose:** retrieve public catalog summary for one catalog family  
-**Caller Type:** public  
-**Response Summary:**
-- family summary
-- linked public catalog records
-- grouped product discovery view
-**Side Effects:** none
-
-### 13.1.4 `GET /v1/public-product-catalog/lookup`
-**Purpose:** look up one or more public catalog records by normalized public query fields  
-**Caller Type:** public  
-**Query Parameters Summary:**
-- optional `product_slug`
-- optional `product_family`
-- optional `plan_slug`
-- optional `surface_tag`
-- optional `q`
-**Response Summary:**
-- normalized lookup results
-- matched public catalog summaries
-- lookup confidence and status hints where relevant
-**Side Effects:** none
-
-## 13.2 Authenticated Read APIs
-
-### 13.2.1 `GET /v1/public-product-catalog/me`
-**Purpose:** retrieve bounded actor-aware catalog enrichments where policy allows  
-**Caller Type:** authenticated user  
-**Auth Expectation:** valid authenticated session  
-**Query Parameters Summary:**
-- optional `catalog_family`
-- pagination
-**Response Summary:**
-- catalog summary list
-- actor-safe enrichment data
-- scoped references where allowed
-**Side Effects:** none
-
-### 13.2.2 `GET /v1/public-product-catalog/me/{public_catalog_id}`
-**Purpose:** retrieve one bounded actor-aware catalog detail  
-**Caller Type:** authenticated user  
-**Response Summary:**
-- base public catalog detail
-- bounded authenticated enrichment
-- scoped artifact references where allowed
-**Side Effects:** none
-
-## 13.3 Internal Service APIs
-
-### 13.3.1 `POST /internal/v1/public-product-catalog`
-**Purpose:** create draft public catalog record  
-**Caller Type:** internal trusted service  
-**Auth Expectation:** service-to-service identity only  
-**Request Body Summary:**
-- `catalog_family`
-- `classification`
-- `title`
-- optional `summary`
-- `product_reference`
-- optional `plan_reference`
-- optional `availability_state`
-- `idempotency_key`
-**Response Summary:** catalog record summary
-**Side Effects:** creates draft catalog record
-**Idempotency Behavior:** required
-**Audit Requirements:** catalog creation audit
-**Emitted Events:** `public_product_catalog.record_created`
-
-### 13.3.2 `POST /internal/v1/public-product-catalog/{public_catalog_id}/artifact-links`
-**Purpose:** attach artifact links to one catalog record  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `artifact_type`
-- `artifact_reference`
-- optional `artifact_summary`
-- `idempotency_key`
-**Response Summary:** artifact-link summary
-**Side Effects:** creates artifact-link lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** artifact-link audit
-**Emitted Events:** `public_product_catalog.artifact_linked`
-
-### 13.3.3 `POST /internal/v1/public-product-catalog/{public_catalog_id}/scope-enrichments`
-**Purpose:** attach bounded authenticated enrichment rules to one catalog record  
-**Caller Type:** internal trusted service  
-**Request Body Summary:**
-- `scope_type`
-- `scope_reference`
-- `enrichment_profile`
-- `idempotency_key`
-**Response Summary:** scope-enrichment summary
-**Side Effects:** creates enrichment lineage
-**Idempotency Behavior:** required
-**Audit Requirements:** enrichment audit
-**Emitted Events:** `public_product_catalog.scope_enrichment_linked`
-
-### 13.3.4 `GET /internal/v1/public-product-catalog/{public_catalog_id}`
-**Purpose:** retrieve canonical public catalog truth  
-**Caller Type:** internal trusted service  
-**Response Summary:** full catalog record, classification, product references, plan references, publication state, artifact links, enrichments, supersession lineage, and discrepancy lineage
-**Side Effects:** none
-
-## 13.4 Admin / Control-Plane APIs
-
-### 13.4.1 `POST /admin/v1/public-product-catalog/{public_catalog_id}/publish`
-**Purpose:** publish public catalog record under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `visibility_target`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** published catalog summary
-**Side Effects:** publication state changes to published_public or published_authenticated
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_product_catalog.record_published`
-
-### 13.4.2 `POST /admin/v1/public-product-catalog/{public_catalog_id}/withdraw`
-**Purpose:** withdraw or restrict public catalog visibility under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `withdrawal_mode`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** withdrawn catalog summary
-**Side Effects:** publication state changes to restricted or withdrawn
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_product_catalog.record_withdrawn`
-
-### 13.4.3 `POST /admin/v1/public-product-catalog/{public_catalog_id}/supersede`
-**Purpose:** supersede one public catalog record with another under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `replacement_public_catalog_id`
-- `reason_code`
-- `operator_note`
-- `idempotency_key`
-**Response Summary:** supersession summary
-**Side Effects:** creates supersession linkage and updates visible preference
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_product_catalog.record_superseded`
-
-### 13.4.4 `POST /admin/v1/public-product-catalog/discrepancies`
-**Purpose:** resolve public catalog discrepancy under controlled policy  
-**Caller Type:** admin/operator  
-**Request Body Summary:**
-- `target_reference_type`
-- `target_reference_id`
-- `resolution_code`
-- `operator_note`
-- `related_case_id`
-- `idempotency_key`
-**Response Summary:** discrepancy-resolution summary
-**Side Effects:** may correct, supersede, restrict, withdraw, or close discrepancy posture with preserved lineage
-**Audit Requirements:** critical audit
-**Emitted Events:** `public_product_catalog.discrepancy_resolved`
-
----
-
-## 14. Request Rules
-
-### 14.1 General request rules
-- all mutation-capable routes must require JSON requests with explicit content type
-- all mutation routes must carry correlation IDs
-- sensitive public catalog mutations must carry idempotency keys
-- admin mutations must require reason codes and operator notes
-- no route may accept frontend-authored public catalog truth as authoritative input
-
-### 14.2 Sensitive-action request requirements
-The following requests require heightened validation:
-- publication of new public catalog records
-- publication of products or plans tied to trust-sensitive pricing-presentment or public capability claims
-- withdrawal or restriction of already public catalog records
-- supersession of trust-sensitive published catalog artifacts
-- discrepancy-resolution actions
-
-Heightened validation may include:
-- family/classification consistency checks
-- product and plan reference validation
-- public-safe versus authenticated-only visibility checks
-- operator role confirmation
-- pricing or reporting case linkage for sensitive actions
-
-### 14.3 Scope integrity rule
-Public catalog mutations must target valid and authorized records, artifact links, enrichment records, product references, plan references, and discrepancy records. Services and operators must not mutate unrelated or unauthorized catalog state.
-
-### 14.4 Layer-separation rule
-Public product catalog domain must remain the public discovery-and-presentment layer. It must not collapse:
-- product canonical truth,
-- pricing ownership,
-- billing ownership,
-- metadata ownership,
-- or internal orchestration state
-into one ambiguous catalog object.
-
----
-
-## 15. Response Rules
-
-### 15.1 Success response rules
-Successful responses must include:
-- stable resource identifiers
-- timestamps for created/updated state
-- state/status values
-- family and classification summaries
-- product and plan summaries where relevant
-- artifact-link and publication-state summaries where relevant
-- correlation references for mutations
-
-### 15.2 Async-accepted response rules
-If publication propagation, withdrawal, or discrepancy remediation is async, the response must:
-- return accepted status
-- include action or job ID
-- provide follow-up status semantics
-
-### 15.3 Terminal mutation response rules
-Terminal mutation responses must clearly show:
-- target catalog record or discrepancy
-- mutation type
-- resulting publication state
-- withdrawal, supersession, or restriction effects where relevant
-- whether public-safe views may refresh asynchronously
-
-### 15.4 Read response rules
-Read responses must distinguish:
-- canonical internal catalog truth
-- primary public product records
-- public plan/package records
-- supporting artifacts
-- derived public summaries
-- actor-scoped enrichment versus ordinary public catalog views
-
----
-
-## 16. Error Model
-
-The API uses structured problem-details style error responses.
-
-### 16.1 Required error fields
-- `type`
-- `title`
-- `status`
-- `code`
-- `detail`
-- `instance`
-- `correlation_id`
-
-### 16.2 Common error codes
-
-#### Authorization / permission errors
-- `PUBLIC_PRODUCT_CATALOG_PERMISSION_DENIED`
-- `PUBLIC_PRODUCT_CATALOG_OPERATOR_PERMISSION_DENIED`
-- `PUBLIC_PRODUCT_CATALOG_SERVICE_PERMISSION_DENIED`
-- `PUBLIC_PRODUCT_CATALOG_AUDIENCE_PERMISSION_DENIED`
-
-#### State conflict errors
-- `PUBLIC_PRODUCT_CATALOG_RECORD_STATE_INVALID`
-- `PUBLIC_PRODUCT_CATALOG_PUBLICATION_STATE_INVALID`
-- `PUBLIC_PRODUCT_CATALOG_SUPERSESSION_CONFLICT`
-- `PUBLIC_PRODUCT_CATALOG_VISIBILITY_CONFLICT`
-
-#### Policy / safety errors
-- `PUBLIC_PRODUCT_CATALOG_CLASSIFICATION_REQUIRED`
-- `PUBLIC_PRODUCT_CATALOG_PRODUCT_REFERENCE_REQUIRED`
-- `PUBLIC_PRODUCT_CATALOG_VISIBILITY_NOT_ALLOWED`
-- `PUBLIC_PRODUCT_CATALOG_PUBLICATION_NOT_ALLOWED`
-- `PUBLIC_PRODUCT_CATALOG_WITHDRAWAL_NOT_ALLOWED`
-
-#### Request integrity errors
-- `PUBLIC_PRODUCT_CATALOG_IDEMPOTENCY_KEY_REQUIRED`
-- `PUBLIC_PRODUCT_CATALOG_REQUEST_INVALID`
-- `PUBLIC_PRODUCT_CATALOG_REQUEST_UNPROCESSABLE`
-
-#### Dependency or provider errors
-- `PUBLIC_PRODUCT_CATALOG_STORAGE_UNAVAILABLE`
-- `PUBLIC_PRODUCT_CATALOG_PRODUCT_REFERENCE_UNAVAILABLE`
-- `PUBLIC_PRODUCT_CATALOG_PRICING_REFERENCE_UNAVAILABLE`
-
-### 16.3 Error handling rules
-- do not expose hidden internal governance, treasury, security, or audit detail in public or low-privilege responses
-- do not imply canonical ownership of linked pricing, billing, or entitlement truth from catalog publication alone
-- distinguish classification/visibility failure from generic invalid state
-- distinguish missing product reference from generic invalid request
-- include retry guidance only where safe
-
----
-
-## 17. Idempotency and Mutation Safety
-
-### 17.1 Required idempotent mutations
-The following mutation routes require idempotent behavior:
-- catalog record creation
-- artifact-link attachment
-- scope-enrichment attachment
-- publish
-- withdraw
-- supersede
-- discrepancy resolution
-
-### 17.2 Idempotency key rules
-- mutation requests must supply `Idempotency-Key`
-- backend stores key scope, request hash, actor, and terminal result
-- replay of same semantic request returns original terminal outcome
-- replay of same key with different semantic request must fail with conflict
-
-### 17.3 Mutation safety rules
-- one canonical visible catalog record per current catalog lineage unless explicit supersession exists
-- artifact and enrichment links must remain referentially consistent with catalog family and classification
-- public publication and authenticated publication must remain explicitly distinct
-- corrections and supersession must preserve prior catalog lineage
-- withdrawal and restriction must preserve auditability and public explanation where appropriate
-
----
-
-## 18. Versioning and Compatibility Rules
-
-### 18.1 Versioning
-This API family is versioned under `/v1`, `/internal/v1`, and `/admin/v1` route families.
-
-### 18.2 Compatibility approach
-- additive evolution preferred
-- no silent semantic change to catalog family, classification, availability posture, or visibility meaning
-- new catalog families, lookup key types, and artifact-link types may be added without breaking existing contracts
-- response fields may be added but existing meanings must remain stable
-
-### 18.3 Breaking-change rules
-Breaking changes include:
-- changing the meaning of primary public product record versus plan/package record versus supporting artifact versus derived summary
-- changing visibility semantics incompatibly
-- removing critical product-reference, plan-reference, or artifact-link fields
-- changing supersession or withdrawal semantics incompatibly
-
-Such changes require explicit migration planning and version evolution.
-
-### 18.4 Deprecation
-Deprecated routes or fields must:
-- be documented explicitly
-- carry deprecation metadata where supported
-- preserve compatibility windows long enough for public, first-party, and internal consumers
-
----
-
-## 19. Event Emission and Webhook Behavior
-
-This domain is event-capable.
-
-### 19.1 Internal events
-The Public Product Catalog domain must emit canonical internal events such as:
-- `public_product_catalog.record_created`
-- `public_product_catalog.artifact_linked`
-- `public_product_catalog.scope_enrichment_linked`
-- `public_product_catalog.record_published`
-- `public_product_catalog.record_withdrawn`
-- `public_product_catalog.record_superseded`
-- `public_product_catalog.discrepancy_resolved`
-
-### 19.2 Event payload minimums
-Each event should contain:
-- event ID
-- event type
-- occurred_at
-- public catalog ID
-- catalog family
-- classification
-- publication state
-- actor type
-- correlation ID
-- reason code where applicable
-
-### 19.3 External webhook posture
-This specification does not expose general third-party outbound public catalog webhooks by default. Any future outbound catalog publication webhook surface must be narrow, security-reviewed, and governed by a separate contract.
-
----
-
-## 20. Audit and Activity Requirements
-
-The following actions must generate durable audit events:
-
-- catalog record creation
-- artifact-link attachment
-- publish, withdraw, supersede, and discrepancy actions
-- scope-enrichment linkage where sensitivity requires
-- other sensitive public catalog mutations
-
-### Required audit fields
-- audit event ID
-- actor type and actor reference
-- target catalog record / artifact link / discrepancy reference as applicable
-- action type
-- before/after summary where applicable
-- reason code
-- correlation ID
-- operator note if operator action
-- occurred_at
-
----
-
-## 21. Data Model and Database Schema View
-
-### 21.1 `public_product_catalog_records`
-- `id` PK
-- `catalog_family`
-- `classification`
-- `title`
-- `summary`
-- `state`
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-**Constraints:**
-- index on (`catalog_family`, `classification`)
-- index on `state`
-
-### 21.2 `product_catalog_family_profiles`
-- `id` PK
-- `catalog_family`
-- `allowed_classifications_json`
-- `lookup_profile_json`
-- `visibility_profile_json`
-- `created_at`
-- `updated_at`
-
-**Constraints:**
-- unique `catalog_family`
-
-### 21.3 `product_catalog_classifications`
-- `id` PK
-- `public_product_catalog_record_id` FK -> `public_product_catalog_records.id`
-- `classification`
-- `canonical_owner_reference`
-- `created_at`
-
-**Constraints:**
-- index on `public_product_catalog_record_id`
-
-### 21.4 `product_catalog_publication_states`
-- `id` PK
-- `public_product_catalog_record_id` FK -> `public_product_catalog_records.id`
-- `publication_state`
-- `published_at` nullable
-- `restricted_at` nullable
-- `withdrawn_at` nullable
-- `created_at`
-
-**Constraints:**
-- index on `public_product_catalog_record_id`
-- index on `publication_state`
-
-### 21.5 `product_catalog_product_references`
-- `id` PK
-- `public_product_catalog_record_id` FK -> `public_product_catalog_records.id`
-- `product_reference`
-- `product_family`
-- `availability_state`
-- `created_at`
-
-**Constraints:**
-- index on `public_product_catalog_record_id`
-
-### 21.6 `product_catalog_plan_references`
-- `id` PK
-- `public_product_catalog_record_id` FK -> `public_product_catalog_records.id`
-- `plan_reference`
-- `plan_slug`
-- `plan_label`
-- `created_at`
-
-**Constraints:**
-- index on `public_product_catalog_record_id`
-
-### 21.7 `product_catalog_artifact_links`
-- `id` PK
-- `public_product_catalog_record_id` FK -> `public_product_catalog_records.id`
-- `artifact_type`
-- `artifact_reference`
-- `artifact_summary_json`
-- `created_at`
-
-**Constraints:**
-- index on `public_product_catalog_record_id`
-
-### 21.8 `product_catalog_scope_enrichments`
-- `id` PK
-- `public_product_catalog_record_id` FK -> `public_product_catalog_records.id`
-- `scope_type`
-- `scope_reference`
-- `enrichment_profile_json`
-- `created_at`
-
-**Constraints:**
-- index on `public_product_catalog_record_id`
-
-### 21.9 `product_catalog_supersession_links`
-- `id` PK
-- `from_public_catalog_id` FK -> `public_product_catalog_records.id`
-- `to_public_catalog_id` FK -> `public_product_catalog_records.id`
-- `reason_code`
-- `created_at`
-
-**Constraints:**
-- unique (`from_public_catalog_id`, `to_public_catalog_id`)
-
-### 21.10 `product_catalog_discrepancy_cases`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `state`
-- `resolution_code` nullable
-- `created_at`
-- `updated_at`
-- `closed_at` nullable
-
-### 21.11 `product_catalog_mutation_actions`
-- `id` PK
-- `target_reference_type`
-- `target_reference_id`
-- `action_type`
-- `state`
-- `reason_code`
-- `operator_note` nullable
-- `requested_by_actor_type`
-- `requested_by_actor_id`
-- `created_at`
-- `executed_at` nullable
-- `closed_at` nullable
-- `correlation_id`
-
-### 21.12 `idempotency_records`
-- `id` PK
-- `idempotency_key`
-- `scope_family`
-- `actor_reference`
-- `request_hash`
-- `response_hash`
-- `terminal_status`
-- `created_at`
-- `expires_at`
-
-### 21.13 `audit_log_entries`
-Domain-sourced audit records written into the audit domain.
-
-### Normalization notes
-- canonical public catalog truth stays in catalog records, family profiles, classifications, publication states, product references, plan references, artifact links, enrichments, supersession links, and discrepancy records
-- product, pricing, billing, and entitlement canonical truths remain external and are referenced rather than duplicated
-- public-safe views must derive from canonical public catalog truth filtered by publication state and visibility class
-- actor-scoped enrichments remain bounded overlays rather than new canonical catalog owners
-
-### Reconciliation notes
-- one visible public catalog record should reconcile to one current catalog lineage under current preference
-- publication state must reconcile with allowed family/classification combinations
-- product references and plan references must reconcile to linked public product truth
-- discrepancy cases must preserve review lineage for stale or conflicting public catalog conditions
-
----
-
-## 22. Architecture Diagram — Mermaid flowchart
+A durable publication-domain record representing a public-safe product, product family, module, plan/package reference, capability summary, supporting artifact, or derived product discovery summary.
+
+### Catalog Family
+
+A stable grouping of catalog records, such as `product`, `product_family`, `module`, `plan`, `package`, `add_on`, `capability`, `artifact`, or `trust_surface`.
+
+### Catalog Classification
+
+A stable classification indicating whether a record is a primary product record, plan/package record, module record, supporting artifact, derived summary, or public metadata link.
+
+### Public Product Reference
+
+A lineage pointer from a catalog record to product-owned truth. It is a reference, not a transfer of product ownership.
+
+### Public Plan Reference
+
+A lineage pointer from a catalog record to an approved public plan/package or price-presentment artifact. It is not billing, pricing, subscription, or invoice truth.
+
+### Catalog Publication State
+
+The publication lifecycle state of a catalog record, including draft, published, authenticated-only, restricted, withdrawn, deprecated, superseded, or archived posture.
+
+### Actor-Aware Catalog Enrichment
+
+A bounded authenticated-public enrichment that MAY tailor catalog presentation to an authenticated user or workspace scope without exposing private entitlement computation or internal controls.
+
+### Catalog Artifact Link
+
+A governed link from a catalog record to public docs, metadata records, transparency artifacts, trust pages, registry references, images, downloadable public artifacts, or public product pages.
+
+### Supersession Link
+
+A lineage relationship indicating that one public catalog record has replaced, corrected, or superseded another record.
+
+### Catalog Discrepancy Case
+
+A review/remediation record for stale, incorrect, incomplete, contradictory, unsafe, or inconsistent catalog publication.
+
+## Truth Class Taxonomy
+
+1. **Semantic Truth:** Product meaning remains owned by product domains; catalog meaning is public discovery/publication meaning.
+2. **API Contract Truth:** Route families, request/response/error/status semantics, visibility classes, idempotency, and compatibility rules defined by this document.
+3. **Policy Truth:** Public exposure policy, visibility policy, publication approval policy, rollout gating, abuse controls, and migration/deprecation policy.
+4. **Runtime Truth:** Current request handling, cache refresh, projection status, async publication job status, and dependency availability.
+5. **Ledger / Storage Truth:** Durable catalog records, publication states, action records, idempotency records, artifact links, supersession links, discrepancy cases, audit records, and projections.
+6. **Public Read-Model Truth:** Catalog index/search/detail views derived from publication-domain records and safe upstream references.
+7. **Provider/Input Truth:** Provider, product-team, frontend, partner, CMS, or imported signals remain input until normalized and accepted by catalog or rightful owner domains.
+8. **Event / Async Execution Truth:** Catalog lifecycle events, projection refresh jobs, and webhook-safe projections express accepted or completed publication outcomes without becoming owners.
+9. **Projection / Reporting Truth:** Analytics, exports, search indexes, and reporting views are downstream and non-authoritative for mutations.
+10. **Presentation Truth:** Frontend copy, UX labels, ordering, badges, screenshots, and SEO rendering are presentation, not catalog source truth.
+
+## Architectural Position in the Spec Hierarchy
+
+This document sits below:
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`;
+- `SYSTEM_BOUNDARY_AND_OWNERSHIP_SPEC.md`;
+- `SYSTEM_OVERVIEW_AND_BOUNDARIES_SPEC.md`;
+- `PLATFORM_ARCHITECTURE_SPEC.md`;
+- `DOMAIN_OWNERSHIP_MATRIX_SPEC.md`;
+- `DATA_MODEL_AND_ENTITY_OWNERSHIP_SPEC.md`;
+- `PRODUCT_BOUNDARY_AND_DOMAIN_OWNERSHIP_SPEC.md`;
+- `PRODUCT_ADMISSION_AND_EXPANSION_GATE_SPEC.md`;
+- `API_ARCHITECTURE_SPEC.md`;
+- `PUBLIC_API_SPEC.md`.
+
+It sits alongside or upstream of downstream implementation artifacts:
+
+- public OpenAPI routes;
+- public SDK catalog surfaces;
+- first-party catalog UI contracts;
+- admin publication tooling;
+- catalog event schemas;
+- search/projection jobs;
+- file/artifact delivery contracts;
+- product-specific catalog publication profiles.
+
+## Upstream Semantic Owners
+
+The Public Product Catalog API consumes semantics from the following upstream owners:
+
+- Product boundary and domain ownership specs own product identity, ownership, and domain boundaries.
+- Product admission and expansion specs own product admission, lifecycle, and platform-fit rules.
+- Pricing and monetization specs own pricing policy, offer construction, plan/package valuation, and commercial policy.
+- Subscription and usage billing specs own subscription and billing truth.
+- Entitlement and capability gating specs own capability eligibility and usage gating truth.
+- Feature flag and rollout control specs own rollout exposure, flags, kill switches, and emergency narrowings.
+- Public metadata and transparency specs own broader public metadata and transparency publication where linked.
+- File/object/artifact storage specs own artifact custody, classification, lifecycle, delivery tokens, and file handling.
+- Public API and API architecture specs own public exposure, surface families, request lineage, accepted-state posture, and API governance.
+- Audit, security, monitoring, idempotency, event, and migration specs own cross-cutting implementation obligations.
+
+## API Surface Families
+
+### Public-Read Surface
+
+Exposes approved, unauthenticated public-safe catalog records and summaries.
+
+### Authenticated Public-Read Surface
+
+Exposes bounded actor-aware enrichments to authenticated users or approved client scopes. It remains a public/external contract, not an internal service API.
+
+### First-Party Application Surface
+
+First-party web/mobile clients consume public and authenticated-public route families. First-party consumption does not weaken public contract posture.
+
+### Internal Service Surface
+
+Used by owner-domain and platform services to prepare draft records, validate references, attach artifacts, refresh projections, and read canonical catalog publication truth.
+
+### Admin / Control-Plane Surface
+
+Used for reason-coded publication, withdrawal, restriction, correction, supersession, discrepancy resolution, and emergency narrowing.
+
+### Event / Async Surface
+
+Emits catalog lifecycle events and drives projection/search/cache refresh. Events are not mutation owners.
+
+### Reporting / Export Surface
+
+Supports internal and partner-safe exports of catalog publication state. Exported views are derived and must preserve source lineage.
+
+## System / API Boundaries
+
+- Public catalog publication is downstream of product truth and upstream of public discovery UX.
+- Public catalog records MAY reference pricing-presentment artifacts but MUST NOT own pricing rules.
+- Public catalog records MAY reference plan/package labels but MUST NOT own subscriptions or billing.
+- Public catalog visibility MAY be narrowed by rollout/control policy but MUST NOT become rollout truth.
+- Authenticated enrichments MAY show caller-relevant catalog context but MUST NOT expose private entitlement computation or grant access.
+- Public catalog may link to metadata, registry, transparency, docs, or trust artifacts without absorbing their source truth.
+- Search, recommendation, cache, reporting, and frontend presentation views are derived.
+
+## Adjacent API Boundaries
+
+- `PUBLIC_METADATA_API_SPEC.md` governs broader public metadata; this spec governs product-catalog-specific publication.
+- `PUBLIC_TRANSPARENCY_API_SPEC.md` governs transparency artifacts; catalog may link to them.
+- `PUBLIC_REGISTRY_LOOKUP_API_SPEC.md` governs registry lookups; catalog may reference registry items where product-facing.
+- `PUBLIC_CHAIN_REFERENCE_API_SPEC.md` governs chain references; catalog may expose only approved chain-related product references.
+- `PLATFORM_CREDITS_API_SPEC.md`, `BASE_PLATFORM_CREDITS_LAYER_API_SPEC.md`, and billing specs govern commercial/credits truth; catalog may expose public-safe plan or credits-related summaries only as approved references.
+- `ENTITLEMENT_AND_CAPABILITY_GATING_API_SPEC.md` governs entitlement and capability checks; catalog may show availability labels but not compute entitlements.
+- `FEATURE_FLAG_AND_ROLLOUT_CONTROL_API_SPEC.md` governs rollout and kill switches; catalog may be restricted by them but not replace them.
+
+## Conflict Resolution Rules
+
+1. The active refined registry and higher-order constitutional specs win over this API spec.
+2. Product owner-domain specs win on product meaning, product lifecycle, and internal product behavior.
+3. Public API and API architecture specs win on shared public/external contract posture.
+4. Pricing, billing, credits, entitlement, and rollout owner specs win on their respective truths.
+5. This spec wins on catalog publication route families, catalog record visibility, catalog correction lineage, and product-catalog public read contract behavior.
+6. Frontend, CMS, landing-page, analytics, SDK, gateway, cache, or search convenience never wins over canonical catalog publication truth.
+7. Where ambiguity remains, FUZE MUST choose the more restrictive public-safe interpretation and escalate the ambiguity into spec refinement or recorded decision work.
+
+## Default Decision Rules
+
+1. Unknown product/catalog data defaults to non-public draft.
+2. External exposure defaults to no exposure until explicit publication exists.
+3. Product visibility in catalog does not imply purchase eligibility, workspace authorization, entitlement, or runtime activation.
+4. Public price or plan labels default to presentation-safe references, not pricing truth.
+5. Authenticated enrichment defaults to omission when caller scope or policy is uncertain.
+6. Withdrawal/restriction defaults to preserving audit and lineage rather than deletion.
+7. Search/cache/index discrepancies default to stale projection, not source truth change.
+8. Admin publication/correction defaults to reason-coded and audited control-plane action.
+9. Any catalog mutation that cannot name owner domain, product reference, visibility target, reason, idempotency key, and correlation ID is incomplete.
+
+## Roles / Actors / API Consumers
+
+### Human Actors
+
+- unauthenticated public readers;
+- authenticated FUZE users;
+- workspace members and admins;
+- product owners;
+- product operators;
+- publication/admin operators;
+- support and trust operators;
+- API/SDK consumers;
+- public trust, partner, investor, or community readers.
+
+### System Actors
+
+- public website and first-party apps;
+- API gateway and public edge;
+- public catalog service;
+- product domain services;
+- pricing-presentment service;
+- billing/subscription service;
+- entitlement/capability service;
+- feature flag/rollout service;
+- public metadata service;
+- file/artifact service;
+- search/index service;
+- event bus/outbox;
+- audit/activity service;
+- monitoring/incident systems;
+- admin/control-plane tooling;
+- OpenAPI/SDK generation pipeline.
+
+## Resource / Entity Families
+
+### Canonical Catalog Entities
+
+- `public_product_catalog_record`;
+- `catalog_family_profile`;
+- `catalog_classification`;
+- `catalog_publication_state`;
+- `catalog_product_reference`;
+- `catalog_plan_reference`;
+- `catalog_artifact_link`;
+- `catalog_scope_enrichment`;
+- `catalog_supersession_link`;
+- `catalog_discrepancy_case`;
+- `catalog_mutation_action`.
+
+### Cross-Domain References
+
+- product reference;
+- product family reference;
+- product module reference;
+- plan/package reference;
+- pricing-presentment artifact reference;
+- entitlement/capability class reference;
+- rollout visibility policy reference;
+- metadata artifact reference;
+- file/artifact object reference;
+- transparency/trust artifact reference.
+
+### Derived Views
+
+- `catalog_index_view`;
+- `catalog_search_view`;
+- `catalog_family_view`;
+- `catalog_detail_view`;
+- `actor_catalog_enrichment_view`;
+- `catalog_export_view`;
+- `catalog_discrepancy_view`.
+
+## Ownership Model
+
+### Public Product Catalog Domain Owns
+
+- catalog publication records;
+- catalog family/classification posture;
+- publication state and public visibility posture;
+- catalog-specific product and plan references;
+- catalog artifact linking;
+- catalog correction, withdrawal, and supersession lineage;
+- public catalog route contract semantics;
+- catalog lifecycle events.
+
+### Public Product Catalog Domain Does Not Own
+
+- product business truth;
+- product runtime workflows;
+- pricing policy or billing outcomes;
+- entitlements or permissions;
+- rollout flags or kill switches;
+- file storage custody beyond catalog artifact references;
+- public metadata or transparency truth beyond catalog-specific links;
+- checkout, payment, subscription, credits, governance, treasury, payout, or chain truth.
+
+## Authority / Decision Model
+
+- Product domains decide whether a product identity, module, or capability exists and what it means.
+- Product admission/governance decides whether a product can be publicly admitted under platform policy.
+- Public Product Catalog decides whether an approved public-safe product representation is published, restricted, withdrawn, or superseded.
+- Pricing/billing/credits domains decide commercial truth; catalog may show approved presentment references only.
+- Entitlement/capability domains decide actor-specific eligibility; catalog may show bounded caller-safe hints only.
+- Rollout/control domains may narrow or pause exposure but do not define catalog semantics.
+- Admin/control-plane operators may act only through reason-coded, audited, policy-constrained operations.
+
+## Authentication Model
+
+### Public Routes
+
+Unauthenticated access MAY be permitted for records with `visibility_class = public` and `publication_state = published_public`.
+
+### Authenticated Public Routes
+
+Authenticated routes require a valid user/session/client posture and scope resolution. Authenticated routes remain external/public contracts and MUST use public-safe error responses.
+
+### Partner Routes
+
+Partner-safe lookup/export routes require approved client identity, route-specific scopes, rate-limit policy, and stronger audit lineage.
+
+### Internal Routes
+
+Internal service routes require service identity, least-privilege authorization, service-to-service correlation, and catalog-domain action authorization.
+
+### Admin Routes
+
+Admin/control-plane routes require privileged operator identity, reason codes, policy evaluation, correlation ID, idempotency key, and audit logging.
+
+## Authorization / Scope / Permission Model
+
+Authorization MUST evaluate:
+
+1. caller posture: public, authenticated user, partner, first-party, internal service, or admin/operator;
+2. route family and visibility class;
+3. catalog record publication state;
+4. actor or workspace scope for authenticated enrichments;
+5. service permission for internal writes;
+6. operator permission and reason code for admin actions;
+7. product/plan/artifact reference validation;
+8. current rollout/control restrictions;
+9. abuse, rate-limit, and security policies.
+
+## Entitlement / Capability-Gating Model
+
+Catalog visibility is not entitlement. The catalog MAY expose:
+
+- public product availability labels;
+- public capability summaries;
+- public plan/package presentment references;
+- authenticated hints such as `available_to_request`, `requires_workspace_admin`, or `contact_support`.
+
+The catalog MUST NOT expose:
+
+- raw entitlement computation;
+- hidden deny reasons that reveal internal policy;
+- private workspace billing state unless an adjacent authenticated contract permits it;
+- capability grants or actual access rights as catalog state.
+
+## API State Model
+
+### Catalog Record State
+
+Allowed values:
+
+- `draft`;
+- `review_required`;
+- `approved_for_publication`;
+- `published`;
+- `restricted`;
+- `deprecated`;
+- `superseded`;
+- `withdrawn`;
+- `archived`.
+
+### Publication State
+
+Allowed values:
+
+- `unpublished`;
+- `published_public`;
+- `published_authenticated`;
+- `limited_public`;
+- `partner_only`;
+- `restricted`;
+- `withdrawn`.
+
+### Availability State
+
+Allowed values:
+
+- `announced`;
+- `discoverable`;
+- `active`;
+- `limited`;
+- `waitlist`;
+- `paused`;
+- `retired`;
+- `superseded`.
+
+### Action State
+
+Allowed values:
+
+- `requested`;
+- `validated`;
+- `accepted`;
+- `applied`;
+- `previously_applied`;
+- `conflicted`;
+- `failed_retryable`;
+- `failed_terminal`.
+
+## Lifecycle / Workflow Model
+
+1. Product source truth or operator proposes a catalogable product artifact.
+2. Catalog service validates product reference, family, classification, visibility, public safety, and optional plan/artifact references.
+3. A draft catalog record is created with idempotency and correlation lineage.
+4. Internal review or automated checks prepare the record for publication.
+5. Admin/control-plane actor publishes, restricts, withdraws, corrects, or supersedes the record with reason code and audit.
+6. Catalog events are emitted to outbox/event bus.
+7. Search/index/cache/read-model projections refresh asynchronously.
+8. Public and authenticated consumers read published-safe views.
+9. Discrepancies open review cases and may lead to correction, withdrawal, restriction, or supersession.
+10. Migration/deprecation flows preserve compatibility and historical interpretability.
+
+## Architecture Diagram — Mermaid flowchart
 
 ```mermaid
-flowchart LR
-    PublicUser[Public User]
-    AuthUser[Authenticated User]
-    WebApp[fuze-frontend-webapp]
-    AdminUI[fuze-frontend-admin]
-    PCAPI[Public Product Catalog API<br/>fuze-backend-api]
-    RecordStore[(public_product_catalog_records)]
-    FamilyStore[(product_catalog_family_profiles)]
-    ProductStore[(product_catalog_product_references)]
-    PlanStore[(product_catalog_plan_references)]
-    PubStore[(product_catalog_publication_states)]
-    ArtifactStore[(product_catalog_artifact_links)]
-    EnrichStore[(product_catalog_scope_enrichments)]
-    InternalSvc[Internal FUZE Services]
+flowchart TD
+    PublicReaders[Unauthenticated Public Readers]
+    AuthUsers[Authenticated Users / Workspace Actors]
+    Partners[Approved Partner Clients]
+    FirstParty[First-Party Web/App]
+    AdminOps[Admin / Control-Plane Operators]
+    Gateway[Public API Gateway / Auth / Rate Limit]
+    CatalogAPI[Public Product Catalog API]
+    CatalogDomain[Public Product Catalog Domain]
+    ProductDomain[Product Owner Domains]
+    PricingDomain[Pricing / Monetization Domain]
+    BillingDomain[Subscription / Billing Domain]
+    EntitlementDomain[Entitlement / Capability Domain]
+    RolloutDomain[Feature Flag / Rollout Control]
+    MetadataDomain[Public Metadata / Transparency / Registry]
+    ArtifactService[File / Artifact Storage]
+    EventBus[Event Bus / Outbox]
+    ProjectionWorkers[Projection / Search / Cache Workers]
+    ReadModels[Catalog Index / Search / Detail Views]
+    Audit[Audit / Activity / Observability]
 
-    PublicUser --> PCAPI
-    AuthUser --> WebApp
-    WebApp --> PCAPI
-    AdminUI --> PCAPI
-    InternalSvc --> PCAPI
+    PublicReaders --> Gateway
+    AuthUsers --> Gateway
+    Partners --> Gateway
+    FirstParty --> Gateway
+    Gateway --> CatalogAPI
+    CatalogAPI --> CatalogDomain
+    AdminOps --> CatalogAPI
 
-    PCAPI --> RecordStore
-    PCAPI --> FamilyStore
-    PCAPI --> ProductStore
-    PCAPI --> PlanStore
-    PCAPI --> PubStore
-    PCAPI --> ArtifactStore
-    PCAPI --> EnrichStore
+    CatalogDomain --> ProductDomain
+    CatalogDomain --> PricingDomain
+    CatalogDomain --> BillingDomain
+    CatalogDomain --> EntitlementDomain
+    CatalogDomain --> RolloutDomain
+    CatalogDomain --> MetadataDomain
+    CatalogDomain --> ArtifactService
+    CatalogDomain --> Audit
+    CatalogDomain --> EventBus
+    EventBus --> ProjectionWorkers
+    ProjectionWorkers --> ReadModels
+    CatalogAPI --> ReadModels
+
+    ProductDomain -. owns product truth .-> ProductDomain
+    PricingDomain -. owns pricing truth .-> PricingDomain
+    BillingDomain -. owns billing truth .-> BillingDomain
+    EntitlementDomain -. owns entitlement truth .-> EntitlementDomain
+    RolloutDomain -. owns rollout truth .-> RolloutDomain
+    ReadModels -. derived only .-> CatalogAPI
 ```
 
----
-
-## 23. Data Design — Mermaid Diagram
+## Data Design — Mermaid Diagram
 
 ```mermaid
 erDiagram
-    public_product_catalog_records ||--o{ product_catalog_classifications : classifies
-    public_product_catalog_records ||--o{ product_catalog_publication_states : publishes
-    public_product_catalog_records ||--o{ product_catalog_product_references : references
-    public_product_catalog_records ||--o{ product_catalog_plan_references : plans
-    public_product_catalog_records ||--o{ product_catalog_artifact_links : links
-    public_product_catalog_records ||--o{ product_catalog_scope_enrichments : enriches
-    public_product_catalog_records ||--o{ product_catalog_mutation_actions : tracks
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_CLASSIFICATION : has
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_PUBLICATION_STATE : has
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_PRODUCT_REFERENCE : links
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_PLAN_REFERENCE : links
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_ARTIFACT_LINK : links
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_SCOPE_ENRICHMENT : may_have
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_SUPERSESSION_LINK : supersedes
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_MUTATION_ACTION : records
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_DISCREPANCY_CASE : may_open
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_INDEX_VIEW : projects_to
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_SEARCH_VIEW : projects_to
+    PUBLIC_PRODUCT_CATALOG_RECORD ||--o{ CATALOG_AUDIT_EVENT : emits
 
-    public_product_catalog_records {
-        uuid id PK
-        string catalog_family
-        string classification
-        string title
-        string state
-        datetime created_at
-        datetime updated_at
-        datetime closed_at
+    PUBLIC_PRODUCT_CATALOG_RECORD {
+      string id
+      string catalog_family
+      string title
+      string summary
+      string record_state
+      datetime created_at
+      datetime updated_at
     }
-
-    product_catalog_publication_states {
-        uuid id PK
-        uuid public_product_catalog_record_id FK
-        string publication_state
-        datetime published_at
-        datetime restricted_at
-        datetime withdrawn_at
-        datetime created_at
+    CATALOG_PUBLICATION_STATE {
+      string id
+      string publication_state
+      string visibility_class
+      datetime published_at
+      datetime withdrawn_at
     }
-
-    product_catalog_product_references {
-        uuid id PK
-        uuid public_product_catalog_record_id FK
-        string product_reference
-        string product_family
-        string availability_state
-        datetime created_at
+    CATALOG_PRODUCT_REFERENCE {
+      string id
+      string product_reference
+      string product_family
+      string availability_state
     }
-
-    product_catalog_plan_references {
-        uuid id PK
-        uuid public_product_catalog_record_id FK
-        string plan_reference
-        string plan_slug
-        string plan_label
-        datetime created_at
+    CATALOG_PLAN_REFERENCE {
+      string id
+      string plan_reference
+      string presentment_label
+      string pricing_reference
     }
-
-    product_catalog_artifact_links {
-        uuid id PK
-        uuid public_product_catalog_record_id FK
-        string artifact_type
-        string artifact_reference
-        datetime created_at
+    CATALOG_ARTIFACT_LINK {
+      string id
+      string artifact_type
+      string artifact_reference
+      string classification
     }
-
-    product_catalog_scope_enrichments {
-        uuid id PK
-        uuid public_product_catalog_record_id FK
-        string scope_type
-        string scope_reference
-        datetime created_at
+    CATALOG_SCOPE_ENRICHMENT {
+      string id
+      string scope_type
+      string scope_reference
+      string enrichment_profile
+    }
+    CATALOG_SUPERSESSION_LINK {
+      string id
+      string predecessor_id
+      string successor_id
+      string reason_code
+    }
+    CATALOG_MUTATION_ACTION {
+      string id
+      string action_type
+      string idempotency_key_hash
+      string correlation_id
+      string actor_ref
+    }
+    CATALOG_DISCREPANCY_CASE {
+      string id
+      string discrepancy_type
+      string state
+      string resolution_code
+    }
+    CATALOG_INDEX_VIEW {
+      string id
+      string source_record_id
+      string projection_version
+    }
+    CATALOG_SEARCH_VIEW {
+      string id
+      string source_record_id
+      string index_version
+    }
+    CATALOG_AUDIT_EVENT {
+      string id
+      string action_type
+      string actor_ref
+      string correlation_id
     }
 ```
 
----
+## Flow View
 
-## 24. Flow View
+### Public Read Flow
 
-### 24.1 Happy path — publish primary public product record
-1. internal service creates draft catalog record
-2. product reference, plan references, and artifact links are attached to docs, pricing-presentment, transparency, or public artifacts
-3. operator validates family/classification and publication intent
-4. admin publishes record publicly
-5. public index, family, lookup, and detail surfaces become available
-6. external readers can discover the record as primary product record, plan/package record, supporting artifact, or derived summary
+1. Consumer requests catalog list, lookup, family, or detail.
+2. Gateway applies rate limit, abuse controls, and visibility posture.
+3. Catalog API reads only published-safe read models or canonical catalog state filtered by visibility.
+4. Response includes record ID, family, classification, publication state, availability summary, product reference summary, plan/package presentment summary where approved, artifact links, supersession hints, and cache/projection metadata where relevant.
+5. Public response MUST NOT include internal product config, internal rollout flags, entitlement computation, private billing state, or admin/control data.
 
-### 24.2 Happy path — authenticated enrichment
-1. catalog record is already published or authenticated-visible
-2. bounded actor/scope enrichment is linked internally
-3. authenticated actor requests the catalog artifact
-4. backend returns base public catalog plus scoped enrichment where policy allows
-5. actor sees additional safe context without gaining hidden entitlement or control access
+### Authenticated Enrichment Flow
 
-### 24.3 Alternate path — superseding an older catalog publication
-1. older catalog record must be replaced or corrected
-2. replacement record is created and validated
-3. admin supersedes the older record
-4. previous record remains historically linked and interpretable
-5. new record becomes current visible preference
+1. Authenticated actor requests `me`/scope-aware catalog view.
+2. API authenticates actor and resolves permitted scope.
+3. Authorization checks visibility and actor-safe enrichment policy.
+4. Catalog API composes public base record plus safe enrichment.
+5. Response distinguishes `public_catalog` from `authenticated_enrichment` and MUST NOT grant entitlement.
 
-### 24.4 Failure path — invalid classification or publication posture
-1. catalog record is created or modified
-2. backend detects missing classification, invalid family/classification combination, or disallowed visibility posture
-3. request is rejected or record remains unpublished
-4. no unsafe public catalog surface is produced
+### Internal Draft Flow
 
-### 24.5 Failure and remediation path — stale or incorrect public catalog
-1. linked product/plan/presentment/public artifact changes or catalog record becomes stale/inconsistent
-2. admin opens discrepancy-resolution flow
-3. backend preserves existing lineage
-4. corrected or superseding catalog record is created
-5. discrepancy closes with preserved history
+1. Internal service submits catalog draft request with idempotency key and correlation ID.
+2. Catalog validates product reference, family/classification, public safety, plan/artifact references, and visibility target.
+3. Catalog creates or replays draft record.
+4. Audit and event lineage are recorded.
 
-### 24.6 Degraded-mode path
-1. linked pricing-presentment, docs, or public artifact is delayed or degraded
-2. public catalog surface stays available where safe
-3. backend communicates freshness or visibility degradation explicitly
-4. canonical truth mutation is not implied by degraded presentation
+### Admin Publication / Correction Flow
 
-### 24.7 Retry behavior
-- duplicate catalog creation returns same canonical record result
-- duplicate artifact or enrichment attachment returns same lineage result where applicable
-- duplicate publish/withdraw/supersede/discrepancy actions return same terminal action result
+1. Operator submits reason-coded publish/withdraw/restrict/supersede/correct request.
+2. API verifies operator privilege, policy state, idempotency, and dependency references.
+3. Catalog applies mutation or records accepted async intent.
+4. Audit event is generated.
+5. Lifecycle event is emitted.
+6. Projections refresh.
+7. Public views reflect updated state with supersession or withdrawal lineage.
 
----
+### Failure / Retry / Degraded Flow
 
-## 25. Data Flows — Mermaid sequenceDiagram
+1. If product/pricing/artifact dependency is unavailable, mutation fails retryable or accepts pending review only when safe.
+2. Public reads may serve stale-but-labelled views during projection lag.
+3. Stale view MUST be labelled as projection lag, not as source truth.
+4. Retry of same idempotency key returns same result; changed request hash conflicts.
+5. Critical publication discrepancies open catalog discrepancy cases and notify operators.
+
+## Data Flows — Mermaid sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant S as Internal Service
+    autonumber
+    participant Client as Public/Auth Client
+    participant Gateway as API Gateway
     participant API as Public Product Catalog API
-    participant R as Catalog Store
-    participant PR as Product Reference Store
-    participant PL as Plan Reference Store
-    participant A as Artifact Store
-    participant P as Publication Store
-    participant E as Enrichment Store
+    participant Catalog as Catalog Domain
+    participant Product as Product Domain
+    participant Pricing as Pricing/Plan Presentment
+    participant Rollout as Rollout/Policy
+    participant Audit as Audit Service
+    participant Event as Event Bus
+    participant Worker as Projection Worker
+    participant Read as Public Read Model
 
-    S->>API: POST /internal/v1/public-product-catalog
-    API->>R: Create catalog record
-    API->>PR: Create product reference
-    API->>PL: Create plan reference
-    API-->>S: catalog summary
+    Client->>Gateway: GET /v1/public-product-catalog?filters
+    Gateway->>Gateway: Rate-limit and visibility posture
+    Gateway->>API: Forward request with correlation_id
+    API->>Read: Read published-safe catalog view
+    Read-->>API: Derived view + source lineage
+    API-->>Client: 200 catalog summaries
 
-    S->>API: POST /internal/v1/public-product-catalog/{id}/artifact-links
-    API->>A: Create artifact link
-    API-->>S: artifact summary
-
-    S->>API: POST /internal/v1/public-product-catalog/{id}/scope-enrichments
-    API->>E: Create scope enrichment
-    API-->>S: enrichment summary
-
-    S->>API: POST /admin/v1/public-product-catalog/{id}/publish
-    API->>P: Create publication state
-    API-->>S: publication summary
+    Client->>Gateway: POST /admin/v1/public-product-catalog/{id}/publish
+    Gateway->>API: Authenticated admin request + idempotency key
+    API->>Catalog: Validate action, reason, state, idempotency
+    Catalog->>Product: Validate product reference
+    Catalog->>Pricing: Validate approved presentment reference
+    Catalog->>Rollout: Check public exposure restrictions
+    Catalog->>Catalog: Apply publication mutation
+    Catalog->>Audit: Write critical audit event
+    Catalog->>Event: Emit public_product_catalog.record_published
+    Event->>Worker: Trigger projection refresh
+    Worker->>Read: Update index/detail/search views
+    Catalog-->>API: Applied publication result
+    API-->>Client: 200 published catalog record + correlation_id
 ```
 
----
+## Request Model
 
-## 26. Security and Risk Controls
+### Required Request Headers
 
-1. **Public catalog truth is backend-owned**  
-   Frontends and informal publication channels may not authoritatively define public catalog truth.
+- `Accept`;
+- `Content-Type: application/json` for mutation routes;
+- `X-Correlation-ID` for significant reads and all mutations;
+- `Idempotency-Key` for all mutation-capable routes;
+- authentication headers for authenticated, partner, internal, or admin routes.
 
-2. **Catalog is not a control plane**  
-   Public catalog surfaces must support discovery, evaluation, and public presentment, not expose purchase mutation, pricing internals, entitlement internals, or rollout controls.
+### Public Read Query Parameters
 
-3. **Classification clarity is mandatory**  
-   Public catalog must explicitly distinguish primary product records, plan/package records, supporting artifacts, and derived public summaries so external consumers do not mistake one for another.
+Allowed patterns include:
 
-4. **Public-safe visibility discipline**  
-   Publication state must keep public, authenticated-only, and internal-only catalog clearly separated.
+- `catalog_family`;
+- `classification`;
+- `product_family`;
+- `availability_state`;
+- `visibility_class` where safe;
+- `q` for bounded search;
+- `surface_tag`;
+- `plan_slug`;
+- `product_slug`;
+- `page` / `limit` / cursor pagination;
+- `include` for safe optional expansions.
 
-5. **Rate limits and abuse controls**  
-   Public catalog surfaces require public-surface protections such as rate limiting, actor/token throttling, input hardening, and stable pagination expectations.
+### Mutation Request Fields
 
-6. **Backward-compatibility discipline**  
-   Public catalog surfaces must follow explicit versioning and conservative compatibility rules because public interfaces carry strong ecosystem trust obligations.
+Mutation requests MUST include:
 
-7. **Audit-linked publication**  
-   Publication, withdrawal, and supersession of catalog artifacts must remain traceable into internal audit systems.
+- target catalog reference where applicable;
+- action type;
+- reason code for admin/control actions;
+- operator note where applicable;
+- product or plan references where applicable;
+- visibility target;
+- idempotency key;
+- correlation ID;
+- dependency references and policy version references where applicable.
 
-8. **Secrets/config boundary discipline**  
-   Public catalog may include only values intentionally classed as public and must not leak confidential or control-sensitive configuration.
+## Response Model
 
-9. **Trust-preserving degraded modes**  
-   Public catalog should preserve the difference between freshness lag, public presentment lag, and canonical truth mutation.
+### Public Read Response
 
-10. **Historical intelligibility**  
-    Corrections and supersession must preserve lineage so public trust surfaces remain historically interpretable.
+Public read responses MUST include:
 
----
+- `public_catalog_id`;
+- `catalog_family`;
+- `classification`;
+- `title`;
+- `summary`;
+- `publication_state`;
+- `visibility_class`;
+- `availability_state`;
+- `product_reference_summary`;
+- `plan_presentment_summary` where approved;
+- `artifact_links` where approved;
+- `supersession` where applicable;
+- `updated_at`;
+- `projection_lineage` when derived.
 
-## 27. Operational Considerations
+### Authenticated Enrichment Response
 
-- public catalog index, family, lookup, and detail reads should be highly available
-- publication-state changes and product/plan linkage correctness are trust-sensitive and must be monitored
-- product-, plan-, and presentment-sensitive catalog surfaces should surface clearly to ops views
-- supersession and discrepancy workflows should be observable and reviewable
-- monitoring should alert on:
-  - stale public catalog records tied to trust-sensitive surfaces
-  - publication failures for trusted catalog artifacts
-  - public/private visibility divergence
-  - broken public artifact references
-  - public-safe view inconsistency versus canonical catalog state
-  - degraded public discovery surfaces during active launch or plan-transition periods
+Authenticated enrichment responses MUST distinguish:
 
----
+- base public catalog record;
+- actor-safe enrichment;
+- scope reference;
+- omitted fields due to visibility;
+- entitlement-disclaimer or next-action hints where relevant.
 
-## 28. Acceptance Criteria
+### Mutation Response
 
-1. The API preserves the distinction between public catalog truth, product truth, pricing truth, billing truth, entitlement truth, and internal domain truth.
-2. Only `fuze-backend-api` owns canonical public catalog publication truth.
-3. Public catalog records, family profiles, classifications, publication states, product references, plan references, artifact links, enrichments, supersession links, and discrepancy records are durable and backend-owned.
-4. Public and authenticated routes expose only bounded safe public catalog views.
-5. Catalog family, classification, product reference, plan reference, availability posture, and visibility posture are explicit and validated.
-6. Public catalog distinguishes primary product records, plan/package records, supporting artifacts, and derived summary models.
-7. Publication, withdrawal, supersession, and discrepancy actions preserve immutable lineage.
-8. Public catalog mutation actions are idempotent and auditable.
-9. Internal and admin public catalog routes are least-privilege and backend-only.
-10. Admin routes require reason-coded privileged authorization.
-11. Event emissions exist for major public catalog mutations.
-12. Database schema separates records, family profiles, classifications, publication states, product references, plan references, artifact links, enrichments, supersession links, and discrepancy layers.
-13. Public-safe consumers can rely on public catalog views without needing internal platform knowledge.
-14. Public catalog supports rate-limited, versioned, supportable external integration behavior.
-15. Mermaid diagrams remain consistent with prose and data model.
+Mutation responses MUST include:
 
----
+- action ID;
+- target catalog ID;
+- action state;
+- resulting publication state;
+- reason code;
+- correlation ID;
+- idempotency replay indicator where applicable;
+- audit reference for privileged actions;
+- async operation reference if accepted but not completed.
 
-## 29. Test Cases
+## Error / Result / Status Model
 
-### 29.1 Positive cases
-1. Internal service creates draft public catalog record successfully.
-2. Internal service attaches artifact link successfully.
-3. Internal service attaches scope enrichment successfully.
-4. Admin publishes public catalog successfully.
-5. Public user reads published catalog index successfully.
-6. Public user reads one published catalog record successfully.
-7. Public user performs product/plan lookup successfully.
-8. Admin supersedes stale catalog successfully.
+Errors MUST use structured problem-details style fields:
 
-### 29.2 Negative cases
-9. Public user cannot access unpublished or internal-only catalog.
-10. Internal service without write privilege cannot create catalog record.
-11. Publication without valid classification returns `PUBLIC_PRODUCT_CATALOG_CLASSIFICATION_REQUIRED`.
-12. Publication without required product reference returns `PUBLIC_PRODUCT_CATALOG_PRODUCT_REFERENCE_REQUIRED`.
-13. Disallowed visibility target returns `PUBLIC_PRODUCT_CATALOG_VISIBILITY_NOT_ALLOWED`.
-14. Withdrawal attempt in incompatible state returns `PUBLIC_PRODUCT_CATALOG_WITHDRAWAL_NOT_ALLOWED`.
+- `type`;
+- `title`;
+- `status`;
+- `code`;
+- `detail`;
+- `instance`;
+- `correlation_id`;
+- `retry_after` when safe and applicable.
 
-### 29.3 Authorization cases
-15. Ordinary public or authenticated user cannot call admin catalog publication APIs.
-16. Internal service without artifact-link privilege cannot attach artifact links.
-17. Operator without publication privilege cannot publish catalog.
-18. Published public catalog does not imply canonical ownership of linked product/pricing/billing truth.
+### Required Error Classes
 
-### 29.4 Idempotency and replay cases
-19. Repeating catalog creation with same idempotency key returns original catalog result.
-20. Repeating artifact-link attachment with same idempotency key returns original linkage result.
-21. Repeating publish or withdraw with same idempotency key returns original terminal action result.
-22. Repeating supersede or discrepancy resolution with same idempotency key returns original terminal action result.
+- `PUBLIC_PRODUCT_CATALOG_NOT_FOUND`;
+- `PUBLIC_PRODUCT_CATALOG_PERMISSION_DENIED`;
+- `PUBLIC_PRODUCT_CATALOG_OPERATOR_PERMISSION_DENIED`;
+- `PUBLIC_PRODUCT_CATALOG_SERVICE_PERMISSION_DENIED`;
+- `PUBLIC_PRODUCT_CATALOG_VISIBILITY_NOT_ALLOWED`;
+- `PUBLIC_PRODUCT_CATALOG_PUBLICATION_NOT_ALLOWED`;
+- `PUBLIC_PRODUCT_CATALOG_RECORD_STATE_INVALID`;
+- `PUBLIC_PRODUCT_CATALOG_PUBLICATION_STATE_INVALID`;
+- `PUBLIC_PRODUCT_CATALOG_PRODUCT_REFERENCE_REQUIRED`;
+- `PUBLIC_PRODUCT_CATALOG_PRODUCT_REFERENCE_INVALID`;
+- `PUBLIC_PRODUCT_CATALOG_PLAN_REFERENCE_INVALID`;
+- `PUBLIC_PRODUCT_CATALOG_ARTIFACT_REFERENCE_INVALID`;
+- `PUBLIC_PRODUCT_CATALOG_SUPERSESSION_CONFLICT`;
+- `PUBLIC_PRODUCT_CATALOG_WITHDRAWAL_NOT_ALLOWED`;
+- `PUBLIC_PRODUCT_CATALOG_IDEMPOTENCY_KEY_REQUIRED`;
+- `PUBLIC_PRODUCT_CATALOG_IDEMPOTENCY_CONFLICT`;
+- `PUBLIC_PRODUCT_CATALOG_RATE_LIMITED`;
+- `PUBLIC_PRODUCT_CATALOG_PROJECTION_LAGGED`;
+- `PUBLIC_PRODUCT_CATALOG_DEPENDENCY_UNAVAILABLE`;
+- `PUBLIC_PRODUCT_CATALOG_REQUEST_INVALID`.
 
-### 29.5 Concurrency cases
-23. Concurrent product/plan linkage updates preserve one explicit current linkage lineage and duplicate-safe outcomes where appropriate.
-24. Concurrent publish and withdraw actions preserve explicit lifecycle ordering without hidden overwrite.
-25. Concurrent supersede and discrepancy actions preserve explicit visible lineage without ambiguity.
+### Status Rules
 
-### 29.6 Recovery / admin cases
-26. Stale or mislinked public catalog can be corrected under controlled policy with explicit lineage.
-27. Superseded public catalog remains historically linked to the original record.
-28. Discrepancy resolution closes product reference, visibility, or reporting conflict with preserved audit history.
+- `accepted` means accepted for async catalog/projection work, not public visibility completion.
+- `applied` means catalog owner-domain mutation completed.
+- `previously_applied` means idempotent replay.
+- `conflicted` means request conflicts with current state, supersession, or idempotency hash.
+- `projection_lagged` means derived read model is behind source publication state.
 
-### 29.7 Event and audit cases
-29. Successful catalog creation emits `public_product_catalog.record_created`.
-30. Successful artifact-link attachment emits `public_product_catalog.artifact_linked`.
-31. Successful publication emits `public_product_catalog.record_published`.
-32. Successful withdrawal emits `public_product_catalog.record_withdrawn`.
-33. Successful discrepancy resolution emits `public_product_catalog.discrepancy_resolved` with critical audit lineage.
+## Idempotency / Retry / Replay Model
 
----
+All mutation-capable routes MUST be idempotent:
 
-## 30. Open Questions or Explicit Deferred Decisions
+- draft creation;
+- artifact-link attachment;
+- plan-reference attachment;
+- scope-enrichment attachment;
+- publication;
+- withdrawal;
+- restriction;
+- supersession;
+- discrepancy resolution;
+- projection rebuild request.
 
-1. Exact catalog-family taxonomy code sets are deferred.
-2. Exact public-safe plan-presentment detail depth is deferred.
-3. Exact actor-scoped enrichment taxonomy is deferred.
-4. Exact public-safe disclosure depth for pricing-presentment references is deferred.
-5. Exact discrepancy taxonomy for catalog/publication conflicts is deferred.
-6. Exact partner-oriented catalog quota strategy is deferred.
+Idempotency records MUST bind:
 
----
+- idempotency key hash;
+- actor/service/operator identity;
+- route family;
+- request hash;
+- target reference;
+- correlation ID;
+- terminal result or accepted operation reference;
+- expiration/retention policy.
 
-## 31. Implementation Notes for `fuze-backend-api`
+Retries with the same semantic request MUST return the original result. Retries with the same key and different request hash MUST fail with `PUBLIC_PRODUCT_CATALOG_IDEMPOTENCY_CONFLICT`.
 
-Recommended backend module layout:
+## Rate Limit / Abuse-Control Model
 
-```text
-modules/platform/
-  public-product-catalog/
-  product-catalog/
-  pricing/
-  subscriptions-billing/
-  public-metadata/
-  audit-log/
-  control-plane/
-  integrations/
-```
+Public catalog APIs MUST apply:
 
-Implementation guidance:
-- keep catalog records, family profiles, product references, plan references, publication state, artifact links, and supersession logic in one canonical domain service
-- perform family/classification/visibility/product-reference/plan-reference checks inside the commit boundary
-- keep publish, withdraw, supersede, and discrepancy actions explicit and idempotent
-- treat admin remediations as domain actions, not ad hoc row edits
-- emit events only after canonical state commit succeeds
-- publish public-safe catalog views from canonical truth; do not let derived views mutate catalog state
+- unauthenticated route-family rate limits;
+- stricter search/lookup abuse controls;
+- partner/client limits;
+- request-shape validation to prevent expensive arbitrary query fanout;
+- bot/scraping protections where required;
+- safe error responses that do not leak hidden catalog state;
+- monitoring for enumeration, scraping, and suspicious query patterns.
 
----
+Rate-limit denial MUST NOT imply whether a hidden product or restricted record exists.
 
-## 32. Frontend Consumption Notes
+## Endpoint / Route Family Model
 
-### For `fuze-frontend-webapp`
-- may read public catalog and bounded authenticated enrichments where approved
-- must not infer canonical domain ownership from public catalog alone
-- must treat backend public catalog responses as authoritative for publication state and trust-surface semantics
-- should clearly distinguish primary product records, plan/package records, supporting artifacts, and derived summary views when visible
+### Public Read Routes
 
-### For `fuze-frontend-admin`
-- may trigger privileged publish, withdraw, supersede, and discrepancy actions only through backend admin APIs
-- must require operator reason input for sensitive mutations
-- must not directly mutate canonical public catalog truth client-side
-- should present immutable catalog history and correction lineage separately from current visible state
+- `GET /v1/public-product-catalog`
+- `GET /v1/public-product-catalog/{public_catalog_id}`
+- `GET /v1/public-product-catalog/families/{catalog_family}`
+- `GET /v1/public-product-catalog/lookup`
+- `GET /v1/public-product-catalog/search`
+- `GET /v1/public-product-catalog/{public_catalog_id}/artifacts`
+- `GET /v1/public-product-catalog/{public_catalog_id}/supersession`
 
----
+### Authenticated Public Routes
 
-## 33. Contract Derivation Notes
+- `GET /v1/public-product-catalog/me`
+- `GET /v1/public-product-catalog/me/{public_catalog_id}`
+- `GET /v1/public-product-catalog/me/availability-hints`
 
-### OpenAPI / AsyncAPI
-This spec should later derive into:
-- public catalog index/detail/family/lookup read operations
-- authenticated catalog enrichment read operations
-- internal catalog creation, artifact-link, and enrichment operations
-- admin publish / withdraw / supersede / discrepancy operations
-- shared problem-details schema
-- public catalog lifecycle events in AsyncAPI
+### Partner-Safe Routes
 
-### Future `fuze-sdk`
-Future `fuze-sdk` packages may derive:
-- public catalog lookup helpers
-- public family discovery helpers
-- typed catalog-family, classification, availability, and publication-state summary models
-- problem-error models for public catalog outcomes
+- `GET /v1/partner/public-product-catalog`
+- `GET /v1/partner/public-product-catalog/lookup`
+- `GET /v1/partner/public-product-catalog/exports/{export_id}`
 
-The SDK must derive from approved API contracts and must not become the source of truth over this narrative specification.
+### Internal Service Routes
+
+- `POST /internal/v1/public-product-catalog`
+- `PATCH /internal/v1/public-product-catalog/{public_catalog_id}`
+- `POST /internal/v1/public-product-catalog/{public_catalog_id}/product-references`
+- `POST /internal/v1/public-product-catalog/{public_catalog_id}/plan-references`
+- `POST /internal/v1/public-product-catalog/{public_catalog_id}/artifact-links`
+- `POST /internal/v1/public-product-catalog/{public_catalog_id}/scope-enrichments`
+- `POST /internal/v1/public-product-catalog/{public_catalog_id}/projection-refresh`
+- `GET /internal/v1/public-product-catalog/{public_catalog_id}`
+
+### Admin / Control Routes
+
+- `POST /admin/v1/public-product-catalog/{public_catalog_id}/publish`
+- `POST /admin/v1/public-product-catalog/{public_catalog_id}/restrict`
+- `POST /admin/v1/public-product-catalog/{public_catalog_id}/withdraw`
+- `POST /admin/v1/public-product-catalog/{public_catalog_id}/supersede`
+- `POST /admin/v1/public-product-catalog/{public_catalog_id}/correct`
+- `POST /admin/v1/public-product-catalog/discrepancies`
+- `POST /admin/v1/public-product-catalog/discrepancies/{case_id}/resolve`
+
+## Public API Considerations
+
+Public catalog routes MUST be:
+
+- explicitly classified as public, authenticated-public, partner, or limited-public;
+- read-only unless a narrower spec authorizes a bounded business action;
+- stable and migration-safe;
+- safe against enumeration and private-state leakage;
+- narrower than internal/admin surfaces;
+- compatible with public API versioning and deprecation requirements.
+
+## First-Party Application API Considerations
+
+First-party clients MUST consume the public/authenticated-public catalog contract unless a private first-party contract is explicitly approved. Frontend constants, CMS entries, cached feature lists, or local UI copy MUST NOT be source truth for catalog publication.
+
+## Internal Service API Considerations
+
+Internal service APIs MUST preserve owner-domain discipline:
+
+- services may propose or update catalog records only through approved catalog contracts;
+- product/pricing/billing/entitlement/rollout data must be referenced, not copied as ungoverned truth;
+- internal reads of catalog truth must not be exposed directly to public clients;
+- service-to-service calls must carry correlation and service identity.
+
+## Admin / Control-Plane API Considerations
+
+Admin/control routes MUST:
+
+- require privileged operator identity;
+- require reason codes and operator notes;
+- be policy-constrained;
+- be idempotent;
+- produce critical audit events;
+- separate ordinary publication from emergency restriction/withdrawal;
+- preserve before/after summaries;
+- avoid hidden public route aliases.
+
+## Event / Webhook / Async API Considerations
+
+### Internal Events
+
+The catalog domain SHOULD emit:
+
+- `public_product_catalog.record_created`;
+- `public_product_catalog.record_updated`;
+- `public_product_catalog.product_reference_linked`;
+- `public_product_catalog.plan_reference_linked`;
+- `public_product_catalog.artifact_linked`;
+- `public_product_catalog.scope_enrichment_linked`;
+- `public_product_catalog.record_published`;
+- `public_product_catalog.record_restricted`;
+- `public_product_catalog.record_withdrawn`;
+- `public_product_catalog.record_superseded`;
+- `public_product_catalog.record_corrected`;
+- `public_product_catalog.discrepancy_opened`;
+- `public_product_catalog.discrepancy_resolved`;
+- `public_product_catalog.projection_refreshed`.
+
+### Event Payload Minimums
+
+Events MUST include:
+
+- event ID;
+- event type;
+- occurred_at;
+- catalog ID;
+- catalog family;
+- classification;
+- publication state;
+- visibility class;
+- actor type/reference where applicable;
+- reason code where applicable;
+- correlation ID;
+- source action ID.
+
+### External Webhooks
+
+No general third-party outbound catalog webhook is approved by default. Any future webhook MUST be partner-safe, versioned, deduplicated, replay-safe, scoped, and separately governed.
+
+## Chain-Adjacent API Considerations
+
+Catalog MAY expose approved public-safe chain references only when the chain reference is product-relevant and governed by chain/public registry specs. Catalog MUST NOT:
+
+- define chain truth;
+- publish raw contract internals without approved public-chain reference policy;
+- imply token, payout, treasury, or governance rights through product catalog visibility;
+- collapse Ethereum/Base roles into product availability labels.
+
+## Data Model / Storage Support Implications
+
+Implementation MUST support durable records for:
+
+- catalog records;
+- family profiles;
+- classifications;
+- publication states;
+- product references;
+- plan references;
+- artifact links;
+- scope enrichments;
+- supersession links;
+- discrepancy cases;
+- mutation action records;
+- idempotency records;
+- request lineage;
+- audit references;
+- projection lineage.
+
+Storage convenience MUST NOT change ownership. Derived tables, search indexes, caches, and exports MUST preserve source lineage and projection version.
+
+## Read Model / Projection / Reporting Rules
+
+- Public list/detail/search views are derived from catalog publication truth.
+- Derived views MUST preserve source catalog ID and projection version.
+- Stale projections MUST be labelled or remediated; stale projection is not source truth.
+- Reporting/export surfaces MUST distinguish publication state from product truth, pricing truth, entitlement truth, and rollout truth.
+- Public summaries MUST NOT silently rewrite source owner meaning.
+- Search ranking and presentation order are presentation/projection concerns, not catalog semantics.
+
+## Security / Risk / Privacy Controls
+
+The API MUST enforce:
+
+- least privilege by surface family;
+- no leakage of draft/restricted/withdrawn internal-only records through public errors;
+- route-family-specific rate limits;
+- anti-scraping controls for search and lookup;
+- safe public error messages;
+- authentication and authorization for enrichment routes;
+- service identity for internal writes;
+- operator privilege and reason codes for admin actions;
+- artifact classification and public delivery policy;
+- audit logging for sensitive actions;
+- incident-response hooks for unsafe publication or leakage.
+
+## Audit / Traceability / Observability Requirements
+
+### Audit Required For
+
+- draft creation;
+- product/plan/artifact reference linkage;
+- publication;
+- restriction;
+- withdrawal;
+- supersession;
+- correction;
+- discrepancy open/resolve;
+- scope-enrichment policy changes;
+- projection rebuild where sensitive.
+
+### Required Audit Fields
+
+- audit event ID;
+- actor type and reference;
+- service or operator reference;
+- route family;
+- action type;
+- target catalog record;
+- before/after summary;
+- reason code;
+- policy/version reference;
+- idempotency reference;
+- correlation ID;
+- occurred_at.
+
+### Observability Metrics
+
+- public read volume and latency;
+- search/lookup rate-limit denials;
+- publication mutation latency;
+- projection lag;
+- stale view incidents;
+- discrepancy cases opened/resolved;
+- authorization denials;
+- idempotency conflicts;
+- artifact reference failures;
+- unsafe-publication incident count.
+
+## Failure Handling / Edge Cases
+
+- Missing product reference: reject mutation with reference-specific error.
+- Product reference withdrawn: restrict or supersede catalog record unless policy permits historical publication.
+- Pricing reference unavailable: omit price-presentment or mark dependency unavailable; do not invent price.
+- Rollout restriction triggered: narrow visibility or withdraw publication according to control policy.
+- Projection lag: serve labelled stale view only where safe.
+- Artifact link unsafe: reject link or restrict record until artifact classification is resolved.
+- Supersession conflict: reject if multiple active successors would create ambiguity.
+- Duplicate publication request: replay idempotent result.
+- Admin action without reason: reject.
+- Unauthorized enrichment request: omit enrichment or deny with safe error.
+- Discrepancy detected publicly: open discrepancy case and avoid silent overwrite.
+
+## Migration / Versioning / Compatibility / Deprecation Rules
+
+- Route family versioning uses `/v1`, `/internal/v1`, `/admin/v1`, and `/partner/v1` where applicable.
+- Additive response fields are preferred.
+- Breaking changes require migration plan, compatibility window, deprecation notice, and supersession lineage.
+- Stable public catalog IDs MUST NOT be reused for different product meaning.
+- Classification, visibility, and publication-state semantics MUST NOT change silently.
+- Superseded records SHOULD remain resolvable with guidance where public trust or compatibility requires.
+- Deprecated fields/routes MUST carry deprecation metadata in OpenAPI and documentation.
+- Public SDKs MUST preserve old contract behavior during compatibility windows.
+
+## OpenAPI / AsyncAPI / SDK Derivation Rules
+
+OpenAPI artifacts MUST preserve:
+
+- surface family tags;
+- visibility class;
+- authentication requirements;
+- stable schema names;
+- catalog state enums;
+- publication state enums;
+- structured error codes;
+- idempotency header requirements;
+- correlation ID requirements;
+- deprecation metadata;
+- examples for public, authenticated, internal, and admin routes;
+- no admin routes in public SDKs unless explicitly separated.
+
+AsyncAPI artifacts MUST preserve:
+
+- internal event names;
+- payload minimums;
+- event versioning;
+- source action/correlation lineage;
+- no automatic public webhook exposure.
+
+SDKs MUST NOT:
+
+- hide visibility/publication distinctions;
+- treat catalog availability as entitlement;
+- expose admin/control routes in public client packages;
+- convert derived search results into canonical product truth.
+
+## Implementation-Contract Guardrails
+
+Downstream implementation MUST NOT:
+
+- let frontend constants create canonical catalog records;
+- publish internal product configuration directly;
+- let pricing fields in catalog become pricing policy;
+- expose entitlement internals as catalog enrichments;
+- use feature flags as catalog source truth;
+- delete historical public records without lineage when withdrawal/supersession is required;
+- expose internal/admin routes through public gateway aliases;
+- let search indexes mutate canonical catalog state;
+- bypass idempotency for publication actions;
+- skip audit for sensitive publication actions;
+- silently widen public scope during rollout.
+
+## Downstream Execution Staging
+
+1. Confirm canonical catalog entity schema and lineage fields.
+2. Confirm visibility/classification enum registry.
+3. Implement public-read list/detail/family/lookup routes.
+4. Implement authenticated enrichment routes with safe omissions.
+5. Implement internal draft/reference/artifact APIs.
+6. Implement admin publication/restriction/withdrawal/supersession APIs.
+7. Implement idempotency and audit records.
+8. Implement event outbox and projection workers.
+9. Implement search/index/cache projections with source lineage.
+10. Generate OpenAPI and internal implementation contracts.
+11. Add conformance and regression tests.
+12. Run security, public exposure, and migration review.
+
+## Required Downstream Specs / Contract Layers
+
+- OpenAPI public catalog route contract;
+- internal catalog implementation contract;
+- admin publication tooling contract;
+- catalog event schema catalog;
+- catalog read-model/projection contract;
+- artifact-link classification contract;
+- pricing-presentment reference contract;
+- product-reference validation contract;
+- entitlement-enrichment omission contract;
+- public SDK generation contract;
+- QA/regression test contract.
+
+## Boundary Violation Detection / Non-Canonical API Patterns
+
+Forbidden patterns include:
+
+1. exposing internal product config as public catalog JSON;
+2. treating catalog visibility as entitlement or access grant;
+3. treating catalog price labels as billing or pricing truth;
+4. treating feature flags as catalog source truth;
+5. allowing frontend/CMS to publish canonical catalog records directly;
+6. hiding admin publication under public route names;
+7. allowing search indexes to mutate catalog records;
+8. overwriting public history without supersession lineage;
+9. exposing draft/restricted records through lookup errors;
+10. using catalog as a general marketing CMS;
+11. exposing private roadmap, support notes, provider configs, or internal rollout states;
+12. allowing partner writes to catalog without approved narrow contract.
+
+## Canonical Examples / Anti-Examples
+
+### Canonical Example: Public Product Detail
+
+A public reader requests `GET /v1/public-product-catalog/{id}` and receives a public product summary, plan presentment label, availability state, artifact links, and supersession guidance. The response does not include internal pricing rules, entitlement checks, or rollout flags.
+
+### Canonical Example: Authenticated Enrichment
+
+An authenticated workspace admin requests `GET /v1/public-product-catalog/me/{id}` and receives a base public record plus a safe hint that the product is available to request for the workspace. The response does not grant access or expose entitlement internals.
+
+### Canonical Example: Supersession
+
+A published product package is replaced. The old catalog record becomes `superseded`, links to the new record, preserves historical date and reason, and public detail reads guide consumers to the successor.
+
+### Anti-Example: Pricing Override
+
+A product team changes a public catalog price label in catalog storage to alter billing behavior. This is forbidden; pricing truth belongs to pricing/billing domains.
+
+### Anti-Example: Hidden Admin Route
+
+A public route accepts `?publish=true` to publish a draft record. This is forbidden; publication must use admin/control-plane API with reason code and audit.
+
+## Acceptance Criteria
+
+1. Public catalog list/detail/lookup routes return only records with approved public visibility.
+2. Authenticated enrichment routes require authentication and never expose internal entitlement computation.
+3. Internal mutation routes require service identity and idempotency keys.
+4. Admin publication, restriction, withdrawal, correction, and supersession require privileged operator identity, reason code, idempotency key, and audit event.
+5. Catalog records distinguish family, classification, publication state, visibility class, product reference, plan reference, artifact links, and supersession lineage.
+6. Public catalog availability does not grant entitlement or subscription activation.
+7. Public plan/price-presentment references do not alter pricing, billing, payment, invoice, or credits truth.
+8. Search/index/cache views preserve source catalog ID and projection version.
+9. Projection lag is observable and does not overwrite canonical state.
+10. Replaying the same idempotent mutation returns the same result.
+11. Reusing the same idempotency key with a different request hash fails with conflict.
+12. Public errors do not reveal draft, restricted, or internal-only record existence.
+13. Discrepancy resolution preserves before/after lineage and reason code.
+14. Superseded records remain traceable when compatibility or public trust requires.
+15. Events include event ID, event type, catalog ID, classification, publication state, visibility class, actor, reason where applicable, and correlation ID.
+16. OpenAPI separates public, authenticated-public, partner, internal, and admin route families.
+17. SDK generation does not expose admin/control routes through public SDK packages.
+18. Rate-limit and abuse controls are enforced on public search and lookup.
+19. Migration/deprecation metadata exists for any breaking change to catalog classification, visibility, or stable fields.
+20. Audit records can reconstruct each sensitive publication action.
+
+## Test Cases
+
+### Positive Tests
+
+1. Public list returns only `published_public` records.
+2. Public detail returns approved artifact links and supersession guidance.
+3. Family route groups catalog records by approved family profile.
+4. Lookup by product slug returns matching public record with confidence metadata.
+5. Authenticated enrichment returns actor-safe hints for permitted scope.
+6. Internal service creates draft catalog record with valid product reference.
+7. Admin publishes draft record and public read model refreshes.
+8. Admin supersedes record and old detail points to successor.
+9. Catalog event is emitted after publication.
+10. Projection worker builds search view with source lineage.
+
+### Negative / Authorization Tests
+
+11. Public request for draft record returns safe not-found or forbidden without leakage.
+12. Authenticated route without valid session fails.
+13. User outside allowed scope does not receive enrichment.
+14. Internal draft mutation without service identity fails.
+15. Admin publication without operator privilege fails.
+16. Admin publication without reason code fails.
+17. Artifact link with unsafe classification fails.
+18. Product reference that cannot be validated fails.
+19. Plan reference from unapproved pricing-presentment source fails.
+20. Public search cannot infer hidden restricted records through errors.
+
+### Idempotency / Retry / Conflict Tests
+
+21. Duplicate draft create with same idempotency key and same request returns original record.
+22. Duplicate publish with same idempotency key returns previously applied result.
+23. Same idempotency key with different publish payload fails with conflict.
+24. Retry after dependency retryable failure preserves correlation and safe retry guidance.
+25. Concurrent publish and withdraw requests produce deterministic conflict resolution.
+
+### Rate Limit / Abuse Tests
+
+26. Excessive unauthenticated search requests are rate-limited.
+27. Enumeration of sequential IDs does not reveal hidden record existence.
+28. Partner export respects client-specific quota.
+29. Public query with unsupported expensive filters fails safely.
+
+### Degraded / Failure Tests
+
+30. Product dependency unavailable during draft creation returns dependency unavailable or accepted review state only where safe.
+31. Pricing-presentment dependency unavailable prevents publishing price labels.
+32. Projection lag is surfaced internally and public stale views remain labelled or withheld.
+33. Search index failure does not mutate canonical catalog record.
+34. Emergency rollout restriction narrows catalog visibility without deleting lineage.
+
+### Audit / Observability Tests
+
+35. Publication audit includes actor, target, before/after, reason, idempotency, and correlation references.
+36. Withdrawal audit is critical and reconstructible.
+37. Discrepancy resolution links case ID, resolution code, and resulting catalog mutation.
+38. Metrics include read volume, rate limits, projection lag, idempotency conflicts, and unsafe-publication incidents.
+
+### Migration / Compatibility Tests
+
+39. Deprecated field appears with deprecation metadata in OpenAPI.
+40. Superseded record remains resolvable during compatibility window.
+41. Changing classification semantics requires versioned migration plan.
+42. Public SDK generated from OpenAPI omits admin routes.
+43. Old clients can still read compatible fields after additive schema expansion.
+
+### Boundary-Violation Tests
+
+44. Attempt to treat catalog availability as entitlement fails contract validation.
+45. Attempt to update billing price through catalog route fails.
+46. Attempt to publish via frontend-only/CMS route fails.
+47. Attempt to expose internal rollout flag through public catalog response fails schema/security validation.
+48. Attempt to mutate catalog from search projection job fails.
+
+## Dependencies / Cross-Spec Links
+
+- `REFINED_SYSTEM_SPEC_INDEX.md`
+- `API_SPEC_INDEX.md`
+- `API_ARCHITECTURE_SPEC.md`
+- `PUBLIC_API_SPEC.md`
+- `INTERNAL_SERVICE_API_SPEC.md`
+- `EVENT_MODEL_AND_WEBHOOK_SPEC.md`
+- `IDEMPOTENCY_AND_VERSIONING_SPEC.md`
+- `MIGRATION_AND_BACKWARD_COMPATIBILITY_SPEC.md`
+- `PRODUCT_BOUNDARY_AND_DOMAIN_OWNERSHIP_SPEC.md`
+- `PRODUCT_ADMISSION_AND_EXPANSION_GATE_SPEC.md`
+- `PRICING_AND_MONETIZATION_MODEL_SPEC.md`
+- `SUBSCRIPTIONS_AND_USAGE_BILLING_SPEC.md`
+- `ENTITLEMENT_AND_CAPABILITY_GATING_SPEC.md`
+- `FEATURE_FLAG_AND_ROLLOUT_CONTROL_SPEC.md`
+- `PUBLIC_METADATA_API_SPEC.md`
+- `PUBLIC_TRANSPARENCY_API_SPEC.md`
+- `FILE_OBJECT_AND_ARTIFACT_STORAGE_SPEC.md`
+- `AUDIT_LOG_AND_ACTIVITY_SPEC.md`
+- `SECURITY_AND_RISK_CONTROL_SPEC.md`
+- `MONITORING_ALERTING_AND_INCIDENT_RESPONSE_SPEC.md`
+
+## Explicitly Deferred Items
+
+- Exact machine-readable OpenAPI schemas and examples.
+- Exact public SDK package layout.
+- Final per-product family catalog taxonomy.
+- Final partner export catalog contract.
+- Final artifact classification matrix for every product artifact type.
+- Final operational runbook for unsafe-publication incident response.
+- Exact search ranking and recommendation logic.
+
+Deferred items MUST remain consistent with this specification.
+
+## Final Normative Summary
+
+The Public Product Catalog API is the canonical public-read and bounded authenticated-read contract for FUZE product discovery and product-catalog publication. It owns catalog publication records, classification, visibility, artifact linkage, correction lineage, supersession, discrepancy handling, and catalog-specific route semantics. It does not own product business truth, pricing, billing, entitlement, rollout, file custody, transparency truth, registry truth, governance, treasury, payout, or chain truth.
+
+Every implementation MUST preserve public/internal/admin/event separation, product-truth separation, pricing/billing/entitlement boundaries, idempotency, auditability, visibility classification, projection lineage, migration safety, and public-safe response posture. Derived views, frontend presentations, search indexes, exports, SDKs, and public pages MUST consume the catalog contract without redefining it.
+
+## Quality Gate Checklist
+
+- [x] Upstream refined semantic owners are explicit.
+- [x] Canonical API owner is explicit.
+- [x] API surface families are explicit.
+- [x] Mutation boundaries are explicit.
+- [x] Read boundaries are explicit.
+- [x] Adjacent API boundaries are explicit.
+- [x] Truth classes are explicit.
+- [x] Conflict-resolution rules are explicit.
+- [x] Default decision rules are explicit.
+- [x] Public, first-party, internal, admin/control, event/webhook, reporting, and chain-adjacent distinctions are explicit where relevant.
+- [x] Non-canonical API patterns are called out.
+- [x] Operator/admin override paths are bounded, reason-coded, and audited.
+- [x] Read-model, cache, reporting, and projection rules are explicit.
+- [x] On-chain vs off-chain responsibilities are addressed where relevant.
+- [x] Accepted-state vs final success semantics are explicit.
+- [x] Idempotency and replay requirements are explicit.
+- [x] Request, response, error, result, and status classes are explicit.
+- [x] Failure and degraded-mode behaviors are explicit.
+- [x] Audit, traceability, and observability requirements are explicit.
+- [x] Versioning, migration, compatibility, and deprecation rules are explicit.
+- [x] OpenAPI / AsyncAPI / SDK guardrails are explicit.
+- [x] Dependencies and downstream impacts are explicit.
+- [x] Non-goals and deferred items are explicit.
+- [x] Architecture Diagram uses Mermaid `flowchart` syntax.
+- [x] Data Design uses Mermaid syntax.
+- [x] Flow View is included.
+- [x] Data Flows use Mermaid `sequenceDiagram` syntax.
+- [x] Acceptance Criteria are concrete and testable.
+- [x] Test Cases cover positive, negative, authorization, entitlement, idempotency, retry, conflict, rate-limit, degraded-mode, audit, migration, and boundary-violation behavior.
